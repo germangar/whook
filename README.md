@@ -84,10 +84,10 @@ When you first launch the script it will generate a json file. This file is a te
 ]<br>
 
 
-You have to fill your API key and SECRET key information in the accounts.json file.
-The ACCOUNT_ID filed is the name you give to the account. To be included in the alert message to identity it.
-The EXCHANGE file is self explanatory. Only kucoinfutures is supported atm.
-The password field is required by Kucoin but other exchanges may or may not use it.
+You have to fill your API key and SECRET key information in the accounts.json file.<br>
+The ACCOUNT_ID field is the name you give to the account. It's to be included in the alert message to identify the account.<br>
+The EXCHANGE field is self explanatory. Only kucoinfutures is supported atm.<br>
+The password field is required by Kucoin but other exchanges may or may not use it.<br>
 
 The code allows to configure a Binance spot account, but it is not supported yet. It will bug out if you try to use it.
 
