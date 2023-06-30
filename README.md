@@ -48,26 +48,6 @@ Orders must come in contracts.
 synonims: symbol, ticker // command, cmd, action
 
 
-###  HOW TO SET UP ###
-
-If you have experience with python: It requires to pip install ccxt and flask.
-
-If you don't know anything about python and you are on Windows I recommend to do this:
-- Install the latest version of Python from their website. During the install make sure to *enable the system PATH option* and at the end of the installation *allow it to unlimit windows PATH length*
-https://www.python.org/downloads/
-
-- Install Visual Code and in the extensions tab install the python extension. *Restart visual code*. In the terminal pip install ccxt and flask (just type pip install ccxt and pip install flask. Make sure you restarted VC after enabling the python extension. And make sure python was already installed)
-https://code.visualstudio.com/download
-
-With these you can already run the script, but it won't have access online. For giving it access to the internet you should use:
-
-- ngrok. Create a free ngrok account. Download the last version of ngrok and unzip it. Launch the software and copy paste the auth code they give you on the website (with the authcode ngrok will be able to stay open forever). 
-Then type in the ngrok console: "ngrok http 80". This will create an internet address that you can copy from the console. You have to add /whook to it to access the hook server.
-
-Example of an address: https://e579-139-47-50-49.ngrok-free.app/whook
-
-This address will continue stable until you close ngrok. Launching ngrok again will produce a new address.
-
 
 ### API KEYS ###
 When you first launch the script it will generate a json file. This file is a template to fill the accounts API data. This file can contain more than one account. It looks like this:
@@ -90,6 +70,29 @@ The EXCHANGE field is self explanatory. Only kucoinfutures is supported atm.<br>
 The password field is required by Kucoin but other exchanges may or may not use it.<br>
 
 The code allows to configure a Binance spot account, but it is not supported yet. It will bug out if you try to use it.
+
+
+
+###  HOW TO SET UP ###
+
+If you have experience with python: It requires to pip install ccxt and flask.
+
+If you don't know anything about python and you are on Windows I recommend to do this:
+- Install the latest version of Python from their website. During the install make sure to *enable the system PATH option* and at the end of the installation *allow it to unlimit windows PATH length*
+https://www.python.org/downloads/
+
+- Install Visual Code and in the extensions tab install the python extension. *Restart visual code*. In the terminal pip install ccxt and flask (just type pip install ccxt and pip install flask. Make sure you restarted VC after enabling the python extension. And make sure python was already installed)
+https://code.visualstudio.com/download
+
+With these you can already run the script, but it won't have access online. For giving it access to the internet you should use:
+
+- ngrok. Create a free ngrok account. Download the last version of ngrok and unzip it. Launch the software and copy paste the auth code they give you on the website (with the authcode ngrok will be able to stay open forever). 
+Then type in the ngrok console: "ngrok http 80". This will create an internet address that you can copy from the console. You have to add /whook to it to access the hook server.
+
+Example of an address: https://e579-139-47-50-49.ngrok-free.app/whook
+
+This address will continue stable until you close ngrok. Launching ngrok again will produce a new address.
+
 
 ### HOW TO HOST IN AWS ###
 
