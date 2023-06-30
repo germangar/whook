@@ -70,10 +70,26 @@ This address will continue stable until you close ngrok. Launching ngrok again w
 
 
 ### API KEYS ###
-When you first launch the script it will generate a json file. This file is a template to fill the accounts API data. This file can contain more than one account.
-You have to fill your API key information in the accounts.json file. The password field is required for Kucoin but other exchanges may or may not use it.
-The code allows to configure a Binance spot account, but it is not supported yet. It will bug out if you try to use it.
+When you first launch the script it will generate a json file. This file is a template to fill the accounts API data. This file can contain more than one account. It looks like this:
 
+
+[<br>
+&emsp;	{<br>
+&emsp;&emsp;		"EXCHANGE":"kucoinfutures", <br>
+&emsp;&emsp;		"ACCOUNT_ID":"your_account_name", <br>
+&emsp;&emsp;		"API_KEY":"your_api_key", <br>
+&emsp;&emsp;		"SECRET_KEY":"your_secret_key", <br>
+&emsp;&emsp;		"PASSWORD":"your_API_password"<br>
+&emsp;	}<br>
+]<br>
+
+
+You have to fill your API key and SECRET key information in the accounts.json file.
+The ACCOUNT_ID filed is the name you give to the account. To be included in the alert message to identity it.
+The EXCHANGE file is self explanatory. Only kucoinfutures is supported atm.
+The password field is required by Kucoin but other exchanges may or may not use it.
+
+The code allows to configure a Binance spot account, but it is not supported yet. It will bug out if you try to use it.
 
 ### HOW TO HOST IN AWS ###
 
