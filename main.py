@@ -288,8 +288,12 @@ class account_c:
                         break
                     elif 'Balance insufficient' in a :
                         if( order.quantity > 1 ):
-                            printf( ' * Exception raised: Balance insufficient: Reducing by one contract')
-                            order.quantity -= 1
+                            if( order.quantity < 20 ):
+                                printf( ' * Exception raised: Balance insufficient: Reducing by one contract')
+                                order.quantity -= 1
+                            else:
+                                printf( ' * Exception raised: Balance insufficient: Reducing by 5%')
+                                order.quantity -= floor( float(order.quantity) * 0.5 )
                             break
                         else: #cancel the order
                             printf( ' * Exception raised: Balance insufficient: Cancelling')
