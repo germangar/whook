@@ -67,7 +67,6 @@ class order_c:
         self.id = ""
         self.delay = delay
         self.timestamp = time.monotonic()
-        self.active = False
     def setType(cls, type):
         cls.type = type
     def setSymbol(cls, symbol):
@@ -233,25 +232,20 @@ class account_c:
 
             info = cls.exchange.fetch_order( order.id, order.symbol )
             status = info.get('status')
-            filled = info.get('filled')
-            remaining = info.get('remaining')
-            price = info.get('cost')
-            #status = info['status']
-            #filled = info['filledSize']
-            #price = info['filledValue']
-            print( status, 'filled:', filled, 'remaining:', remaining, 'price:', price )
+            remaining = int( info.get('remaining') )
+            price = info.get('price')
+            if verbose : print( status, 'remaining:', remaining, type(remaining), 'price:', price )
 
-            if( status == 'canceled' ):
+            if( remaining > 0 and (status == 'canceled' or status == 'closed') ):
                 print("r...", end = '')
-                cls.ordersQueue.append( order_c( order.symbol, order.type, order.quantity, order.leverage, 0.5 ) )
+                cls.ordersQueue.append( order_c( order.symbol, order.type, remaining, order.leverage, 0.5 ) )
                 cls.activeOrders.remove( order )
                 return True
             
             if ( status == 'closed' ):
-                printf( timeNow(), "* Order succesful:", order.symbol, order.type, order.quantity, str(order.leverage)+"x", 'id', order.id )
+                printf( timeNow(), "* Order succesful:", order.symbol, order.type, order.quantity, str(order.leverage)+"x", "at price", price, 'id', order.id )
                 order.quantity = 0
                 order.leverage = 0
-                order.active = False
                 cls.activeOrders.remove( order )
                 return True
         return False
@@ -313,7 +307,6 @@ class account_c:
                 continue
             
             order.id = response.get('id')
-            order.active = True
             if verbose : print( timeNow(), " * Activating Order", order.symbol, order.type, order.quantity, str(order.leverage)+'x', 'id', order.id )
             cls.activeOrders.append( order )
             cls.ordersQueue.remove( order )
