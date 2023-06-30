@@ -17,32 +17,32 @@ It will do everything it can to fullfill orders, including reducing the quantity
 * Account id: Just add the id. No command associated. Account id must include at least one character.
 
 * Commands:
-buy or long - places buy order
-sell or short - places sell order
-position or pos - goes to a position of the given value (no matter what the current position is)
-close - closes the position (position 0 also does it)
+buy or long - places buy order.
+sell or short - places sell order.
+position or pos - goes to a position of the given value (no matter what the current position is).
+close - closes the position (position 0 also does it).
 
 * Quantities:
-<value> - quantity in contracts. No command associated, just the number
-<value>$ - quantity in USDT. No command associated, just the number and the dollar sign
-<value>x or x<value> - defines the leverage.
+"value" - quantity in contracts. No command associated, just the number.<br>
+"value"$ - quantity in USDT. No command associated. Just the number and the dollar sign.<br>
+"value"x or x"value" - defines the leverage.<br>
 
-Examples:
-kucoin000 ETH/USDT buy 300$ x3
-ETH/USDT pos 300 x3 kucoin000
-kucoin000 ETH/USD close
+Examples:<br>
+kucoin000 ETH/USDT buy 300$ x3<br>
+ETH/USDT pos 300 x3 kucoin000<br>
+kucoin000 ETH/USD close<br>
 
 #### As JSON message:
 
 JSON Messages are barely supported (I don't use them). Only accepts one alert per message and direct USDT orders aren't implemented.
 Orders must come in contracts.
 
-{
-"symbol": "BTC/USDT",
-"command": "buy",
-"quantity": "12",
-"leverage": "3",
-"id" : "kucoin000"
+{<br>
+"symbol": "BTC/USDT",<br>
+"command": "buy",<br>
+"quantity": "12",<br>
+"leverage": "3",<br>
+"id" : "kucoin000"<br>
 }
 
 synonims: symbol, ticker // command, cmd, action
