@@ -7,9 +7,8 @@ It will do everything it can to fullfill orders, including reducing the quantity
 
 Disclaimer: This project is for my personal use. I'm not taking feature requests.
 
-#######################################
-########## Alert syntax ###############
-#######################################
+
+##### ALERT SYNTAX #####
 
 As plain text:
 
@@ -49,9 +48,7 @@ Orders must come in contracts.
 synonims: symbol, ticker // command, cmd, action
 
 
-################################################
-#####  HOW TO SET UP ###########################
-################################################
+#####  HOW TO SET UP #####
 
 If you have experience with python: It requires to pip install ccxt and flask.
 
@@ -72,15 +69,13 @@ Example of an address: https://e579-139-47-50-49.ngrok-free.app/whook
 This address will continue stable until you close ngrok. Launching ngrok again will produce a new address.
 
 
-##### API KEYS #######
+##### API KEYS #####
 When you first launch the script it will generate a json file. This file is a template to fill the accounts API data. This file can contain more than one account.
 You have to fill your API key information in the accounts.json file. The password field is required for Kucoin but other exchanges may or may not use it.
 The code allows to configure a Binance spot account, but it is not supported yet. It will bug out if you try to use it.
 
 
-#############################################
-########## HOW TO HOST IN AWS ###############
-#############################################
+##### HOW TO HOST IN AWS #####
 
 You can host a server in AWS EC2 for free. It can be a linux server or a windows server. You can find many tutorials in Youtube on how to do it.
 
