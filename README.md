@@ -4,7 +4,7 @@ Alert syntax:
 
 As plain text:
 
-* Symbol format:: ETHUSDTM, ETH/USDT, ETH/USDT:USDT
+* Symbol format:: ETHUSDT, ETHUSDTM, ETH/USDT, ETH/USDT:USDT
 
 * Account id: Just add the id. No command associated. Account id must include at least one character.
 
