@@ -16,7 +16,7 @@ It will do everything it can to fullfill orders, including reducing the quantity
 
 * Account id: Just add the id. No command associated. Account id must include at least one non-numeric character and obviously it shouldn't be the same as any of the command names.
 
-* Commands:
+* Commands:<br>
 buy or long - places buy order.<br>
 sell or short - places sell order.<br>
 position or pos - goes to a position of the given value (no matter what the current position is).<br>
