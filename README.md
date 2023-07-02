@@ -32,6 +32,8 @@ kucoin000 ETH/USDT buy 300$ x3<br>
 ETH/USDT pos 300 x3 kucoin000<br>
 kucoin000 ETH/USD close<br>
 
+Several orders can be included in the same alert, separated by line breaks.
+
 #### As JSON message:
 
 JSON Messages are barely supported (I don't use them). Only accepts one alert per message and direct USDT orders aren't implemented.
