@@ -32,7 +32,7 @@ kucoin000 ETH/USDT buy 300$ x3<br>
 ETH/USDT pos 300 x3 kucoin000<br>
 kucoin000 ETH/USD close<br>
 
-Several orders can be included in the same alert, separated by line breaks.
+Several orders can be included in the same alert, separated by line breaks. For example, you can send the orders for 2 different accounts in the same alert.
 
 #### As JSON message:
 
