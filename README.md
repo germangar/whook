@@ -14,7 +14,7 @@ It will do everything it can to fullfill orders, including reducing the quantity
 
 * Symbol format:: ETHUSDT, ETHUSDTM, ETH/USDT, ETH/USDT:USDT
 
-* Account id: Just add the id. No command associated. Account id must include at least one character.
+* Account id: Just add the id. No command associated. Account id must include at least one non-numeric character and obviously it shouldn't be the same as any of the command names.
 
 * Commands:
 buy or long - places buy order.
