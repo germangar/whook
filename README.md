@@ -23,9 +23,9 @@ position or pos - goes to a position of the given value (no matter what the curr
 close - closes the position (position 0 also does it).<br>
 
 * Quantities:<br>
-"value" - quantity in contracts. No command associated, just the number.<br>
-"value"$ - quantity in USDT. No command associated. Just the number and the dollar sign.<br>
-"value"x or x"value" - defines the leverage.<br>
+[value] - quantity in contracts. No command associated, just the number.<br>
+[value]$ - quantity in USDT. No command associated. Just the number and the dollar sign.<br>
+[value]x or x[value] - defines the leverage.<br>
 
 Examples:<br>
 kucoin000 ETH/USDT buy 300$ x3<br>
