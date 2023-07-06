@@ -57,11 +57,6 @@ class position_c:
         self.position = position
     def getKey(cls, key):
         return cls.position.get(key)
-    def getInfoKey(cls, key):
-        info = cls.position.get('info')
-        if( info == None ):
-            return None
-        return info.get(key)
 
 class order_c:
     def __init__(self, symbol = "", type = "", quantity = 0.0, leverage = 1, delay = 0) -> None:
@@ -107,9 +102,10 @@ class account_c:
                 'secret': secret,
                 'password': password 
                 } )
+                #self.exchange.rateLimit = 333
         elif( exchange.lower() == 'binance' ):
             self.exchange = ccxt.binance ( {
-                #'enableRateLimit': True,
+                'enableRateLimit': True,
                 'apiKey': apiKey,
                 'secret': secret
                 } )
@@ -121,12 +117,20 @@ class account_c:
             printf( " * FATAL ERROR: Exchange creation failed" )
             raise SystemExit()
         
-        #self.exchange.rateLimit = 333
+        # describe = self.exchange.describe()
+        # has = describe.get('has')
+        # self.id = describe.get('id')
+        # self.isFutures
+        
         self.markets = self.exchange.load_markets()
-        self.balance = self.exchange.parse_balance( self.exchange.fetch_balance() )['info']['info']['data']
+        self.balance = self.fetchBalance()
         self.refreshPositions()
     
     #methods
+    def fetchBalance(cls):
+        response = cls.exchange.fetch_balance()
+        return response.get('USDT')
+    
     def fetchAvailableBalance(cls)->float:
         available = cls.exchange.fetch_free_balance()['USDT']
         return available
@@ -193,7 +197,48 @@ class account_c:
         return None
     
     def refreshPositions(cls, v = verbose):
+        v = True
     ### https://docs.ccxt.com/#/?id=position-structure ###
+        if( cls.id == "binance" ):
+            try:
+                list = cls.exchange.fetch_balance()
+            except Exception as e:
+                for a in e.args:
+                    if 'Remote end closed connection' in a :
+                        printf( timeNow, ' * Exception raised: Refreshpositions. Remote end closed connection' )
+                    elif '502 Bad Gateway' in a:
+                        printf( timeNow, ' * Exception raised: 502 Bad Gateway' )
+                    else:
+                        printf( timeNow, ' * Unknown Exception raised: Refreshpositions:', a )
+                return
+            
+            cls.positionslist.clear()
+
+            #we need to go through the list and add only the symbols with a value
+            positions = list.get( 'used' )
+            for key, value in positions.items():
+                if( key == 'USDT' ): continue
+                #print( key, value, type(value) )
+                if( value > 0.0 ):
+                    symbol = key + '/USDT:USDT'
+                    thisPosition = { 'symbol': symbol, 'contracts' : value, 'side': 'long' }
+                    cls.positionslist.append(position_c( symbol, thisPosition ))
+
+            numPositions = len(cls.positionslist)
+            if v:
+                if( numPositions > 0 ) : print('------------------------------')
+                print('Refreshing positions '+cls.id+':', numPositions, "positions found" )
+
+            if v:
+                for pos in cls.positionslist:
+                    p = ( pos.getKey('unrealizedPnl') / pos.getKey('initialMargin') ) * 100.0
+                    print(pos.symbol, pos.getKey('side'), int(pos.getKey('contracts')), pos.getKey('collateral'), pos.getKey('unrealizedPnl'), "{:.2f}".format(p) + '%', sep=' * ')
+        
+            if v : print('------------------------------')
+            return
+
+
+        ### FUTURES ###
 
         try:
             positions = cls.exchange.fetch_positions()
@@ -210,7 +255,7 @@ class account_c:
         numPositions = len(positions)
         if v:
             if( numPositions > 0 ) : print('------------------------------')
-            print('Refreshing positions:', numPositions, "positions found" )
+            print('Refreshing positions '+cls.id+':', numPositions, "positions found" )
             
         cls.positionslist.clear()
         for element in positions:
@@ -303,13 +348,13 @@ class account_c:
                             contractSize = cls.findContractSizeFromSymbol(order.symbol)
                             available = cls.fetchAvailableBalance() * 0.985
                             order.quantity = contractsFromUSDT( available, contractSize, price, order.leverage )
-                            
+                            order.reduced = True
                             if( order.quantity < 1 ):
                                 printf( ' * Exception raised: Balance insufficient (', available,'): Cero contracts possible. Cancelling')
                                 cls.ordersQueue.remove( order )
                             else:
                                 printf( ' * Exception raised: Balance insufficient: Reducing to', order.quantity, "contracts")
-                                order.reduced = True
+                                
                             break
                         elif( order.quantity > 1 ):
                             if( order.quantity < 20 ):
