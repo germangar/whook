@@ -131,18 +131,18 @@ class account_c:
         available = cls.exchange.fetch_free_balance()['USDT']
         return available
     
-    def fetchBuyPrice(cls, pair)->float:
-        orderbook = cls.exchange.fetch_order_book (pair)
+    def fetchBuyPrice(cls, symbol)->float:
+        orderbook = cls.exchange.fetch_order_book(symbol)
         ask = orderbook['asks'][0][0] if len (orderbook['asks']) > 0 else None
         return ask
 
-    def fetchSellPrice(cls, pair)->float:
-        orderbook = cls.exchange.fetch_order_book (pair)
+    def fetchSellPrice(cls, symbol)->float:
+        orderbook = cls.exchange.fetch_order_book(symbol)
         bid = orderbook['bids'][0][0] if len (orderbook['bids']) > 0 else None
         return bid
 
-    def fetchAveragePrice(cls, pair)->float:
-        orderbook = cls.exchange.fetch_order_book (pair)
+    def fetchAveragePrice(cls, symbol)->float:
+        orderbook = cls.exchange.fetch_order_book(symbol)
         bid = orderbook['bids'][0][0] if len (orderbook['bids']) > 0 else None
         ask = orderbook['asks'][0][0] if len (orderbook['asks']) > 0 else None
         return ( bid + ask ) * 0.5
@@ -153,7 +153,7 @@ class account_c:
                 return pos
         return None
     
-    def findSymbolFromPairName(cls, paircmd ):
+    def findSymbolFromPairName(cls, paircmd):
         #first let's check if the pair string contains
         #a backslash. If it does it's probably already a symbol
         #but it also may not include the ':USDT' ending
@@ -164,7 +164,12 @@ class account_c:
         if '/' in paircmd and not paircmd.endswith(':USDT'):
             paircmd += ':USDT'
 
-        #so now let's find it in the list
+        #try the more direct approach
+        m = cls.markets.get(paircmd)
+        if( m != None ):
+            return m.get('symbol')
+
+        #so now let's find it in the list using the id
         for m in cls.markets:
             id = cls.markets[m]['id'] 
             symbol = cls.markets[m]['symbol']
@@ -172,25 +177,19 @@ class account_c:
                 return symbol
         return None
     
-    def findContractSizeFromSymbol(cls, paircmd )->float:
-        #so now let's find it in the list
-        for m in cls.markets:
-            id = cls.markets[m]['id'] 
-            symbol = cls.markets[m]['symbol']
-            if( symbol == paircmd or id == paircmd ):
-                size = cls.markets[m]['contractSize']
-                return size
+    def findContractSizeFromSymbol(cls, symbol)->float:
+        m = cls.markets.get(symbol)
+        if( m != None ):
+            return m.get('contractSize')
         return None
     
-    def findMaxLeverageForSymbol(cls, paircmd )->float:
+    def findMaxLeverageForSymbol(cls, symbol)->float:
         #'leverage': {'min': 1.0, 'max': 50.0}}
-        for m in cls.markets:
-            id = cls.markets[m]['id'] 
-            symbol = cls.markets[m]['symbol']
-            if( symbol == paircmd or id == paircmd ):
-                bounds = cls.markets[m]['limits']['leverage']
-                maxLeverage = bounds['max']
-                return maxLeverage
+        m = cls.markets.get(symbol)
+        if( m != None ):
+            bounds = m['limits']['leverage']
+            maxLeverage = bounds['max']
+            return maxLeverage
         return None
     
     def refreshPositions(cls, v = verbose):
@@ -455,7 +454,7 @@ def parseAlert( data, isJSON, account: account_c ):
     # convert quantity to concracts if needed
     if( isUSDT ) :
         print( "CONVERTING", quantity, "$ - Leverage", leverage, end = '' )
-        #FIXME?? We don't know for sure yet if it's a buy or a sell, so we average
+        #We don't know for sure yet if it's a buy or a sell, so we average
         quantity = contractsFromUSDT( quantity, contractSize, account.fetchAveragePrice(symbol), leverage )
         print( ":", quantity, "contracts" )
         
