@@ -56,7 +56,12 @@ class position_c:
         self.symbol = symbol
         self.position = position
     def getKey(cls, key):
-        return cls.position[key]
+        return cls.position.get(key)
+    def getInfoKey(cls, key):
+        info = cls.position.get('info')
+        if( info == None ):
+            return None
+        return info.get(key)
 
 class order_c:
     def __init__(self, symbol = "", type = "", quantity = 0.0, leverage = 1, delay = 0) -> None:
@@ -64,6 +69,7 @@ class order_c:
         self.symbol = symbol
         self.quantity = quantity
         self.leverage = leverage
+        self.reduced = False
         self.id = ""
         self.delay = delay
         self.timestamp = time.monotonic()
@@ -187,7 +193,7 @@ class account_c:
                 return maxLeverage
         return None
     
-    def refreshPositions(cls):
+    def refreshPositions(cls, v = verbose):
     ### https://docs.ccxt.com/#/?id=position-structure ###
 
         try:
@@ -196,25 +202,30 @@ class account_c:
             for a in e.args:
                 if 'Remote end closed connection' in a :
                     printf( timeNow, ' * Exception raised: Refreshpositions. Remote end closed connection' )
+                elif '502 Bad Gateway' in a:
+                    printf( timeNow, ' * Exception raised: 502 Bad Gateway' )
                 else:
                     printf( timeNow, ' * Unknown Exception raised: Refreshpositions:', a )
             return
                     
         numPositions = len(positions)
-        if verbose:
+        if v:
+            if( numPositions > 0 ) : print('------------------------------')
             print('Refreshing positions:', numPositions, "positions found" )
-            print('------------------------------')
-
+            
         cls.positionslist.clear()
         for element in positions:
             thisPosition = cls.exchange.parse_positions( element )[0]
-            #symbol = thisPosition['info']['symbol']
-            symbol = thisPosition['symbol']
+            #symbol = thisPosition['symbol']
+            symbol = thisPosition.get('symbol')
             cls.positionslist.append(position_c( symbol, thisPosition ))
 
-        if verbose:
+        if v:
             for pos in cls.positionslist:
-                print(pos.symbol, pos.getKey('side'), pos.getKey('contracts'), pos.getKey('collateral'), pos.getKey('unrealizedPnl'), sep=' * ')
+                p = ( pos.getKey('unrealizedPnl') / pos.getKey('initialMargin') ) * 100.0
+                print(pos.symbol, pos.getKey('side'), int(pos.getKey('contracts')), pos.getKey('collateral'), pos.getKey('unrealizedPnl'), "{:.2f}".format(p) + '%', sep=' * ')
+        
+        if v : print('------------------------------')
 
     def activeOrderForSymbol(cls, symbol ):
         for o in cls.activeOrders:
@@ -260,7 +271,7 @@ class account_c:
 
         #if we just cleared the orders queue refresh the positions info
         if( numOrders > 0 and (len(cls.ordersQueue) + len(cls.activeOrders)) == 0 ):
-            cls.refreshPositions()
+            cls.refreshPositions(True)
 
         if( len(cls.ordersQueue) == 0 ):
             return
@@ -287,7 +298,21 @@ class account_c:
                         order.delay += 0.5
                         break
                     elif 'Balance insufficient' in a :
-                        if( order.quantity > 1 ):
+                        # try first reducing it to our estimation of current balance
+                        if( not order.reduced ):
+                            price = cls.fetchSellPrice(order.symbol) if( type == 'sell' ) else cls.fetchBuyPrice(order.symbol)
+                            contractSize = cls.findContractSizeFromSymbol(order.symbol)
+                            available = cls.fetchAvailableBalance() * 0.985
+                            order.quantity = contractsFromUSDT( available, contractSize, price, order.leverage )
+                            
+                            if( order.quantity < 1 ):
+                                printf( ' * Exception raised: Balance insufficient (', available,'): Cero contracts possible. Cancelling')
+                                cls.ordersQueue.remove( order )
+                            else:
+                                printf( ' * Exception raised: Balance insufficient: Reducing to', order.quantity, "contracts")
+                                order.reduced = True
+                            break
+                        elif( order.quantity > 1 ):
                             if( order.quantity < 20 ):
                                 printf( ' * Exception raised: Balance insufficient: Reducing by one contract')
                                 order.quantity -= 1
@@ -303,7 +328,7 @@ class account_c:
                         printf( ' * ERROR Cancelling: Unhandled Exception raised:', e )
                         cls.ordersQueue.remove( order )
                         break
-                continue
+                continue #back to the orders loop
 
             if( response.get('id') == None ):
                 print( "Order denied:", response['info'], "Cancelling" )
@@ -487,11 +512,10 @@ def parseAlert( data, isJSON, account: account_c ):
         if( pos != None ):
             positionContracts = int( pos.getKey('contracts') )
             positionSide = pos.getKey( 'side' )
-
             
             if ( positionSide == 'long' and type == 'sell' ) or ( positionSide == 'short' and type == 'buy' ):
                 # de we need to divide these in 2 orders?
-                if( quantity > canDoContracts + positionContracts ):
+                if( quantity >= canDoContracts + positionContracts ):
                     #first order is the contracts in the position and the contracs we can afford with the liquidity
                     account.ordersQueue.append( order_c( symbol, type, canDoContracts + positionContracts, leverage ) )
 
@@ -500,20 +524,21 @@ def parseAlert( data, isJSON, account: account_c ):
                     if( quantity < 1 ): #we are done (should never happen)
                         return
                     
-                    spent = contractsToUSDT( canDoContracts, contractSize, price, leverage )
-                    returned = contractsToUSDT( positionContracts, contractSize, price, leverage )
-                    spent *= 1.05 #account for some fees
-                    returned *= 0.95 #account for some fees
-                    nextAvailable = available - spent + returned
+                    # spent = contractsToUSDT( canDoContracts, contractSize, price, leverage )
+                    # returned = contractsToUSDT( positionContracts, contractSize, price, leverage )
+                    # #available = available - spent + returned
+                    # available -= spent * 1.02
+                    # available += returned * 0.97
+                    # #so, how many countracs can we do with this
+                    # canDoContracts = contractsFromUSDT( available, contractSize, price, leverage )
 
-                    #so, how many countracs can we do with this
-                    canDoContracts = contractsFromUSDT( nextAvailable, contractSize, price, leverage )
-                    if( canDoContracts < 1 ):
-                        printf( timeNow(), " * WARNING * Insuficient balance for the second order. Skipping." )
-                        return
-                    if( quantity > canDoContracts ):
-                        printf( timeNow(), " * WARNING * Insuficient balance. Reducing by", quantity - canDoContracts, "contracts" )
-                        quantity = canDoContracts
+                    # if( canDoContracts < 1 ):
+                    #     printf( timeNow(), " * WARNING * Insuficient balance for the second order. Skipping." )
+                    #     return
+                    
+                    # if( quantity > canDoContracts ):
+                    #     printf( timeNow(), " * WARNING * Insuficient balance. Reducing by", quantity - canDoContracts, "contracts" )
+                    #     quantity = canDoContracts
 
                     account.ordersQueue.append( order_c( symbol, type, quantity, leverage, 1.0 ) )
                     return
@@ -525,9 +550,9 @@ def parseAlert( data, isJSON, account: account_c ):
             printf( timeNow(), " * ERROR * Insuficient balance:", available )
             return
 
-        if( quantity > canDoContracts ):
-            printf( timeNow(), " * WARNING * Insuficient balance. Reducing to", canDoContracts)
-            quantity = canDoContracts
+        # if( quantity > canDoContracts ):
+        #     printf( timeNow(), " * WARNING * Insuficient balance. Reducing to", canDoContracts)
+        #     quantity = canDoContracts
         
         account.ordersQueue.append( order_c( symbol, type, quantity, leverage ) )
         return
@@ -598,32 +623,32 @@ except FileNotFoundError:
     raise SystemExit()
 
 for ac in accounts_data:
-    try:
-        exchange = ac['EXCHANGE']
-    except Exception as e:
-        printf( " * ERROR PARSING ACCOUNT INFORMATION", e )
+
+    exchange = ac.get('EXCHANGE')
+    if( exchange == None ):
+        printf( " * ERROR PARSING ACCOUNT INFORMATION: EXCHANGE" )
         continue
-    try:
-        account_id = ac['ACCOUNT_ID']
-    except Exception as e:
-        printf( " * ERROR PARSING ACCOUNT INFORMATION", e )
+
+    account_id = ac.get('ACCOUNT_ID')
+    if( account_id == None ):
+        printf( " * ERROR PARSING ACCOUNT INFORMATION: ACCOUNT_ID" )
         continue
-    try:
-        api_key = ac['API_KEY']
-    except Exception as e:
-        printf( " * ERROR PARSING ACCOUNT INFORMATION", e )
+
+    api_key = ac.get('API_KEY')
+    if( api_key == None ):
+        printf( " * ERROR PARSING ACCOUNT INFORMATION: API_KEY" )
         continue
-    try:
-        secret_key = ac['SECRET_KEY']
-    except Exception as e:
-        printf( " * ERROR PARSING ACCOUNT INFORMATION", e )
+
+    secret_key = ac.get('SECRET_KEY')
+    if( secret_key == None ):
+        printf( " * ERROR PARSING ACCOUNT INFORMATION: SECRET_KEY" )
         continue
-    try:
-        password = ac['PASSWORD'] # FIXME: Password may not be neccesary
-    except Exception as e:
-        printf( " * ERROR PARSING ACCOUNT INFORMATION", e )
+
+    password = ac.get('PASSWORD')
+    if( password == None ):
+        password = ""
         continue
-    
+
     print( timeNow(), " * Initializing account:", exchange, account_id )
     accounts.append( account_c( exchange, account_id, api_key, secret_key, password ) )
 
