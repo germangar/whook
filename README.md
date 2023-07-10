@@ -5,6 +5,10 @@ WHOOK is a web hook for handling Tradingview Alerts to Kucoin. Other exchanges m
 Whook prioritizes realiability over speed. If you're looking for high frequency trading, this is not for you.
 It will do everything it can to fullfill orders, including reducing the quantity or the order when the balance is not enough.
 
+Currently supported exchanges:
+- Kucoin futures
+- Bitget futures (no hedge mode)
+
 ##### Disclaimer: This project is for my personal use. I'm not taking feature requests.
 
 
@@ -68,7 +72,7 @@ When you first launch the script it will generate a json file. This file is a te
 
 You have to fill your API key and SECRET key information in the accounts.json file.<br>
 The ACCOUNT_ID field is the name you give to the account. It's to be included in the alert message to identify the account.<br>
-The EXCHANGE field is self explanatory. Only kucoinfutures is supported atm.<br>
+The EXCHANGE field is self explanatory. Valid exchange names are: "kucoinfutures" and "bitget".<br>
 The password field is required by Kucoin but other exchanges may or may not use it.<br>
 
 The code allows to configure a Binance spot account, but it is not supported yet. It will bug out if you try to use it.
