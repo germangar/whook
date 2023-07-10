@@ -97,7 +97,7 @@ Example of an address: https://e579-139-47-50-49.ngrok-free.app/whook
 This address will continue stable until you close ngrok. Launching ngrok again will produce a new address.
 
 
-### HOW TO HOST IN AWS ###
+### HOW TO HOST IN AWS ### (the easy way)
 
 You can host a server in AWS EC2 for free. It can be a linux server or a windows server. You can find many tutorials in Youtube on how to do it.
 
