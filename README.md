@@ -75,9 +75,6 @@ The ACCOUNT_ID field is the name you give to the account. It's to be included in
 The EXCHANGE field is self explanatory. Valid exchange names are: "kucoinfutures" and "bitget".<br>
 The password field is required by Kucoin and Bitget but other exchanges may or may not use it.<br>
 
-The code allows to configure a Binance spot account, but it is not supported yet. It will bug out if you try to use it.
-
-
 
 ###  HOW TO SET UP ###
 
