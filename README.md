@@ -81,7 +81,7 @@ The password field is required by Kucoin and Bitget but other exchanges may or m
 If you have experience with python: It requires to pip install ccxt and flask.
 
 If you don't know anything about python and you are on Windows I recommend to do this:
-- Install the latest version of Python from their website. During the install make sure to *enable the system PATH option* and at the end of the installation *allow it to unlimit windows PATH length*
+- Install the latest version of Python from their website. During the installation make sure to *enable the system PATH option* and at the end of the installation *allow it to unlimit windows PATH length*
 https://www.python.org/downloads/
 
 - Install Visual Code and in the extensions tab install the python extension. *Restart visual code*. In the terminal pip install ccxt and flask (just type pip install ccxt and pip install flask. Make sure you restarted VC after enabling the python extension. And make sure python was already installed)
