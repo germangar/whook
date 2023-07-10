@@ -109,9 +109,9 @@ I simply hosted it in a Windows_server 2022 edition. Basic steps are pretty much
 - Download and install python following the same steps.
 - pip install ccxt and flask from the windows cmd terminal (if you have troubles with this see the last line of this readme)
 - Download and execute ngrok the same way
-- You can launch the script by creating a .bat file in the same directory as main.py like this:
-@echo off
-python.exe main.py
-pause
+- You can launch the script by creating a .bat file in the same directory as main.py like this:<br>
+@echo off<br>
+python.exe main.py<br>
+pause<br>
 
 If you have troubles with the bat file you can also install Visual Code in the server and run it from there.
