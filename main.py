@@ -82,12 +82,12 @@ class order_c:
         return (cls.timestamp + cls.delay > time.monotonic() )
 
 class account_c:
-    def __init__(self, exchange = None, id = 'default', apiKey = None, secret = None, password = None )->None:
-        if( id.isnumeric() ):
+    def __init__(self, exchange = None, name = 'default', apiKey = None, secret = None, password = None )->None:
+        if( name.isnumeric() ):
             printf( " * FATAL ERROR: Account 'id' can not be only  numeric" )
             raise SystemExit()
         
-        self.id = id
+        self.accountName = name
         self.positionslist = []
         self.ordersQueue = []
         self.activeOrders = []
@@ -97,18 +97,23 @@ class account_c:
         
         if( exchange.lower() == 'kucoinfutures' ):
             self.exchange = ccxt.kucoinfutures( {
-                #'enableRateLimit': True,
                 'apiKey': apiKey,
                 'secret': secret,
-                'password': password 
+                'password': password,
+                #'enableRateLimit': True
                 } )
                 #self.exchange.rateLimit = 333
-        elif( exchange.lower() == 'binance' ):
-            self.exchange = ccxt.binance ( {
-                'enableRateLimit': True,
-                'apiKey': apiKey,
-                'secret': secret
-                } )
+        elif( exchange.lower() == 'bitget' ):
+            self.exchange = ccxt.bitget({
+                "apiKey": apiKey,
+                "secret": secret,
+                'password': password,
+                "options": {'defaultType': 'swap', 'adjustForTimeDifference' : True},
+                #"timeout": 60000,
+                "enableRateLimit": True
+                })
+            # self.exchange.set_sandbox_mode( True )
+            #print( self.exchange.set_position_mode( False ) )
         else:
             printf( " * FATAL ERROR: Unsupported exchange:", exchange )
             raise SystemExit()
@@ -117,15 +122,11 @@ class account_c:
             printf( " * FATAL ERROR: Exchange creation failed" )
             raise SystemExit()
         
-        # describe = self.exchange.describe()
-        # has = describe.get('has')
-        # self.id = describe.get('id')
-        # self.isFutures
-        
         self.markets = self.exchange.load_markets()
         self.balance = self.fetchBalance()
-        self.refreshPositions()
-    
+        print( self.balance )
+        self.refreshPositions(True)
+
     #methods
     def fetchBalance(cls):
         response = cls.exchange.fetch_balance()
@@ -181,11 +182,29 @@ class account_c:
                 return symbol
         return None
     
-    def findContractSizeFromSymbol(cls, symbol)->float:
+    def findContractSizeForSymbol(cls, symbol)->float:
         m = cls.markets.get(symbol)
         if( m != None ):
             return m.get('contractSize')
         return None
+    
+    def findPrecisionForSymbol(cls, symbol)->float:
+        m = cls.markets.get(symbol)
+        if( m != None ):
+            p = m.get('precision')
+            if( p != None ):
+                return p.get('amount')
+        return 1.0
+    
+    def findMinimumAmountForSymbol(cls, symbol)->float:
+        m = cls.markets.get(symbol)
+        if( m != None ):
+            l = m.get('limits')
+            if( l != None ):
+                a = l.get('amount')
+                if( a != None ):
+                    return a.get('min')
+        return 1.0
     
     def findMaxLeverageForSymbol(cls, symbol)->float:
         #'leverage': {'min': 1.0, 'max': 50.0}}
@@ -196,50 +215,14 @@ class account_c:
             return maxLeverage
         return None
     
-    def refreshPositions(cls, v = verbose):
-        v = True
-    ### https://docs.ccxt.com/#/?id=position-structure ###
-        if( cls.id == "binance" ):
-            try:
-                list = cls.exchange.fetch_balance()
-            except Exception as e:
-                for a in e.args:
-                    if 'Remote end closed connection' in a :
-                        printf( timeNow, ' * Exception raised: Refreshpositions. Remote end closed connection' )
-                    elif '502 Bad Gateway' in a:
-                        printf( timeNow, ' * Exception raised: 502 Bad Gateway' )
-                    else:
-                        printf( timeNow, ' * Unknown Exception raised: Refreshpositions:', a )
-                return
-            
-            cls.positionslist.clear()
-
-            #we need to go through the list and add only the symbols with a value
-            positions = list.get( 'used' )
-            for key, value in positions.items():
-                if( key == 'USDT' ): continue
-                #print( key, value, type(value) )
-                if( value > 0.0 ):
-                    symbol = key + '/USDT:USDT'
-                    thisPosition = { 'symbol': symbol, 'contracts' : value, 'side': 'long' }
-                    cls.positionslist.append(position_c( symbol, thisPosition ))
-
-            numPositions = len(cls.positionslist)
-            if v:
-                if( numPositions > 0 ) : print('------------------------------')
-                print('Refreshing positions '+cls.id+':', numPositions, "positions found" )
-
-            if v:
-                for pos in cls.positionslist:
-                    p = ( pos.getKey('unrealizedPnl') / pos.getKey('initialMargin') ) * 100.0
-                    print(pos.symbol, pos.getKey('side'), int(pos.getKey('contracts')), pos.getKey('collateral'), pos.getKey('unrealizedPnl'), "{:.2f}".format(p) + '%', sep=' * ')
+    def contractsFromUSDT(cls, symbol, amount, price, leverage = 1.0 )->float :
+        contractSize = cls.findContractSizeForSymbol( symbol )
+        precision = cls.findPrecisionForSymbol( symbol )
+        coin = (amount * leverage) / (contractSize * price)
+        return roundDownTick( coin, precision ) if ( coin > 0 ) else roundUpTick( coin, precision )
         
-            if v : print('------------------------------')
-            return
-
-
-        ### FUTURES ###
-
+    def refreshPositions(cls, v = verbose):
+    ### https://docs.ccxt.com/#/?id=position-structure ###
         try:
             positions = cls.exchange.fetch_positions()
         except Exception as e:
@@ -255,7 +238,7 @@ class account_c:
         numPositions = len(positions)
         if v:
             if( numPositions > 0 ) : print('------------------------------')
-            print('Refreshing positions '+cls.id+':', numPositions, "positions found" )
+            print('Refreshing positions '+cls.accountName+':', numPositions, "positions found" )
             
         cls.positionslist.clear()
         for element in positions:
@@ -267,7 +250,7 @@ class account_c:
         if v:
             for pos in cls.positionslist:
                 p = ( pos.getKey('unrealizedPnl') / pos.getKey('initialMargin') ) * 100.0
-                print(pos.symbol, pos.getKey('side'), int(pos.getKey('contracts')), pos.getKey('collateral'), pos.getKey('unrealizedPnl'), "{:.2f}".format(p) + '%', sep=' * ')
+                print(pos.symbol, pos.getKey('side'), pos.getKey('contracts'), pos.getKey('collateral'), pos.getKey('unrealizedPnl'), "{:.2f}".format(p) + '%', sep=' * ')
         
         if v : print('------------------------------')
 
@@ -289,7 +272,7 @@ class account_c:
             status = info.get('status')
             remaining = int( info.get('remaining') )
             price = info.get('price')
-            if verbose : print( status, 'remaining:', remaining, type(remaining), 'price:', price )
+            if verbose : print( status, 'remaining:', remaining, 'price:', price )
 
             if( remaining > 0 and (status == 'canceled' or status == 'closed') ):
                 print("r...", end = '')
@@ -333,36 +316,60 @@ class account_c:
             if( order.delayed() ):
                 continue
 
+            params = {}
+
+            if( cls.exchange.id == 'kucoinfutures' ):
+                params['leverage'] = order.leverage
+
+            if( cls.exchange.id == 'bitget' ):
+                try: #disable hedged mode
+                    response = cls.exchange.set_position_mode( False, order.symbol )
+                    params['side'] = 'buy_single' if( order.type == "buy" ) else 'sell_single'
+                except Exception as e:
+                    print( timeNow(), " * Exception Raised. Failed to set position mode:", e )
+
+                try: #set leverage
+                    response = cls.exchange.set_leverage( order.leverage, order.symbol )
+                except Exception as e:
+                    print( timeNow(), " * Exception Raised. Failed to set leverage:", e )
+
+            # send the actual order
             try:
-                response = cls.exchange.create_market_order( order.symbol, order.type, order.quantity, None, {'leverage': order.leverage } )
+                response = cls.exchange.create_market_order( order.symbol, order.type, order.quantity, None, params )
+                #print( response )
             
             except Exception as e:
+                print( e.args )
                 for a in e.args:
                     if 'Too Many Requests' in a : #set a bigger delay and try again
                         order.delay += 0.5
                         break
                     elif 'Balance insufficient' in a :
+                        precision = cls.findPrecisionForSymbol( order.symbol )
                         # try first reducing it to our estimation of current balance
                         if( not order.reduced ):
                             price = cls.fetchSellPrice(order.symbol) if( type == 'sell' ) else cls.fetchBuyPrice(order.symbol)
-                            contractSize = cls.findContractSizeFromSymbol(order.symbol)
                             available = cls.fetchAvailableBalance() * 0.985
-                            order.quantity = contractsFromUSDT( available, contractSize, price, order.leverage )
+                            order.quantity = cls.contractsFromUSDT( order.symbol, available, price, order.leverage )
                             order.reduced = True
-                            if( order.quantity < 1 ):
+                            if( order.quantity < cls.findMinimumAmountForSymbol(order.symbol) ):
                                 printf( ' * Exception raised: Balance insufficient (', available,'): Cero contracts possible. Cancelling')
                                 cls.ordersQueue.remove( order )
                             else:
                                 printf( ' * Exception raised: Balance insufficient: Reducing to', order.quantity, "contracts")
                                 
                             break
-                        elif( order.quantity > 1 ):
-                            if( order.quantity < 20 ):
+                        elif( order.quantity > precision ):
+                            if( order.quantity < 20 and precision >= 1 ):
                                 printf( ' * Exception raised: Balance insufficient: Reducing by one contract')
-                                order.quantity -= 1
+                                order.quantity -= precision
                             else:
-                                printf( ' * Exception raised: Balance insufficient: Reducing by 5%')
-                                order.quantity -= floor( float(order.quantity) * 0.5 )
+                                order.quantity = roundDownTick( order.quantity * 0.95, precision )
+                                if( order.quantity < cls.findMinimumAmountForSymbol(order.symbol) ):
+                                    printf( ' * Exception raised: Balance insufficient: Cancelling' )
+                                    cls.ordersQueue.remove( order )
+                                else:
+                                    printf( ' * Exception raised: Balance insufficient: Reducing by 5%')
                             break
                         else: #cancel the order
                             printf( ' * Exception raised: Balance insufficient: Cancelling')
@@ -390,6 +397,18 @@ accounts = []
 def floor( number ):
     return number // 1
 
+def ceil( number ):
+    return int(-(-number // 1))
+
+def roundUpTick( value, tick )-> float:
+    return ceil( value / tick ) * tick
+
+def roundDownTick( value, tick )-> float:
+    return floor( value / tick ) * tick
+
+def roundToTick( value, tick )-> float:
+    return round( value / tick ) * tick
+
 def stringToValue( arg )->float:
     if (arg[:1] == "-" ): # this is a minus symbol! What a bitch
         arg = arg[1:]
@@ -404,11 +423,9 @@ def is_json( j ):
         return False
     return True
 
-def contractsToUSDT( contracts, contractSize, price, leverage = 1.0 )->float:
-    return ( contractSize * price * contracts ) / leverage
-
-def contractsFromUSDT( amountCoin, contractSize, price, leverage = 1.0 )->int :
-    return int( floor(amountCoin / ((contractSize * price) / leverage )) )
+# def contractsFromUSDT( amount, contractSize, precision, price, leverage = 1.0 )->float :
+#     coin = (amount * leverage) / (contractSize * price)
+#     return roundDownTick( coin, precision ) if ( coin > 0 ) else roundUpTick( coin, precision )
 
 def updateOrdersQueue():
     for account in accounts:
@@ -493,14 +510,15 @@ def parseAlert( data, isJSON, account: account_c ):
         printf( " * WARNING: Leverage out of bounds. Readjusting to", str(maxLeverage)+"x" )
         leverage = maxLeverage
 
-    contractSize = account.findContractSizeFromSymbol(symbol)
+    contractSize = account.findContractSizeForSymbol(symbol)
+    precision = account.findPrecisionForSymbol( symbol )
     available = account.fetchAvailableBalance() * 0.985
     
     # convert quantity to concracts if needed
     if( isUSDT ) :
         print( "CONVERTING", quantity, "$ - Leverage", leverage, end = '' )
         #We don't know for sure yet if it's a buy or a sell, so we average
-        quantity = contractsFromUSDT( quantity, contractSize, account.fetchAveragePrice(symbol), leverage )
+        quantity = account.contractsFromUSDT( symbol, quantity, account.fetchAveragePrice(symbol), leverage )
         print( ":", quantity, "contracts" )
         
 
@@ -511,7 +529,7 @@ def parseAlert( data, isJSON, account: account_c ):
         if pos == None:
             printf( timeNow(), " * 'Close", symbol, "' No position found" )
             return
-        positionContracts = int( pos.getKey('contracts') )
+        positionContracts = pos.getKey('contracts')
         positionSide = pos.getKey( 'side' )
         if( positionSide == 'long' ):
             account.ordersQueue.append( order_c( symbol, 'sell', positionContracts, 1 ) )
@@ -531,7 +549,7 @@ def parseAlert( data, isJSON, account: account_c ):
             quantity = abs(quantity)
         else:
             #we need to account for the old position
-            positionContracts = int( pos.getKey('contracts') )
+            positionContracts = pos.getKey('contracts')
             positionSide = pos.getKey( 'side' )
             if( positionSide == 'short' ):
                 positionContracts = -positionContracts
@@ -548,13 +566,12 @@ def parseAlert( data, isJSON, account: account_c ):
 
         #fetch available balance and price
         price = account.fetchSellPrice(symbol) if( type == 'sell' ) else account.fetchBuyPrice(symbol)
-        canDoContracts = contractsFromUSDT( available, contractSize, price, leverage )
-        #canDoContracts = int( floor(available / ((contractSize * price) / leverage )) )# how many contracts we can buy with the available balance
-
+        canDoContracts = account.contractsFromUSDT( symbol, available, price, leverage )
+        
         if verbose : print( "CandoContracts", canDoContracts )
 
         if( pos != None ):
-            positionContracts = int( pos.getKey('contracts') )
+            positionContracts = pos.getKey('contracts')
             positionSide = pos.getKey( 'side' )
             
             if ( positionSide == 'long' and type == 'sell' ) or ( positionSide == 'short' and type == 'buy' ):
@@ -574,7 +591,7 @@ def parseAlert( data, isJSON, account: account_c ):
                     # available -= spent * 1.02
                     # available += returned * 0.97
                     # #so, how many countracs can we do with this
-                    # canDoContracts = contractsFromUSDT( available, contractSize, price, leverage )
+                    # canDoContracts = contractsFromUSDT( available, contractSize, precision, price, leverage )
 
                     # if( canDoContracts < 1 ):
                     #     printf( timeNow(), " * WARNING * Insuficient balance for the second order. Skipping." )
@@ -590,7 +607,7 @@ def parseAlert( data, isJSON, account: account_c ):
 
 
 
-        if( canDoContracts < 1 ):
+        if( canDoContracts < account.findMinimumAmountForSymbol(symbol) ):
             printf( timeNow(), " * ERROR * Insuficient balance:", available )
             return
 
@@ -635,7 +652,7 @@ def Alert( data ):
         tokens = line.split()
         for token in tokens:
             for a in accounts:
-                if( token == a.id ):
+                if( token == a.accountName ):
                     account = a
                     break
         if( account == None ):
@@ -693,7 +710,7 @@ for ac in accounts_data:
         password = ""
         continue
 
-    print( timeNow(), " * Initializing account:", exchange, account_id )
+    print( timeNow(), " * Initializing account: [", account_id, "] in [", exchange , ']')
     accounts.append( account_c( exchange, account_id, api_key, secret_key, password ) )
 
 
@@ -736,10 +753,8 @@ timerOrdersQueue.start()
 if __name__ == '__main__':
     printf( " * Listening" )
     app.run(host="0.0.0.0", port=80, debug=False)
-    
 
-time.sleep(1)
-#close
-timerFetchPositions.cancel()
-timerOrdersQueue.cancel()
+
+#timerFetchPositions.cancel()
+#timerOrdersQueue.cancel()
 
