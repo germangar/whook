@@ -84,7 +84,7 @@ If you don't know anything about python and you are on Windows I recommend to do
 - Install the latest version of Python from their website. During the installation make sure to *enable the system PATH option* and at the end of the installation *allow it to unlimit windows PATH length*
 https://www.python.org/downloads/
 
-- Install Visual Code and in the extensions tab install the python extension. *Restart visual code*. In the terminal pip install ccxt and flask (just type pip install ccxt and pip install flask. Make sure you restarted VC after enabling the python extension. And make sure python was already installed)
+- Install Visual Code and in the extensions tab install the python extension. *Restart visual code*. In the terminal pip install ccxt and flask (just type 'pip install ccxt' and 'pip install flask'. Make sure you restarted VC after enabling the python extension. And make sure python was already installed)
 https://code.visualstudio.com/download
 
 With these you can already run the script, but it won't have access online. For giving it access to the internet you should use:
