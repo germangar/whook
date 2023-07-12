@@ -4,7 +4,6 @@ import ccxt
 from flask import Flask, request, abort
 from threading import Timer
 import time
-from datetime import datetime
 import json
 import logging
 #import csv
@@ -12,11 +11,11 @@ import logging
 verbose = False
 _ORDER_TIMEOUT_ = 10
 
-today = datetime.today()
-
-year = today.year
-month = today.month
-day = today.day
+from datetime import datetime
+# today = datetime.today()
+# year = today.year
+# month = today.month
+# day = today.day
 #print("Current year:", today.year)
 #print("Current month:", today.month)
 #print("Current day:", today.day)
@@ -24,11 +23,11 @@ day = today.day
 #print("Minute =", today.minute)
 #print("Second =", today.second )
 
-def timeNow():
-    return time.strftime("%H:%M:%S")
-
 def dateString():
     return datetime.today().strftime("%Y/%m/%d")
+
+def timeNow():
+    return time.strftime("%H:%M:%S")
 
 # create logger PNL
 #pnllogger = logging.getLogger('balance')
@@ -342,12 +341,16 @@ class account_c:
                 #print( response )
             
             except Exception as e:
-                print( e.args )
                 for a in e.args:
+                    print( 'a=', a )
                     if 'Too Many Requests' in a : #set a bigger delay and try again
                         order.delay += 0.5
                         break
-                    elif 'Balance insufficient' in a :
+                    #
+                    # KUCOIN: kucoinfutures Balance insufficient. The order would cost 304.7268292695.
+                    # BITGET: bitget {"code":"40762","msg":"The order size is greater than the max open size","requestTime":1689179675919,"data":null}
+                    #
+                    elif 'Balance insufficient' in a or '"code":"40762"' in a:
                         precision = cls.findPrecisionForSymbol( order.symbol )
                         # try first reducing it to our estimation of current balance
                         if( not order.reduced ):
@@ -732,7 +735,7 @@ log.disabled = True
 def webhook():
     if request.method == 'POST':
         data = request.get_data(as_text=True)
-        printf( '\n' + str(timeNow()), "ALERT:", data.replace('\n', '') )
+        printf( '\n' + str(timeNow()), "ALERT:", data.replace('\n', ' | ') )
         printf('----------------------------')
         Alert(data)
         return 'success', 200
@@ -744,10 +747,10 @@ def webhook():
         abort(400)
 
 # start the positions fetching loop
-timerFetchPositions = RepeatTimer(20, refreshPositions)
+timerFetchPositions = RepeatTimer(120, refreshPositions)
 timerFetchPositions.start()
 
-timerOrdersQueue = RepeatTimer(0.5, updateOrdersQueue)
+timerOrdersQueue = RepeatTimer(0.25, updateOrdersQueue)
 timerOrdersQueue.start()
 
 #start the webhook server
