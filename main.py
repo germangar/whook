@@ -229,11 +229,13 @@ class account_c:
         except Exception as e:
             for a in e.args:
                 if 'Remote end closed connection' in a :
-                    printf( timeNow, ' * Exception raised: Refreshpositions. Remote end closed connection' )
+                    print( timeNow(), ' * Refreshpositions:Exception raised: Remote end closed connection' )
                 elif '502 Bad Gateway' in a:
-                    printf( timeNow, ' * Exception raised: 502 Bad Gateway' )
+                    print( timeNow(), ' * Refreshpositions:Exception raised: 502 Bad Gateway' )
+                elif 'Internal Server Error' in a:
+                    print( timeNow(), ' * Refreshpositions:Exception raised: 500 Internal Server Error' )
                 else:
-                    printf( timeNow, ' * Unknown Exception raised: Refreshpositions:', a )
+                    print( timeNow(), ' * Refreshpositions:Unknown Exception raised:', a )
             return
                     
         numPositions = len(positions)
