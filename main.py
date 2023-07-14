@@ -128,14 +128,35 @@ class account_c:
         print( self.balance )
         self.refreshPositions(True)
 
-    #methods
+    ## methods ##
+
+    def print(cls, *args, sep=" ", **kwargs): # adds account and exchange information to the message
+        logger.info( dateString() +'['+ cls.accountName +'/'+ cls.exchange.id +'] '+sep.join(map(str,args)), **kwargs)
+        print( '['+ cls.accountName +'/'+ cls.exchange.id +'] '+sep.join(map(str,args)), **kwargs)
+
     def fetchBalance(cls):
         response = cls.exchange.fetch_balance()
-        return response.get('USDT')
+        if( cls.exchange.id == "bitget" ):
+            # Bitget response message is all over the place!!
+            # so we reconstruct it from the embedded exchange info
+            data = response['info'][0]
+            balance = {}
+            balance['total'] = data.get('usdtEquity')
+            balance['free'] = data.get('crossMaxAvailable')
+            balance['used'] = data.get('available')
+        else:
+            balance = response.get('USDT')
+        
+        return balance
     
     def fetchAvailableBalance(cls)->float:
-        available = cls.exchange.fetch_free_balance()['USDT']
-        return available
+        if( cls.exchange.id == "bitget" ):
+            # Bitget response message is WRONG!!
+            response = cls.fetchBalance()
+            return response.get( 'free' )
+
+        available = cls.exchange.fetch_free_balance()
+        return available.get('USDT')
     
     def fetchBuyPrice(cls, symbol)->float:
         orderbook = cls.exchange.fetch_order_book(symbol)
@@ -229,13 +250,13 @@ class account_c:
         except Exception as e:
             for a in e.args:
                 if 'Remote end closed connection' in a :
-                    print( timeNow(), ' * Refreshpositions:Exception raised: Remote end closed connection' )
+                    print( timeNow(), cls.exchange.id, '* Refreshpositions:Exception raised: Remote end closed connection' )
                 elif '502 Bad Gateway' in a:
-                    print( timeNow(), ' * Refreshpositions:Exception raised: 502 Bad Gateway' )
+                    print( timeNow(), cls.exchange.id, '* Refreshpositions:Exception raised: 502 Bad Gateway' )
                 elif 'Internal Server Error' in a:
-                    print( timeNow(), ' * Refreshpositions:Exception raised: 500 Internal Server Error' )
+                    print( timeNow(), cls.exchange.id, '* Refreshpositions:Exception raised: 500 Internal Server Error' )
                 else:
-                    print( timeNow(), ' * Refreshpositions:Unknown Exception raised:', a )
+                    print( timeNow(), cls.exchange.id, '* Refreshpositions:Unknown Exception raised:', a )
             return
                     
         numPositions = len(positions)
@@ -267,7 +288,7 @@ class account_c:
         # go through the queue and remove the first completed order
         for order in cls.activeOrders:
             if( order.timedOut() ):
-                printf( timeNow(), " * Active Order Timed out", order.symbol, order.type, order.quantity, str(order.leverage)+'x' )
+                cls.print( timeNow(), " * Active Order Timed out", order.symbol, order.type, order.quantity, str(order.leverage)+'x' )
                 cls.activeOrders.remove( order )
                 continue
 
@@ -284,7 +305,7 @@ class account_c:
                 return True
             
             if ( status == 'closed' ):
-                printf( timeNow(), "* Order succesful:", order.symbol, order.type, order.quantity, str(order.leverage)+"x", "at price", price, 'id', order.id )
+                cls.print( timeNow(), "* Order succesful:", order.symbol, order.type, order.quantity, str(order.leverage)+"x", "at price", price, 'id', order.id )
                 order.quantity = 0
                 order.leverage = 0
                 cls.activeOrders.remove( order )
@@ -312,7 +333,7 @@ class account_c:
                 continue
 
             if( order.timedOut() ):
-                printf( timeNow(), " * Order Timed out", order.symbol, order.type, order.quantity, str(order.leverage)+'x' )
+                cls.print( timeNow(), " * Order Timed out", order.symbol, order.type, order.quantity, str(order.leverage)+'x' )
                 cls.ordersQueue.remove( order )
                 continue
 
@@ -329,13 +350,13 @@ class account_c:
                     response = cls.exchange.set_position_mode( False, order.symbol )
                     params['side'] = 'buy_single' if( order.type == "buy" ) else 'sell_single'
                 except Exception as e:
-                    print( timeNow(), " * Exception Raised. Failed to set position mode:", e )
+                    cls.print( timeNow(), " * Exception Raised. Failed to set position mode:", e )
 
                 if( order.leverage > 0 ): # it's 0 when closing a position
                     try: #set leverage
                         response = cls.exchange.set_leverage( order.leverage, order.symbol )
                     except Exception as e:
-                        print( timeNow(), " * Exception Raised. Failed to set leverage:", e )
+                        cls.print( timeNow(), " * Exception Raised. Failed to set leverage:", e )
 
             # send the actual order
             try:
@@ -344,7 +365,6 @@ class account_c:
             
             except Exception as e:
                 for a in e.args:
-                    print( 'a=', a )
                     if 'Too Many Requests' in a : #set a bigger delay and try again
                         order.delay += 0.5
                         break
@@ -361,7 +381,7 @@ class account_c:
                             order.quantity = cls.contractsFromUSDT( order.symbol, available, price, order.leverage )
                             order.reduced = True
                             if( order.quantity < cls.findMinimumAmountForSymbol(order.symbol) ):
-                                printf( ' * Exception raised: Balance insufficient (', available,'): Cero contracts possible. Cancelling')
+                                cls.print( ' * Exception raised: Balance insufficient (', available,'): Cero contracts possible. Cancelling')
                                 cls.ordersQueue.remove( order )
                             else:
                                 printf( ' * Exception raised: Balance insufficient: Reducing to', order.quantity, "contracts")
@@ -369,28 +389,28 @@ class account_c:
                             break
                         elif( order.quantity > precision ):
                             if( order.quantity < 20 and precision >= 1 ):
-                                printf( ' * Exception raised: Balance insufficient: Reducing by one contract')
+                                cls.print( ' * Exception raised: Balance insufficient: Reducing by one contract')
                                 order.quantity -= precision
                             else:
                                 order.quantity = roundDownTick( order.quantity * 0.95, precision )
                                 if( order.quantity < cls.findMinimumAmountForSymbol(order.symbol) ):
-                                    printf( ' * Exception raised: Balance insufficient: Cancelling' )
+                                    cls.print( ' * Exception raised: Balance insufficient: Cancelling' )
                                     cls.ordersQueue.remove( order )
                                 else:
-                                    printf( ' * Exception raised: Balance insufficient: Reducing by 5%')
+                                    cls.print( ' * Exception raised: Balance insufficient: Reducing by 5%')
                             break
                         else: #cancel the order
-                            printf( ' * Exception raised: Balance insufficient: Cancelling')
+                            cls.print( ' * Exception raised: Balance insufficient: Cancelling')
                             cls.ordersQueue.remove( order )
                             break
                     else: #Unknown exception raised
-                        printf( ' * ERROR Cancelling: Unhandled Exception raised:', e )
+                        cls.print( ' * ERROR Cancelling: Unhandled Exception raised:', e )
                         cls.ordersQueue.remove( order )
                         break
                 continue #back to the orders loop
 
             if( response.get('id') == None ):
-                print( "Order denied:", response['info'], "Cancelling" )
+                cls.print( "Order denied:", response['info'], "Cancelling" )
                 cls.ordersQueue.remove( order )
                 continue
             
@@ -501,13 +521,13 @@ def parseAlert( data, isJSON, account: account_c ):
 
     #let's try to validate the commands
     if( symbol == "Invalid"):
-        printf( "ERROR: Couldn't find symbol" )
+        account.print( "ERROR: Couldn't find symbol" )
         return
     if( type == "Invalid" ):
-        printf( "Invalid Order: Missing command")
+        account.print( "Invalid Order: Missing command")
         return 
     if( quantity <= 0 and (type == 'buy' or type == 'sell') ):
-        printf( "Invalid Order: Buy/Sell must have positive amount")
+        account.print( "Invalid Order: Buy/Sell must have positive amount")
         return
 
     #time to put the order on the queue
@@ -515,7 +535,7 @@ def parseAlert( data, isJSON, account: account_c ):
     maxLeverage = account.findMaxLeverageForSymbol( symbol )
     leverage = max( leverage, 1 )
     if( maxLeverage != None and maxLeverage < leverage ):
-        printf( " * WARNING: Leverage out of bounds. Readjusting to", str(maxLeverage)+"x" )
+        account.print( " * WARNING: Leverage out of bounds. Readjusting to", str(maxLeverage)+"x" )
         leverage = maxLeverage
 
     available = account.fetchAvailableBalance() * 0.985
@@ -563,7 +583,7 @@ def parseAlert( data, isJSON, account: account_c ):
             type = 'sell' if positionContracts > quantity else 'buy'
             quantity = abs( quantity - positionContracts )
             if( quantity == 0 ):
-                printf( " * Order completed: Request matched current position")
+                account.print( " * Order completed: Request matched current position")
                 return
         # fall through
 
@@ -614,7 +634,7 @@ def parseAlert( data, isJSON, account: account_c ):
 
 
         if( quantity < account.findMinimumAmountForSymbol(symbol) ):
-            printf( timeNow(), " * ERROR * Order too small:", available )
+            account.print( timeNow(), " * ERROR * Order too small:", available )
             return
 
         # if( quantity > canDoContracts ):
@@ -624,7 +644,7 @@ def parseAlert( data, isJSON, account: account_c ):
         account.ordersQueue.append( order_c( symbol, type, quantity, leverage ) )
         return
 
-    printf( timeNow(), " * WARNING: Something went wrong. No order was placed")
+    account.print( timeNow(), " * WARNING: Something went wrong. No order was placed")
 
 
 
