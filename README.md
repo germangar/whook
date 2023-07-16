@@ -78,7 +78,7 @@ The password field is required by Kucoin and Bitget but other exchanges may or m
 
 ###  HOW TO SET UP ###
 
-If you want to go for a quick effortless test I recommend to copy/paste the script into a free account at 'https://replit.com'. It installs all modules for you so you don't have to do anything. Do *not* use it to host an actual server. It goes idle as soon as you close the browser, and anyone can see your API keys.
+If you want to go for a quick effortless test I recommend to copy/paste the script into a free account at 'https://replit.com'. It installs all modules for you so you don't have to do anything. Do **not** use it to host an actual server. It goes idle as soon as you close the browser, and anyone can see your API keys.
 
 If you have experience with python: It requires to pip install ccxt and flask.
 
