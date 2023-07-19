@@ -1,6 +1,6 @@
 # whook
 
-WHOOK is a web hook for handling Tradingview Alerts to Kucoin. Other exchanges may be added in the future.
+WHOOK is a web hook for handling Tradingview Alerts to Kucoin and Bitget. Other exchanges may be added in the future.
 
 Whook prioritizes realiability over speed. If you're looking for high frequency trading, this is not for you.
 It will do everything it can to fullfill orders, including reducing the quantity or the order when the balance is not enough.
