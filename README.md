@@ -32,11 +32,17 @@ close - closes the position (position 0 also does it).<br>
 [value]x or x[value] - defines the leverage.<br>
 
 Examples:<br>
+- Buy command using USDT:<br>
 [account_id] [symbol] [command] [value in USDT] [leverage] - **kucoin000 ETH/USDT buy 300$ x3**<br>
-[symbol] [command] [value in contracts] [leverage] [account_id] - **ETH/USDT pos 300 x3 kucoin000**<br>
+
+- Position command using contracts:<br>
+[symbol] [command] [value in contracts] [leverage] [account_id] - **ETH/USDT position -300 x3 kucoin000**<br>
+Notice: This is a short position. For a long position use a positive value. Same goes when the value is in USDT<br>
+
+- Close position<br>
 [account_id] [symbol] [command] - **kucoin000 ETH/USD close**<br>
 
-Several orders can be included in the same alert, separated by line breaks. For example, you can send the orders for 2 different accounts in the same alert.
+Several orders can be included in the same alert, separated by line breaks. For example, you can send the orders for 2 different accounts inside the same alert.
 
 #### As JSON message:
 
