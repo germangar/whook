@@ -78,7 +78,7 @@ When you first launch the script it will generate a json file. This file is a te
 
 You have to fill your API key and SECRET key information in the accounts.json file.<br>
 The ACCOUNT_ID field is the name you give to the account. It's to be included in the alert message to identify the account.<br>
-The EXCHANGE field is self explanatory. Valid exchange names are: "kucoinfutures" and "bitget".<br>
+The EXCHANGE field is self explanatory. Valid exchange names are: "**kucoinfutures**" and "**bitget**".<br>
 The password field is required by Kucoin and Bitget but other exchanges may or may not use it.<br>
 
 
