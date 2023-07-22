@@ -129,6 +129,7 @@ class account_c:
                 #"timeout": 60000,
                 "enableRateLimit": True
                 })
+            self.canFlipPosition = False
         else:
             printf( " * FATAL ERROR: Unsupported exchange:", exchange )
             raise SystemExit()
@@ -264,7 +265,7 @@ class account_c:
                     cls.symbolStatus[ symbol ]['leverage'] = leverage
 
             if( cls.symbolStatus[ symbol ]['marginMode'] == 'isolated' and cls.symbolStatus[ symbol ]['leverage'] == leverage ):
-                cls.print( "* Leverage updated: x" + str(cls.symbolStatus[ symbol ]['leverage']) + " Margin Mode:", cls.symbolStatus[ symbol ]['marginMode'] )
+                cls.print( "* Leverage updated: Margin Mode:", cls.symbolStatus[ symbol ]['marginMode'] + " Leverage: " + str(cls.symbolStatus[ symbol ]['leverage']) + "x" )
 
 
     def fetchBalance(cls):
@@ -277,6 +278,14 @@ class account_c:
             balance['free'] = float( data.get('crossMaxAvailable') )
             balance['used'] = float( data.get('available') )
             balance['total'] = float( data.get('usdtEquity') )
+        elif( cls.exchange.id == "coinex" ):
+            # Coinex response isn't much better. We also reconstruct it
+            data = response['info'].get('data')
+            data = data.get('USDT')
+            balance = {}
+            balance['free'] = float( data.get('available') )
+            balance['used'] = float( data.get('margin') )
+            balance['total'] = balance['free'] + balance['used'] + float( data.get('profit_unreal') )
         else:
             balance = response.get('USDT')
         
@@ -351,7 +360,78 @@ class account_c:
                 return p.get('amount')
         return 1.0
     
+        '''
+        {
+            'id': 'ATOM-USDT', 
+            'symbol': 'ATOM/USDT:USDT', 
+            'base': 'ATOM', 
+            'quote': 'USDT', 
+            'baseId': 'ATOM', 
+            'quoteId': 'USDT', 
+            'active': True, 
+            'type': 'swap', 
+            'linear': True, 
+            'inverse': False, 
+            'spot': False, 
+            'swap': True, 
+            'future': False, 
+            'option': False, 
+            'margin': False, 
+            'contract': True, 
+            'contractSize': 0.01, 
+            'expiry': None, 
+            'expiryDatetime': None, 
+            'optionType': None, 
+            'strike': None, 
+            'settle': 'USDT', 
+            'settleId': 'USDT', 
+            'precision': {
+                    'amount': 2, 
+                    'price': 3, 
+                    'base': None, 
+                    'quote': None
+            }, 
+            'limits': {
+                'amount': {
+                    'min': None,
+                    'max': None
+                }, 
+                'price': {
+                    'min': None, 
+                    'max': None
+                }, 
+                'cost': {
+                    'min': None, 
+                    'max': None
+                }, 
+                'leverage': {
+                    'min': None, 
+                    'max': 5
+                }
+            }, 
+            'info': {
+                'contractId': '100030', 
+                'symbol': 'ATOM-USDT', 
+                'size': '0.01', 
+                'quantityPrecision': '2', 
+                'pricePrecision': '3', 
+                'feeRate': '0.0005', 
+                'tradeMinLimit': '1', 
+                'maxLongLeverage': '5', 
+                'maxShortLeverage': '5', 
+                'currency': 'USDT', 
+                'asset': 'ATOM', 
+                'status': '1'
+            }, 
+            'percentage': True, 
+            'taker': None, 
+            'maker': None
+        }'''
+    
     def findMinimumAmountForSymbol(cls, symbol)->float:
+        if( cls.exchange.id == 'bingx' ): #exceptions and more exceptions. Nothing is consistent
+            return cls.findPrecisionForSymbol( symbol )
+        
         m = cls.markets.get(symbol)
         if( m != None ):
             l = m.get('limits')
@@ -405,7 +485,7 @@ class account_c:
 
             #HACK!! coinx doesn't have 'contracts'. The value comes in 'contractSize' and in info:{'amount'}
             if( cls.exchange.id == 'coinex' ):
-                thisPosition['contracts'] = thisPosition['info']['amount']
+                thisPosition['contracts'] = float( thisPosition['info']['amount'] )
 
             symbol = thisPosition.get('symbol')
             cls.positionslist.append(position_c( symbol, thisPosition ))
@@ -785,7 +865,7 @@ def parseAlert( data, isJSON, account: account_c ):
             if( positionSide == 'short' ):
                 positionContracts = -positionContracts
 
-            print( '/////////////// positionContracts', positionContracts, type(positionContracts) )
+            
             command = 'sell' if positionContracts > quantity else 'buy'
             quantity = abs( quantity - positionContracts )
             if( quantity == 0 ):
@@ -814,20 +894,30 @@ def parseAlert( data, isJSON, account: account_c ):
                     quantity = positionContracts
 
                 if( quantity >= canDoContracts + positionContracts and not account.canFlipPosition ):
+                    # we have to make sure each of the orders has the minimum order contracts
+                    minOrder = account.findMinimumAmountForSymbol(symbol)
+                    order1 = canDoContracts + positionContracts
+                    order2 = quantity - (canDoContracts + positionContracts)
+                    if( order2 < minOrder ):
+                        diff = minOrder - order2
+                        if( order1 > minOrder + diff ):
+                            order1 -= diff
+
                     #first order is the contracts in the position and the contracs we can afford with the liquidity
-                    account.ordersQueue.append( order_c( symbol, command, canDoContracts + positionContracts, leverage ) )
+                    account.ordersQueue.append( order_c( symbol, command, order1, leverage ) )
 
                     #second order is whatever we can affort with the former position contracts + the change
-                    quantity -= canDoContracts + positionContracts
-                    if( quantity >= account.findMinimumAmountForSymbol(symbol) ): #we are done (should never happen)
+                    quantity -= order1
+                    if( quantity >= minOrder ): #we are done (should never happen)
                         account.ordersQueue.append( order_c( symbol, command, quantity, leverage, 1.0 ) )
 
                     return
             # fall through
 
 
-
-        if( quantity < account.findMinimumAmountForSymbol(symbol) ):
+        minAmount = account.findMinimumAmountForSymbol(symbol)
+        print( "MINIMUM AMOUNT:", minAmount, type(minAmount))
+        if( quantity < minAmount ):
             account.print( timeNow(), " * ERROR * Order too small:", available )
             return
 
