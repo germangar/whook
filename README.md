@@ -47,7 +47,7 @@ Several orders can be included in the same alert, separated by line breaks. For 
 #### As JSON message:
 
 JSON Messages are barely supported (I don't use them). Only accepts one alert per message and direct USDT orders aren't implemented.
-Orders must come in contracts.
+Orders must come in contracts. The skeleton of the parser is there for anyone to complete it, but don't expect it to fully work.
 
 {<br>
 "symbol": "BTC/USDT",<br>
