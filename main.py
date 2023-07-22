@@ -200,6 +200,7 @@ class account_c:
             cls.print( " * WARNING: Leverage out of bounds. Readjusting to", str(maxLeverage)+"x" )
             leverage = maxLeverage
 
+        # coinex has a list of valid leverage values
         if( cls.exchange.id != 'coinex' ):
             return leverage
         
@@ -244,8 +245,8 @@ class account_c:
                 if( response.get('code') == '0' ):
                     cls.symbolStatus[ symbol ]['marginMode'] = 'isolated'
 
-                response = cls.exchange.set_leverage( 10, 'ATOM/USDT:USDT', params = {'side':'LONG'} )
-                response2 = cls.exchange.set_leverage( 10, 'ATOM/USDT:USDT', params = {'side':'SHORT'} )
+                response = cls.exchange.set_leverage( 10, symbol, params = {'side':'LONG'} )
+                response2 = cls.exchange.set_leverage( 10, symbol, params = {'side':'SHORT'} )
                 if( response.get('code') == '0' and response2.get('code') == '0' ):
                     cls.symbolStatus[ symbol ]['leverage'] = leverage
                 
@@ -257,7 +258,7 @@ class account_c:
                 # Coinex doesn't accept any number as leverage. It must be on the list.
                 leverage = cls.verifyLeverageRange( symbol, leverage )
                 
-                response = cls.exchange.set_margin_mode( 'isolated', 'ATOM/USDT:USDT', params = {'leverage':leverage} )
+                response = cls.exchange.set_margin_mode( 'isolated', symbol, params = {'leverage':leverage} )
                 if( response.get('message') == 'OK' ):
                     cls.symbolStatus[ symbol ]['marginMode'] = 'isolated'
                     cls.symbolStatus[ symbol ]['leverage'] = leverage
@@ -401,6 +402,11 @@ class account_c:
         cls.positionslist.clear()
         for element in positions:
             thisPosition = cls.exchange.parse_positions( element )[0]
+
+            #HACK!! coinx doesn't have 'contracts'. The value comes in 'contractSize' and in info:{'amount'}
+            if( cls.exchange.id == 'coinex' ):
+                thisPosition['contracts'] = thisPosition['info']['amount']
+
             symbol = thisPosition.get('symbol')
             cls.positionslist.append(position_c( symbol, thisPosition ))
 
@@ -464,7 +470,12 @@ class account_c:
 
         if v:
             for pos in cls.positionslist:
-                p = ( pos.getKey('unrealizedPnl') / pos.getKey('initialMargin') ) * 100.0
+                p = 0.0
+                unrealizedPnl = pos.getKey('unrealizedPnl')
+                initialMargin = pos.getKey('initialMargin')
+                if( unrealizedPnl != None and initialMargin != None ):
+                    p = ( unrealizedPnl / initialMargin ) * 100.0
+
                 print(pos.symbol, pos.getKey('side'), pos.getKey('contracts'), pos.getKey('collateral'), pos.getKey('unrealizedPnl'), "{:.2f}".format(p) + '%', sep=' * ')
             print('------------------------------')
 
@@ -530,7 +541,7 @@ class account_c:
             if( order.delayed() ):
                 continue
 
-            # see if the leverage in the server needs to be changed and set marginMode
+            # see if the leverage in the server needs to be changed and setup marginMode/position mode
             cls.updateSymbolLeverage( order.symbol, order.leverage )
 
             # set up exchange specific parameters
@@ -563,7 +574,7 @@ class account_c:
                     # KUCOIN: kucoinfutures Balance insufficient. The order would cost 304.7268292695.
                     # BITGET: bitget {"code":"40762","msg":"The order size is greater than the max open size","requestTime":1689179675919,"data":null}
                     # BITGET: {"code":"40754","msg":"balance not enough","requestTime":1689363604542,"data":null}
-                    # [bitget/bitget]  * ERROR Cancelling: Unhandled Exception raised: bitget {"code":"45110","msg":"less than the minimum amount 5 USDT","requestTime":1689481837614,"data":null}
+                    # [bitget/bitget] bitget {"code":"45110","msg":"less than the minimum amount 5 USDT","requestTime":1689481837614,"data":null}
                     
                     elif 'Balance insufficient' in a or '"code":"40762"' in a or '"code":"40754","msg"' in a:
                         precision = cls.findPrecisionForSymbol( order.symbol )
@@ -665,7 +676,7 @@ def parseAlert( data, isJSON, account: account_c ):
     symbol = "Invalid"
     quantity = 0
     leverage = 0
-    type = "Invalid"
+    command = "Invalid"
     isUSDT = False
     reverse = False
 
@@ -677,7 +688,7 @@ def parseAlert( data, isJSON, account: account_c ):
                 if( account.findSymbolFromPairName(value) != None ): # GMXUSDTM, GMX/USDT:USDT and GMX/USDT are all acceptable formats
                     symbol = account.findSymbolFromPairName(value) 
             elif key == 'action' or key == 'command':
-                type = value
+                command = value
             elif key == 'quantity':
                 quantity = int(value)
             elif key == 'leverage':
@@ -688,6 +699,8 @@ def parseAlert( data, isJSON, account: account_c ):
         for token in tokens:
             if( account.findSymbolFromPairName(token) != None ): # GMXUSDTM, GMX/USDT:USDT and GMX/USDT are all acceptable formats
                 symbol = account.findSymbolFromPairName(token) 
+            elif ( token == account.accountName ):
+                pass
             elif ( token[-1:]  == "$" ):
                 isUSDT = True
                 arg = token[:-1]
@@ -699,28 +712,30 @@ def parseAlert( data, isJSON, account: account_c ):
                 quantity = int(arg)
             elif ( token[:1].lower()  == "x" ):
                 arg = token[1:]
+                print( 'AAAAARG1', arg)
                 leverage = int(arg)
             elif ( token[-1:].lower()  == "x" ):
                 arg = token[:-1]
+                print( 'AAAAARG2', arg)
                 leverage = int(arg)
             elif token.lower()  == 'long' or token.lower() == "buy":
-                type = 'buy'
+                command = 'buy'
             elif token.lower()  == 'short' or token.lower() == "sell":
-                type = 'sell'
+                command = 'sell'
             elif token.lower()  == 'close':
-                type = 'close'
+                command = 'close'
             elif token.lower()  == 'position' or token.lower()  == 'pos':
-                type = 'position'
+                command = 'position'
     
 
     #let's try to validate the commands
     if( symbol == "Invalid"):
         account.print( "ERROR: Couldn't find symbol" )
         return
-    if( type == "Invalid" ):
+    if( command == "Invalid" ):
         account.print( "Invalid Order: Missing command")
         return 
-    if( quantity <= 0 and (type == 'buy' or type == 'sell') ):
+    if( quantity <= 0 and (command == 'buy' or command == 'sell') ):
         account.print( "Invalid Order: Buy/Sell must have positive amount")
         return
 
@@ -741,7 +756,7 @@ def parseAlert( data, isJSON, account: account_c ):
     #check for a existing position
     pos = account.getPositionBySymbol( symbol )
 
-    if( type == 'close' or (type == 'position' and quantity == 0) ):
+    if( command == 'close' or (command == 'position' and quantity == 0) ):
         if pos == None:
             printf( timeNow(), " * 'Close", symbol, "' No position found" )
             return
@@ -755,13 +770,13 @@ def parseAlert( data, isJSON, account: account_c ):
         return
     
     # position orders are absolute. Convert them to buy/sell order
-    if( type == 'position' ):
+    if( command == 'position' ):
         if( pos == None ):
             # it's just a straight up buy or sell
             if( quantity < 0 ):
-                type = 'sell'
+                command = 'sell'
             else:
-                type = 'buy'
+                command = 'buy'
             quantity = abs(quantity)
         else:
             #we need to account for the old position
@@ -770,7 +785,8 @@ def parseAlert( data, isJSON, account: account_c ):
             if( positionSide == 'short' ):
                 positionContracts = -positionContracts
 
-            type = 'sell' if positionContracts > quantity else 'buy'
+            print( '/////////////// positionContracts', positionContracts, type(positionContracts) )
+            command = 'sell' if positionContracts > quantity else 'buy'
             quantity = abs( quantity - positionContracts )
             if( quantity == 0 ):
                 account.print( " * Order completed: Request matched current position")
@@ -778,10 +794,10 @@ def parseAlert( data, isJSON, account: account_c ):
         # fall through
 
 
-    if( type == 'buy' or type == 'sell'):
+    if( command == 'buy' or command == 'sell'):
 
         #fetch available balance and price
-        price = account.fetchSellPrice(symbol) if( type == 'sell' ) else account.fetchBuyPrice(symbol)
+        price = account.fetchSellPrice(symbol) if( command == 'sell' ) else account.fetchBuyPrice(symbol)
         canDoContracts = account.contractsFromUSDT( symbol, available, price, leverage )
         
         if verbose : print( "CandoContracts", canDoContracts )
@@ -790,22 +806,21 @@ def parseAlert( data, isJSON, account: account_c ):
             positionContracts = pos.getKey('contracts')
             positionSide = pos.getKey( 'side' )
             
-            if ( positionSide == 'long' and type == 'sell' ) or ( positionSide == 'short' and type == 'buy' ):
+            if ( positionSide == 'long' and command == 'sell' ) or ( positionSide == 'short' and command == 'buy' ):
                 reverse = True
                 # de we need to divide these in 2 orders?
                 if( account.exchange.id == 'bitget' and available < account.findMinimumAmountForSymbol(symbol) ): #convert it to a reversal
                     print( "Quantity =", quantity, "PositionContracts=", positionContracts )
                     quantity = positionContracts
-                    #leverage = 0
 
                 if( quantity >= canDoContracts + positionContracts and not account.canFlipPosition ):
                     #first order is the contracts in the position and the contracs we can afford with the liquidity
-                    account.ordersQueue.append( order_c( symbol, type, canDoContracts + positionContracts, leverage ) )
+                    account.ordersQueue.append( order_c( symbol, command, canDoContracts + positionContracts, leverage ) )
 
                     #second order is whatever we can affort with the former position contracts + the change
                     quantity -= canDoContracts + positionContracts
                     if( quantity >= account.findMinimumAmountForSymbol(symbol) ): #we are done (should never happen)
-                        account.ordersQueue.append( order_c( symbol, type, quantity, leverage, 1.0 ) )
+                        account.ordersQueue.append( order_c( symbol, command, quantity, leverage, 1.0 ) )
 
                     return
             # fall through
@@ -816,7 +831,7 @@ def parseAlert( data, isJSON, account: account_c ):
             account.print( timeNow(), " * ERROR * Order too small:", available )
             return
 
-        account.ordersQueue.append( order_c( symbol, type, quantity, leverage, reverse = reverse ) )
+        account.ordersQueue.append( order_c( symbol, command, quantity, leverage, reverse = reverse ) )
         return
 
     account.print( timeNow(), " * WARNING: Something went wrong. No order was placed")
@@ -857,9 +872,8 @@ def Alert( data ):
                     account = a
                     break
         if( account == None ):
-            if verbose : print( timeNow(), ' * ERROR * Account ID not found.' )
-            # TMP HACK!
-            account = accounts[0]
+            printf( timeNow(), ' * ERROR * Account ID not found.' )
+            return
 
         parseAlert( line, isJSON, account )
 
