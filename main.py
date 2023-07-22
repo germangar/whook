@@ -29,12 +29,6 @@ def dateString():
 def timeNow():
     return time.strftime("%H:%M:%S")
 
-# create logger PNL
-#pnllogger = logging.getLogger('balance')
-#fh = logging.FileHandler('balance.log')
-#pnllogger.addHandler( fh )
-#pnllogger.level = logging.INFO
-
 # create logger for trades
 logger = logging.getLogger('webhook')
 fh = logging.FileHandler('webhook.log')
@@ -58,7 +52,7 @@ class position_c:
         return cls.position.get(key)
 
 class order_c:
-    def __init__(self, symbol = "", type = "", quantity = 0.0, leverage = 1, delay = 0) -> None:
+    def __init__(self, symbol = "", type = "", quantity = 0.0, leverage = 1, delay = 0, reverse = False) -> None:
         self.type = type
         self.symbol = symbol
         self.quantity = quantity
@@ -66,6 +60,7 @@ class order_c:
         self.reduced = False
         self.id = ""
         self.delay = delay
+        self.reverse = reverse
         self.timestamp = time.monotonic()
     def setType(cls, type):
         cls.type = type
@@ -91,6 +86,7 @@ class account_c:
         self.positionslist = []
         self.ordersQueue = []
         self.activeOrders = []
+        self.symbolStatus = {}
         if( exchange == None ):
             printf( " * FATAL ERROR: No exchange was resquested" )
             raise SystemExit()
@@ -115,6 +111,24 @@ class account_c:
                 })
             # self.exchange.set_sandbox_mode( True )
             #print( self.exchange.set_position_mode( False ) )
+        elif( exchange.lower() == 'bingx' ):
+            self.exchange = ccxt.bingx({
+                "apiKey": apiKey,
+                "secret": secret,
+                'password': password,
+                "options": {'defaultType': 'swap', 'adjustForTimeDifference' : True},
+                #"timeout": 60000,
+                "enableRateLimit": True
+                })
+        elif( exchange.lower() == 'coinex' ):
+            self.exchange = ccxt.coinex({
+                "apiKey": apiKey,
+                "secret": secret,
+                'password': password,
+                "options": {'defaultType': 'swap', 'adjustForTimeDifference' : True},
+                #"timeout": 60000,
+                "enableRateLimit": True
+                })
         else:
             printf( " * FATAL ERROR: Unsupported exchange:", exchange )
             raise SystemExit()
@@ -126,6 +140,49 @@ class account_c:
         self.markets = self.exchange.load_markets()
         self.balance = self.fetchBalance()
         print( self.balance )
+
+        # generate a list of the USDT symbols to keep track of marginMode and Leverage status
+        marketKeys = self.markets.keys()
+        for key in marketKeys:
+            if( key.endswith(':USDT') ):
+                self.symbolStatus[ key ] = { 'marginMode': '', 'leverage': 0 }
+
+        '''
+        if( self.exchange.id == 'bingx' ):
+            atomMarket = self.markets.get( "ATOM/USDT:USDT" )
+            print( atomMarket )
+
+            # set margin mode to 'cross' or 'isolated'
+            print( self.exchange.set_margin_mode( 'cross', 'ATOM/USDT:USDT' ) )
+            print( self.exchange.set_leverage( 10, 'ATOM/USDT:USDT', params = {'side':'LONG'} ) )
+            print( self.exchange.set_leverage( 10, 'ATOM/USDT:USDT', params = {'side':'SHORT'} ) )
+            
+        if( self.exchange.id == 'bitget' ):
+            # margin modes: 'fixed' 'crossed'
+            # in bitget they call 'fixed' to 'isolated' margin
+            print( self.exchange.set_margin_mode( 'fixed', 'ATOM/USDT:USDT' ) )
+            print( self.exchange.set_leverage( 3, 'ATOM/USDT:USDT' ) )
+
+        if( self.exchange.id == 'coinex' ):
+            # margin mode uses the names: 'isolated' and 'cross'
+            # it could also be set in the params with the key 'position_type'
+            # position_type	(Integer)	1 Isolated Margin 2 Cross Margin
+            
+            #print( self.exchange.set_margin_mode( 'isolated', 'ATOM/USDT:USDT', params = {'leverage':3, 'position_type':1} ) )
+
+            # Coinex doesn't addept any number as leverage. It must be on the list.
+            atomMarket = self.markets.get( "ATOM/USDT:USDT" )
+            validLeverages = list(map(int, atomMarket['info']['leverages']))
+            targetLeverage = 17
+            leverage = 1
+            for l in validLeverages:
+                if( l > targetLeverage ):
+                    break
+                leverage = l
+            
+            print( self.exchange.set_margin_mode( 'isolated', 'ATOM/USDT:USDT', params = {'leverage':leverage} ) )
+        '''
+
         self.refreshPositions(True)
 
     ## methods ##
@@ -134,6 +191,81 @@ class account_c:
         logger.info( dateString() +'['+ cls.accountName +'/'+ cls.exchange.id +'] '+sep.join(map(str,args)), **kwargs)
         print( '['+ cls.accountName +'/'+ cls.exchange.id +'] '+sep.join(map(str,args)), **kwargs)
 
+    def verifyLeverageRange( cls, symbol, leverage )->int:
+
+        leverage = max( leverage, 1 )
+        maxLeverage = cls.findMaxLeverageForSymbol( symbol )
+        
+        if( maxLeverage != None and maxLeverage < leverage ):
+            cls.print( " * WARNING: Leverage out of bounds. Readjusting to", str(maxLeverage)+"x" )
+            leverage = maxLeverage
+
+        if( cls.exchange.id != 'coinex' ):
+            return leverage
+        
+        market = cls.markets.get( symbol )
+        validLeverages = list(map(int, market['info']['leverages']))
+        safeLeverage = 1
+        for value in validLeverages:
+            if( value > leverage ):
+                break
+            safeLeverage = value
+        
+        return safeLeverage
+
+
+    def updateSymbolLeverage( cls, symbol, leverage ):
+        # also sets marginMode to isolated
+
+        if( leverage < 1 ): #leverage 0 indicates we are closing a position
+            return
+
+        if( cls.symbolStatus[ symbol ]['marginMode'] != 'isolated' or cls.symbolStatus[ symbol ]['leverage'] != leverage ):
+            if( cls.exchange.id == 'kucoinfutures' ):
+                #kucoinfutured is always in isolated mode and leverage is passed as a parm. Do nothing
+                cls.symbolStatus[ symbol ]['marginMode'] = 'isolated'
+                cls.symbolStatus[ symbol ]['leverage'] = leverage
+            
+            if( cls.exchange.id == 'bitget' ):
+                # bitget also requires to set position mode (hedged or one sided)
+                response = cls.exchange.set_position_mode( False, symbol )
+                # margin modes: 'fixed' 'crossed'
+                # in bitget they call 'fixed' to 'isolated' margin
+                response = cls.exchange.set_margin_mode( 'fixed', symbol )
+                if( response.get('marginMode' == 'fixed') ):
+                    cls.symbolStatus[ symbol ]['marginMode'] = 'isolated'
+                response = cls.exchange.set_leverage( leverage, symbol )
+                if( response.get('code') == '0' ):
+                    cls.symbolStatus[ symbol ]['leverage'] = leverage
+
+            if( cls.exchange.id == 'bingx' ):
+                # set margin mode to 'cross' or 'isolated'
+                response = cls.exchange.set_margin_mode( 'isolated', symbol )
+                if( response.get('code') == '0' ):
+                    cls.symbolStatus[ symbol ]['marginMode'] = 'isolated'
+
+                response = cls.exchange.set_leverage( 10, 'ATOM/USDT:USDT', params = {'side':'LONG'} )
+                response2 = cls.exchange.set_leverage( 10, 'ATOM/USDT:USDT', params = {'side':'SHORT'} )
+                if( response.get('code') == '0' and response2.get('code') == '0' ):
+                    cls.symbolStatus[ symbol ]['leverage'] = leverage
+                
+            if( cls.exchange.id == 'coinex' ):
+                # margin mode uses the names: 'isolated' and 'cross'
+                # it could also be set in the params with the key 'position_type'
+                # position_type	(Integer)	1 Isolated Margin 2 Cross Margin
+
+                # Coinex doesn't accept any number as leverage. It must be on the list.
+                leverage = cls.verifyLeverageRange( symbol, leverage )
+                
+                response = cls.exchange.set_margin_mode( 'isolated', 'ATOM/USDT:USDT', params = {'leverage':leverage} )
+                if( response.get('message') == 'OK' ):
+                    cls.symbolStatus[ symbol ]['marginMode'] = 'isolated'
+                    cls.symbolStatus[ symbol ]['leverage'] = leverage
+
+            if( cls.symbolStatus[ symbol ]['marginMode'] == 'isolated' and cls.symbolStatus[ symbol ]['leverage'] == leverage ):
+                cls.print( "* Leverage updated: x" + str(cls.symbolStatus[ symbol ]['leverage']) + " Margin Mode:", cls.symbolStatus[ symbol ]['marginMode'] )
+
+
     def fetchBalance(cls):
         response = cls.exchange.fetch_balance()
         if( cls.exchange.id == "bitget" ):
@@ -141,9 +273,9 @@ class account_c:
             # so we reconstruct it from the embedded exchange info
             data = response['info'][0]
             balance = {}
-            balance['total'] = data.get('usdtEquity')
-            balance['free'] = data.get('crossMaxAvailable')
-            balance['used'] = data.get('available')
+            balance['free'] = float( data.get('crossMaxAvailable') )
+            balance['used'] = float( data.get('available') )
+            balance['total'] = float( data.get('usdtEquity') )
         else:
             balance = response.get('USDT')
         
@@ -235,7 +367,7 @@ class account_c:
             bounds = m['limits']['leverage']
             maxLeverage = bounds['max']
             return maxLeverage
-        return None
+        return 1
     
     def contractsFromUSDT(cls, symbol, amount, price, leverage = 1.0 )->float :
         contractSize = cls.findContractSizeForSymbol( symbol )
@@ -255,6 +387,8 @@ class account_c:
                     print( timeNow(), cls.exchange.id, '* Refreshpositions:Exception raised: 502 Bad Gateway' )
                 elif 'Internal Server Error' in a:
                     print( timeNow(), cls.exchange.id, '* Refreshpositions:Exception raised: 500 Internal Server Error' )
+                elif a == "OK": #Coinex
+                    if v : print('Refreshing positions '+cls.accountName+': 0 positions found' )
                 else:
                     print( timeNow(), cls.exchange.id, '* Refreshpositions:Unknown Exception raised:', a )
             return
@@ -267,16 +401,72 @@ class account_c:
         cls.positionslist.clear()
         for element in positions:
             thisPosition = cls.exchange.parse_positions( element )[0]
-            #symbol = thisPosition['symbol']
             symbol = thisPosition.get('symbol')
             cls.positionslist.append(position_c( symbol, thisPosition ))
+
+            # if the position contains the marginMode information also update the local data
+            if( thisPosition.get('marginMode') != None ) :
+                cls.symbolStatus[ symbol ][ 'marginMode' ] = thisPosition.get('marginMode')
+
+            #try also to refresh the leverage from the exchange (not supported by all exchanges)
+            if( cls.exchange.has.get('fetchLeverage') == True ):
+                response = cls.exchange.fetch_leverage( symbol )
+                
+                #response from bitget
+                '''
+                {'code': '00000', 
+                'msg': 'success', 
+                'requestTime': '1689982439816', 
+                'data': 
+                    {
+                        'marginCoin': 'USDT', 
+                        'locked': '0', 
+                        'available': '116.92474171', 
+                        'crossMaxAvailable': '0', 
+                        'fixedMaxAvailable': '0', 
+                        'maxTransferOut': '0', 
+                        'equity': '87.58689171', 
+                        'usdtEquity': '87.586891713849', 
+                        'btcEquity': '0.002929363596', 
+                        'crossRiskRate': '0.036911106865', 
+                        'crossMarginLeverage': '6', 
+                        'fixedLongLeverage': '3', 
+                        'fixedShortLeverage': '3', 
+                        'marginMode': 'fixed', 
+                        'holdMode': 'single_hold', 
+                        'unrealizedPL': '-29.337850001837', 
+                        'bonus': '0'
+                    }
+                }
+                '''
+                if( cls.exchange.id == 'bitget' ):
+                    # they should always be the same
+                    longLeverage = response['data'].get('fixedLongLeverage')
+                    shortLeverage = response['data'].get('fixedShortLeverage')
+                    if( longLeverage == shortLeverage ):
+                        cls.symbolStatus[ symbol ][ 'leverage' ] = longLeverage
+                
+                #response from bingx
+                '''
+                {
+                    'code': '0', 
+                    'msg': '', 
+                    'data': {'longLeverage': '10', 'shortLeverage': '10'}
+                }
+                '''
+                if( cls.exchange.id == 'bingx' ):
+                    # they should always be the same
+                    longLeverage = response['data'].get('longLeverage')
+                    shortLeverage = response['data'].get('shortLeverage')
+                    if( longLeverage == shortLeverage ):
+                        cls.symbolStatus[ symbol ][ 'leverage' ] = longLeverage
+                
 
         if v:
             for pos in cls.positionslist:
                 p = ( pos.getKey('unrealizedPnl') / pos.getKey('initialMargin') ) * 100.0
                 print(pos.symbol, pos.getKey('side'), pos.getKey('contracts'), pos.getKey('collateral'), pos.getKey('unrealizedPnl'), "{:.2f}".format(p) + '%', sep=' * ')
-        
-        if v : print('------------------------------')
+            print('------------------------------')
 
     def activeOrderForSymbol(cls, symbol ):
         for o in cls.activeOrders:
@@ -340,6 +530,10 @@ class account_c:
             if( order.delayed() ):
                 continue
 
+            # see if the leverage in the server needs to be changed and set marginMode
+            cls.updateSymbolLeverage( order.symbol, order.leverage )
+
+            # set up exchange specific parameters
             params = {}
 
             if( cls.exchange.id == 'kucoinfutures' ):
@@ -347,16 +541,13 @@ class account_c:
 
             if( cls.exchange.id == 'bitget' ):
                 try: #disable hedged mode
-                    response = cls.exchange.set_position_mode( False, order.symbol )
+                    #response = cls.exchange.set_position_mode( False, order.symbol )
                     params['side'] = 'buy_single' if( order.type == "buy" ) else 'sell_single'
                 except Exception as e:
                     cls.print( timeNow(), " * Exception Raised. Failed to set position mode:", e )
 
-                if( order.leverage > 0 ): # it's 0 when closing a position
-                    try: #set leverage
-                        response = cls.exchange.set_leverage( order.leverage, order.symbol )
-                    except Exception as e:
-                        cls.print( timeNow(), " * Exception Raised. Failed to set leverage:", e )
+                if( order.reverse ): #"reverse":true
+                    params['reverse'] = True
 
             # send the actual order
             try:
@@ -371,8 +562,10 @@ class account_c:
                     #
                     # KUCOIN: kucoinfutures Balance insufficient. The order would cost 304.7268292695.
                     # BITGET: bitget {"code":"40762","msg":"The order size is greater than the max open size","requestTime":1689179675919,"data":null}
-                    #
-                    elif 'Balance insufficient' in a or '"code":"40762"' in a:
+                    # BITGET: {"code":"40754","msg":"balance not enough","requestTime":1689363604542,"data":null}
+                    # [bitget/bitget]  * ERROR Cancelling: Unhandled Exception raised: bitget {"code":"45110","msg":"less than the minimum amount 5 USDT","requestTime":1689481837614,"data":null}
+                    
+                    elif 'Balance insufficient' in a or '"code":"40762"' in a or '"code":"40754","msg"' in a:
                         precision = cls.findPrecisionForSymbol( order.symbol )
                         # try first reducing it to our estimation of current balance
                         if( not order.reduced ):
@@ -474,6 +667,7 @@ def parseAlert( data, isJSON, account: account_c ):
     leverage = 0
     type = "Invalid"
     isUSDT = False
+    reverse = False
 
     # FIXME: json commands are pretty incomplete because I don't use them
     if( isJSON ):
@@ -532,11 +726,7 @@ def parseAlert( data, isJSON, account: account_c ):
 
     #time to put the order on the queue
 
-    maxLeverage = account.findMaxLeverageForSymbol( symbol )
-    leverage = max( leverage, 1 )
-    if( maxLeverage != None and maxLeverage < leverage ):
-        account.print( " * WARNING: Leverage out of bounds. Readjusting to", str(maxLeverage)+"x" )
-        leverage = maxLeverage
+    leverage = account.verifyLeverageRange( symbol, leverage )
 
     available = account.fetchAvailableBalance() * 0.985
     
@@ -601,7 +791,13 @@ def parseAlert( data, isJSON, account: account_c ):
             positionSide = pos.getKey( 'side' )
             
             if ( positionSide == 'long' and type == 'sell' ) or ( positionSide == 'short' and type == 'buy' ):
+                reverse = True
                 # de we need to divide these in 2 orders?
+                if( account.exchange.id == 'bitget' and available < account.findMinimumAmountForSymbol(symbol) ): #convert it to a reversal
+                    print( "Quantity =", quantity, "PositionContracts=", positionContracts )
+                    quantity = positionContracts
+                    #leverage = 0
+
                 if( quantity >= canDoContracts + positionContracts and not account.canFlipPosition ):
                     #first order is the contracts in the position and the contracs we can afford with the liquidity
                     account.ordersQueue.append( order_c( symbol, type, canDoContracts + positionContracts, leverage ) )
@@ -610,24 +806,7 @@ def parseAlert( data, isJSON, account: account_c ):
                     quantity -= canDoContracts + positionContracts
                     if( quantity >= account.findMinimumAmountForSymbol(symbol) ): #we are done (should never happen)
                         account.ordersQueue.append( order_c( symbol, type, quantity, leverage, 1.0 ) )
-                    
-                    # spent = contractsToUSDT( canDoContracts, contractSize, price, leverage )
-                    # returned = contractsToUSDT( positionContracts, contractSize, price, leverage )
-                    # #available = available - spent + returned
-                    # available -= spent * 1.02
-                    # available += returned * 0.97
-                    # #so, how many countracs can we do with this
-                    # canDoContracts = contractsFromUSDT( available, contractSize, precision, price, leverage )
 
-                    # if( canDoContracts < 1 ):
-                    #     printf( timeNow(), " * WARNING * Insuficient balance for the second order. Skipping." )
-                    #     return
-                    
-                    # if( quantity > canDoContracts ):
-                    #     printf( timeNow(), " * WARNING * Insuficient balance. Reducing by", quantity - canDoContracts, "contracts" )
-                    #     quantity = canDoContracts
-
-                    # account.ordersQueue.append( order_c( symbol, type, quantity, leverage, 1.0 ) )
                     return
             # fall through
 
@@ -637,11 +816,7 @@ def parseAlert( data, isJSON, account: account_c ):
             account.print( timeNow(), " * ERROR * Order too small:", available )
             return
 
-        # if( quantity > canDoContracts ):
-        #     printf( timeNow(), " * WARNING * Insuficient balance. Reducing to", canDoContracts)
-        #     quantity = canDoContracts
-        
-        account.ordersQueue.append( order_c( symbol, type, quantity, leverage ) )
+        account.ordersQueue.append( order_c( symbol, type, quantity, leverage, reverse = reverse ) )
         return
 
     account.print( timeNow(), " * WARNING: Something went wrong. No order was placed")
