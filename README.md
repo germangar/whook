@@ -1,6 +1,6 @@
 # whook
 
-WHOOK is a web hook for handling Tradingview Alerts to Kucoin. Other exchanges may be added in the future.
+WHOOK is a web hook for handling Tradingview Alerts to Kucoin and Bitget. Other exchanges may be added in the future.
 
 Whook prioritizes realiability over speed. If you're looking for high frequency trading, this is not for you.
 It will do everything it can to fullfill orders, including reducing the quantity or the order when the balance is not enough.
@@ -32,11 +32,17 @@ close - closes the position (position 0 also does it).<br>
 [value]x or x[value] - defines the leverage.<br>
 
 Examples:<br>
-kucoin000 ETH/USDT buy 300$ x3<br>
-ETH/USDT pos 300 x3 kucoin000<br>
-kucoin000 ETH/USD close<br>
+- Buy command using USDT:<br>
+[account_id] [symbol] [command] [value in USDT] [leverage] - **kucoin000 ETH/USDT buy 300$ x3**<br>
 
-Several orders can be included in the same alert, separated by line breaks. For example, you can send the orders for 2 different accounts in the same alert.
+- Position command using contracts:<br>
+[symbol] [command] [value in contracts] [leverage] [account_id] - **ETH/USDT position -300 x3 kucoin000**<br>
+Notice: This is a short position. For a long position use a positive value. Same goes when the value is in USDT<br>
+
+- Close position<br>
+[account_id] [symbol] [command] - **kucoin000 ETH/USD close**<br>
+
+Several orders can be included in the same alert, separated by line breaks. For example, you can send the orders for 2 different accounts inside the same alert.
 
 #### As JSON message:
 
@@ -72,11 +78,13 @@ When you first launch the script it will generate a json file. This file is a te
 
 You have to fill your API key and SECRET key information in the accounts.json file.<br>
 The ACCOUNT_ID field is the name you give to the account. It's to be included in the alert message to identify the account.<br>
-The EXCHANGE field is self explanatory. Valid exchange names are: "kucoinfutures" and "bitget".<br>
+The EXCHANGE field is self explanatory. Valid exchange names are: "**kucoinfutures**" and "**bitget**".<br>
 The password field is required by Kucoin and Bitget but other exchanges may or may not use it.<br>
 
 
 ###  HOW TO SET UP ###
+
+If you want to go for a quick effortless test I recommend to copy/paste the script into a free account at 'https://replit.com'. It installs all modules for you so you don't have to do anything. Do **not** use it to host an actual server. It goes idle as soon as you close the browser, and anyone can see your API keys.
 
 If you have experience with python: It requires to pip install ccxt and flask.
 
