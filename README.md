@@ -5,11 +5,15 @@ WHOOK is a web hook for handling Tradingview Alerts to Kucoin and Bitget. Other 
 Whook prioritizes realiability over speed. If you're looking for high frequency trading, this is not for you.
 It will do everything it can to fullfill orders, including reducing the quantity or the order when the balance is not enough.
 
-Currently supported exchanges:
-- Kucoin futures
-- Bitget futures (no hedge mode)
 
 ##### Disclaimer: This project is for my personal use. I'm not taking feature requests.
+
+Currently supported exchanges:
+- Kucoin futures
+- Bitget futures
+- Coinex futures
+
+Hedge mode is not supported. I'm only using one side mode.
 
 
 ### ALERT SYNTAX ###
@@ -47,7 +51,7 @@ Several orders can be included in the same alert, separated by line breaks. For 
 #### As JSON message:
 
 JSON Messages are barely supported (I don't use them). Only accepts one alert per message and direct USDT orders aren't implemented.
-Orders must come in contracts. The skeleton of the parser is there for anyone to complete it, but don't expect it to fully work.
+Orders must come in contracts. The skeleton of the parser is there for anyone to complete it, but don't expect it to fully work as is.
 
 {<br>
 "symbol": "BTC/USDT",<br>
@@ -78,8 +82,8 @@ When you first launch the script it will generate a json file. This file is a te
 
 You have to fill your API key and SECRET key information in the accounts.json file.<br>
 The ACCOUNT_ID field is the name you give to the account. It's to be included in the alert message to identify the account.<br>
-The EXCHANGE field is self explanatory. Valid exchange names are: "**kucoinfutures**" and "**bitget**".<br>
-The password field is required by Kucoin and Bitget but other exchanges may or may not use it.<br>
+The EXCHANGE field is self explanatory. Valid exchange names are: "**kucoinfutures**", "**bitget**", "**bingx**", "**coinex**" and "**mexc**".<br>
+The password field is required by Kucoin and Bitget but other exchanges may or may not use it. If your exchange doesn't give you a password when creating the API key just leave the field blank.<br>
 
 
 ###  HOW TO SET UP ###
@@ -118,7 +122,13 @@ I simply hosted it in a Windows_server 2022 edition. Basic steps are pretty much
 - Download and install python following the same steps.
 - pip install ccxt and flask from the windows cmd terminal (if you have troubles with this see the last line of this readme)
 - Download and execute ngrok the same way
-- You can launch the script by creating a .bat file in the same directory as main.py like this:<br><br>
+- You can launch the script by double clicking main.py or by creating a .bat file in the same directory as main.py like this:<br><br>
+
+
+### KNOWN BUGS ### 
+- BingX contracSize and precision seem to be either wrong or work in a different scale than the rest of exchanges. The USDT to contracts conversion is returning wrong values. BingX support is uncomplete and I don't think I'll complete it.
+- Mexc has been in maintainance mode since 2022, and, while it connects and sets up fine, orders are denied. I think Mexc would be supported if the orders went thought, but I don't know if they will ever enable them again.
+
 @echo off<br>
 python.exe main.py<br>
 pause<br>
