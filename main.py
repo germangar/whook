@@ -130,6 +130,15 @@ class account_c:
                 "enableRateLimit": True
                 })
             self.canFlipPosition = False
+        elif( exchange.lower() == 'mexc' ):
+            self.exchange = ccxt.mexc({
+                "apiKey": apiKey,
+                "secret": secret,
+                'password': password,
+                "options": {'defaultType': 'swap', 'adjustForTimeDifference' : True},
+                #"timeout": 60000,
+                "enableRateLimit": True
+                })
         else:
             printf( " * FATAL ERROR: Unsupported exchange:", exchange )
             raise SystemExit()
@@ -147,8 +156,18 @@ class account_c:
         for key in marketKeys:
             if( key.endswith(':USDT') ):
                 self.symbolStatus[ key ] = { 'marginMode': '', 'leverage': 0 }
-
         '''
+        if( self.exchange.id == 'mexc' ):
+            print( self.exchange.has.get('fetchPositionMode') )
+            print( self.exchange.fetch_position_mode("ATOM/USDT:USDT") )
+            # (params, 'openType')  # 1 or 2 -  1: isolated position, 2: full position
+            # (params, 'positionType')  # 1 or 2 - 1: Long 2: short
+            print( self.exchange.has.get('setLeverage') )
+            print( self.exchange.set_leverage( 4, "ATOM/USDT:USDT", params = { 'openType': 1, 'positionType': 1} ) )
+            print( self.exchange.set_leverage( 4, "ATOM/USDT:USDT", params = { 'openType': 1, 'positionType': 2} ) )
+            print( self.exchange.has.get('setPositionMode') )
+            print( self.exchange.set_position_mode( False, "ATOM/USDT:USDT" ) )
+        
         if( self.exchange.id == 'bingx' ):
             atomMarket = self.markets.get( "ATOM/USDT:USDT" )
             print( atomMarket )
@@ -264,6 +283,13 @@ class account_c:
                     cls.symbolStatus[ symbol ]['marginMode'] = 'isolated'
                     cls.symbolStatus[ symbol ]['leverage'] = leverage
 
+            if( cls.exchange.id == 'mexc' ):
+                cls.exchange.set_position_mode( False, symbol )
+                cls.exchange.set_leverage( leverage, symbol, params = {'openType': 1, 'positionType': 1} )
+                cls.exchange.set_leverage( leverage, symbol, params = {'openType': 1, 'positionType': 2} )
+                cls.symbolStatus[ symbol ]['marginMode'] = 'isolated'
+                cls.symbolStatus[ symbol ]['leverage'] = leverage
+
             if( cls.symbolStatus[ symbol ]['marginMode'] == 'isolated' and cls.symbolStatus[ symbol ]['leverage'] == leverage ):
                 cls.print( "* Leverage updated: Margin Mode:", cls.symbolStatus[ symbol ]['marginMode'] + " Leverage: " + str(cls.symbolStatus[ symbol ]['leverage']) + "x" )
 
@@ -360,74 +386,6 @@ class account_c:
                 return p.get('amount')
         return 1.0
     
-        '''
-        {
-            'id': 'ATOM-USDT', 
-            'symbol': 'ATOM/USDT:USDT', 
-            'base': 'ATOM', 
-            'quote': 'USDT', 
-            'baseId': 'ATOM', 
-            'quoteId': 'USDT', 
-            'active': True, 
-            'type': 'swap', 
-            'linear': True, 
-            'inverse': False, 
-            'spot': False, 
-            'swap': True, 
-            'future': False, 
-            'option': False, 
-            'margin': False, 
-            'contract': True, 
-            'contractSize': 0.01, 
-            'expiry': None, 
-            'expiryDatetime': None, 
-            'optionType': None, 
-            'strike': None, 
-            'settle': 'USDT', 
-            'settleId': 'USDT', 
-            'precision': {
-                    'amount': 2, 
-                    'price': 3, 
-                    'base': None, 
-                    'quote': None
-            }, 
-            'limits': {
-                'amount': {
-                    'min': None,
-                    'max': None
-                }, 
-                'price': {
-                    'min': None, 
-                    'max': None
-                }, 
-                'cost': {
-                    'min': None, 
-                    'max': None
-                }, 
-                'leverage': {
-                    'min': None, 
-                    'max': 5
-                }
-            }, 
-            'info': {
-                'contractId': '100030', 
-                'symbol': 'ATOM-USDT', 
-                'size': '0.01', 
-                'quantityPrecision': '2', 
-                'pricePrecision': '3', 
-                'feeRate': '0.0005', 
-                'tradeMinLimit': '1', 
-                'maxLongLeverage': '5', 
-                'maxShortLeverage': '5', 
-                'currency': 'USDT', 
-                'asset': 'ATOM', 
-                'status': '1'
-            }, 
-            'percentage': True, 
-            'taker': None, 
-            'maker': None
-        }'''
-    
     def findMinimumAmountForSymbol(cls, symbol)->float:
         if( cls.exchange.id == 'bingx' ): #exceptions and more exceptions. Nothing is consistent
             return cls.findPrecisionForSymbol( symbol )
@@ -468,8 +426,11 @@ class account_c:
                     print( timeNow(), cls.exchange.id, '* Refreshpositions:Exception raised: 502 Bad Gateway' )
                 elif 'Internal Server Error' in a:
                     print( timeNow(), cls.exchange.id, '* Refreshpositions:Exception raised: 500 Internal Server Error' )
+                #mexc GET https://contract.mexc.com/api/v1/private/position/open_positions
+                elif 'mexc GET' in a:
+                    print( timeNow(), cls.exchange.id, "* Refreshpositions:Exception raised: couldn't reach mexc GET" )
                 elif a == "OK": #Coinex
-                    if v : print('Refreshing positions '+cls.accountName+': 0 positions found' )
+                    if v : print('Refreshing positions '+cls.accountName+': 0 positions found\n------------------------------' )
                 else:
                     print( timeNow(), cls.exchange.id, '* Refreshpositions:Unknown Exception raised:', a )
             return
@@ -640,6 +601,17 @@ class account_c:
                 if( order.reverse ): #"reverse":true
                     params['reverse'] = True
 
+            if( cls.exchange.id == 'mexc' ):
+                # We could set these up in 'updateSymbolLeverage' but since it can
+                # take them it's one less comunication we need to perform
+                # openType: 1:isolated, 2:cross - positionMode: 1:hedge, 2:one-way, (no parameter): the user's current config
+                params['openType'] = 1
+                params['positionMode'] = 2
+                params['marginMode'] = 'isolated'
+                params['leverage'] = max( order.leverage, 1 )
+                # side	int	order direction 1: open long, 2: close short,3: open short 4: close long
+                #params['side'] = 1 if( order.type == "buy" ) else 3
+
             # send the actual order
             try:
                 response = cls.exchange.create_market_order( order.symbol, order.type, order.quantity, None, params )
@@ -655,8 +627,9 @@ class account_c:
                     # BITGET: bitget {"code":"40762","msg":"The order size is greater than the max open size","requestTime":1689179675919,"data":null}
                     # BITGET: {"code":"40754","msg":"balance not enough","requestTime":1689363604542,"data":null}
                     # [bitget/bitget] bitget {"code":"45110","msg":"less than the minimum amount 5 USDT","requestTime":1689481837614,"data":null}
+                    # bingx {"code":101204,"msg":"Insufficient margin","data":{}}
                     
-                    elif 'Balance insufficient' in a or '"code":"40762"' in a or '"code":"40754","msg"' in a:
+                    elif 'Balance insufficient' in a or 'balance not enough' in a or '"code":"40762"' in a or '"code":"40754" ' in a or '"code":101204' in a:
                         precision = cls.findPrecisionForSymbol( order.symbol )
                         # try first reducing it to our estimation of current balance
                         if( not order.reduced ):
@@ -665,7 +638,7 @@ class account_c:
                             order.quantity = cls.contractsFromUSDT( order.symbol, available, price, order.leverage )
                             order.reduced = True
                             if( order.quantity < cls.findMinimumAmountForSymbol(order.symbol) ):
-                                cls.print( ' * Exception raised: Balance insufficient (', available,'): Cero contracts possible. Cancelling')
+                                cls.print( ' * Exception raised: Balance insufficient: Minimum contracts required:', cls.findMinimumAmountForSymbol(order.symbol), ' Cancelling')
                                 cls.ordersQueue.remove( order )
                             else:
                                 printf( ' * Exception raised: Balance insufficient: Reducing to', order.quantity, "contracts")
@@ -792,11 +765,9 @@ def parseAlert( data, isJSON, account: account_c ):
                 quantity = int(arg)
             elif ( token[:1].lower()  == "x" ):
                 arg = token[1:]
-                print( 'AAAAARG1', arg)
                 leverage = int(arg)
             elif ( token[-1:].lower()  == "x" ):
                 arg = token[:-1]
-                print( 'AAAAARG2', arg)
                 leverage = int(arg)
             elif token.lower()  == 'long' or token.lower() == "buy":
                 command = 'buy'
@@ -822,7 +793,6 @@ def parseAlert( data, isJSON, account: account_c ):
     #time to put the order on the queue
 
     leverage = account.verifyLeverageRange( symbol, leverage )
-
     available = account.fetchAvailableBalance() * 0.985
     
     # convert quantity to concracts if needed
@@ -865,7 +835,6 @@ def parseAlert( data, isJSON, account: account_c ):
             if( positionSide == 'short' ):
                 positionContracts = -positionContracts
 
-            
             command = 'sell' if positionContracts > quantity else 'buy'
             quantity = abs( quantity - positionContracts )
             if( quantity == 0 ):
@@ -879,8 +848,7 @@ def parseAlert( data, isJSON, account: account_c ):
         #fetch available balance and price
         price = account.fetchSellPrice(symbol) if( command == 'sell' ) else account.fetchBuyPrice(symbol)
         canDoContracts = account.contractsFromUSDT( symbol, available, price, leverage )
-        
-        if verbose : print( "CandoContracts", canDoContracts )
+        minOrder = account.findMinimumAmountForSymbol(symbol)
 
         if( pos != None ):
             positionContracts = pos.getKey('contracts')
@@ -889,13 +857,12 @@ def parseAlert( data, isJSON, account: account_c ):
             if ( positionSide == 'long' and command == 'sell' ) or ( positionSide == 'short' and command == 'buy' ):
                 reverse = True
                 # de we need to divide these in 2 orders?
-                if( account.exchange.id == 'bitget' and available < account.findMinimumAmountForSymbol(symbol) ): #convert it to a reversal
+                if( account.exchange.id == 'bitget' and canDoContracts < account.findMinimumAmountForSymbol(symbol) ): #convert it to a reversal
                     print( "Quantity =", quantity, "PositionContracts=", positionContracts )
                     quantity = positionContracts
 
                 if( quantity >= canDoContracts + positionContracts and not account.canFlipPosition ):
                     # we have to make sure each of the orders has the minimum order contracts
-                    minOrder = account.findMinimumAmountForSymbol(symbol)
                     order1 = canDoContracts + positionContracts
                     order2 = quantity - (canDoContracts + positionContracts)
                     if( order2 < minOrder ):
@@ -914,11 +881,8 @@ def parseAlert( data, isJSON, account: account_c ):
                     return
             # fall through
 
-
-        minAmount = account.findMinimumAmountForSymbol(symbol)
-        print( "MINIMUM AMOUNT:", minAmount, type(minAmount))
-        if( quantity < minAmount ):
-            account.print( timeNow(), " * ERROR * Order too small:", available )
+        if( quantity < minOrder ):
+            account.print( timeNow(), " * ERROR * Order too small:", quantity, "Minimum required:", minOrder )
             return
 
         account.ordersQueue.append( order_c( symbol, command, quantity, leverage, reverse = reverse ) )
