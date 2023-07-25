@@ -140,7 +140,7 @@ If you have troubles with the cmd prompt or the bat file you can also install Vi
 
 
 ### KNOWN BUGS ### 
-- BingX contracSize and precision seem to be either wrong or work in a different scale than the rest of exchanges. The USDT to contracts conversion is returning wrong values. BingX support is uncomplete and I don't think I'll complete it.
+- BingX contracSize and precision seem to be either wrong or work in a different scale than the rest of exchanges. The USDT to contracts conversion is returning wrong values. BingX support is uncomplete and I don't think I'll complete it. But I won't remove it either since most of it is implemented.
 - Mexc has been in maintainance mode since 2022, and, while it connects and sets up fine, orders are denied. I think Mexc would be supported if the orders went thought, but I don't know if they will ever enable them again.
 
 
