@@ -797,7 +797,7 @@ def parseAlert( data, isJSON, account: account_c ):
     
     # convert quantity to concracts if needed
     if( isUSDT and quantity != 0.0 ) :
-        print( "CONVERTING", quantity, "$ - Leverage", leverage, end = '' )
+        print( "CONVERTING (x"+str(leverage)+")", quantity, "$ ==>", end = '' )
         #We don't know for sure yet if it's a buy or a sell, so we average
         quantity = account.contractsFromUSDT( symbol, quantity, account.fetchAveragePrice(symbol), leverage )
         print( ":", quantity, "contracts" )
