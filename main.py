@@ -638,7 +638,7 @@ class account_c:
         for o in response:
             if o.get('id') == id :
                 return o
-        print( " * fetchPhemexOrderById: Didn't find the [closed] order" )
+        if verbose : print( " * fetchPhemexOrderById: Didn't find the [closed] order" )
         return None
 
     
