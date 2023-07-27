@@ -82,7 +82,7 @@ class account_c:
             raise SystemExit()
         
         self.accountName = name
-        self.canFlipPosition = True
+        self.canFlipPosition = False
         self.positionslist = []
         self.ordersQueue = []
         self.activeOrders = []
@@ -99,7 +99,6 @@ class account_c:
                 #'enableRateLimit': True
                 } )
                 #self.exchange.rateLimit = 333
-            self.canFlipPosition = False
         elif( exchange.lower() == 'bitget' ):
             self.exchange = ccxt.bitget({
                 "apiKey": apiKey,
@@ -109,6 +108,7 @@ class account_c:
                 #"timeout": 60000,
                 "enableRateLimit": True
                 })
+            self.canFlipPosition = True
             # self.exchange.set_sandbox_mode( True )
             #print( self.exchange.set_position_mode( False ) )
         elif( exchange.lower() == 'bingx' ):
@@ -139,6 +139,25 @@ class account_c:
                 #"timeout": 60000,
                 "enableRateLimit": True
                 })
+        elif( exchange.lower() == 'phemex' ):
+            self.exchange = ccxt.phemex({
+                "apiKey": apiKey,
+                "secret": secret,
+                'password': password,
+                "options": {'defaultType': 'swap', 'adjustForTimeDifference' : True},
+                #"timeout": 60000,
+                "enableRateLimit": True
+                })
+        elif( exchange.lower() == 'phemexdemo' ):
+            self.exchange = ccxt.phemex({
+                "apiKey": apiKey,
+                "secret": secret,
+                'password': password,
+                "options": {'defaultType': 'swap', 'adjustForTimeDifference' : True},
+                #"timeout": 60000,
+                "enableRateLimit": True
+                })
+            self.exchange.set_sandbox_mode( True )
         else:
             printf( " * FATAL ERROR: Unsupported exchange:", exchange )
             raise SystemExit()
@@ -147,16 +166,72 @@ class account_c:
             printf( " * FATAL ERROR: Exchange creation failed" )
             raise SystemExit()
         
-        self.markets = self.exchange.load_markets()
+        # Some exchanges don't have all fields properly filled, but we can find out
+        # the values in another field. Instead of adding exceptions at each other function
+        # let's reconstruct the markets dictionary trying to fix those values
+        self.markets = {}
+        markets = self.exchange.load_markets()
+        marketKeys = markets.keys()
+        for key in marketKeys:
+            if( not key.endswith(':USDT') ):  # skip not USDT pairs. All the code is based on USDT
+                continue
+
+            thisMarket = markets[key]
+            if( thisMarket.get('settle') != 'USDT' ): # double check
+                continue
+
+            if( thisMarket.get('contractSize') == None ):
+                # in Phemex we can extract the contractSize from the description.
+                # it's always going to be 1, but let's handle it in case they change it
+                if( self.exchange.id == 'phemex' ):
+                    description = thisMarket['info'].get('description')
+                    s = description[ description.find('Each contract is worth') + len('Each contract is worth ') : ]
+                    list = s.split( ' ', 1 )
+                    thisMarket['contractSize'] = float( list[0] )
+                    #print( "MARKET FIX ContractSize", thisMarket['contractSize'], type(thisMarket.get('contractSize')) )
+                else:
+                    print( "WARNING: Market", self.exchange.id, "doesn't have contractSize" )
+
+            # make sure the market has a precision value
+            try:
+                precision = thisMarket['precision'].get('amount')
+            except Exception as e:
+                print( " * FATAL ERROR: Market", self.exchange.id, "doesn't have precision value" )
+                SystemError()
+
+            # some exchanges don't have a minimum purchase amount defined
+            try:
+                minAmount = thisMarket['limits']['amount'].get('min')
+            except Exception as e:
+                minAmount = None
+                l = thisMarket.get('limits')
+                if( l != None ):
+                    a = l.get('amount')
+                    if( a != None ):
+                        minAmount = a.get('min')
+
+            if( minAmount == None ): # replace minimum amount with precision value
+                thisMarket['limits']['amount']['min'] = float(precision)
+                #print( "MARKET FIX minimum AMOUT", thisMarket['limits']['amount']['min'], type(thisMarket['limits']['amount']['min']) )
+
+            # Store the market into the local markets dictionary
+            self.markets[key] = thisMarket
+
+            # also generate an empty list of the USDT symbols to keep track of marginMode and Leverage status
+            self.symbolStatus[key] = { 'marginMode': '', 'leverage': 0 }
+
+
+
         self.balance = self.fetchBalance()
         print( self.balance )
-
-        # generate a list of the USDT symbols to keep track of marginMode and Leverage status
-        marketKeys = self.markets.keys()
-        for key in marketKeys:
-            if( key.endswith(':USDT') ):
-                self.symbolStatus[ key ] = { 'marginMode': '', 'leverage': 0 }
+            
         '''
+        if( self.exchange.id == 'phemex' ):
+            print( 'has setPositionMode', self.exchange.has.get('setPositionMode') )
+            print( 'setPositionMode', self.exchange.set_position_mode( False, "ATOM/USDT:USDT" ) )
+            print( 'has setLeverage', self.exchange.has.get('setLeverage') )
+            print( 'setLeverage', self.exchange.set_leverage( 13, "ATOM/USDT:USDT" ) )
+
         if( self.exchange.id == 'mexc' ):
             print( self.exchange.has.get('fetchPositionMode') )
             print( self.exchange.fetch_position_mode("ATOM/USDT:USDT") )
@@ -224,8 +299,8 @@ class account_c:
         if( cls.exchange.id != 'coinex' ):
             return leverage
         
-        market = cls.markets.get( symbol )
-        validLeverages = list(map(int, market['info']['leverages']))
+        thisMarket = cls.markets.get( symbol )
+        validLeverages = list(map(int, thisMarket['info']['leverages']))
         safeLeverage = 1
         for value in validLeverages:
             if( value > leverage ):
@@ -290,12 +365,27 @@ class account_c:
                 cls.symbolStatus[ symbol ]['marginMode'] = 'isolated'
                 cls.symbolStatus[ symbol ]['leverage'] = leverage
 
+            if( cls.exchange.id == 'phemex' ):
+                response = cls.exchange.set_position_mode( False, symbol )
+                if( response.get('data') != 'ok' ):
+                    cls.print( " * Warning [phemex] updateSymbolLeverage: Failed to set position mode to Swap")
+                # from phemex API documentation: The sign of leverageEr indicates margin mode, i.e. leverage <= 0 means cross-margin-mode, leverage > 0 means isolated-margin-mode.
+                response = cls.exchange.set_leverage( leverage, symbol )
+                if( response.get('data') == 'ok' ):
+                    cls.symbolStatus[ symbol ]['marginMode'] = 'isolated'
+                    cls.symbolStatus[ symbol ]['leverage'] = leverage
+
             if( cls.symbolStatus[ symbol ]['marginMode'] == 'isolated' and cls.symbolStatus[ symbol ]['leverage'] == leverage ):
                 cls.print( "* Leverage updated: Margin Mode:", cls.symbolStatus[ symbol ]['marginMode'] + " Leverage: " + str(cls.symbolStatus[ symbol ]['leverage']) + "x" )
 
 
     def fetchBalance(cls):
-        response = cls.exchange.fetch_balance()
+        params = {}
+        if( cls.exchange.id == "phemex" ):
+            params = { "type":"swap", "code":"USDT" }
+        
+        response = cls.exchange.fetch_balance( params )
+
         if( cls.exchange.id == "bitget" ):
             # Bitget response message is all over the place!!
             # so we reconstruct it from the embedded exchange info
@@ -322,8 +412,12 @@ class account_c:
             # Bitget response message is WRONG!!
             response = cls.fetchBalance()
             return response.get( 'free' )
+        
+        params = {}
+        if( cls.exchange.id == "phemex" ):
+            params = { "type":"swap", "code":"USDT" }
 
-        available = cls.exchange.fetch_free_balance()
+        available = cls.exchange.fetch_free_balance( params )
         return available.get('USDT')
     
     def fetchBuyPrice(cls, symbol)->float:
@@ -374,39 +468,34 @@ class account_c:
     
     def findContractSizeForSymbol(cls, symbol)->float:
         m = cls.markets.get(symbol)
-        if( m != None ):
-            return m.get('contractSize')
-        return None
+        if( m == None ):
+            cls.print( ' * ERROR: findContractSizeForSymbol called with unknown symbol:', symbol )
+            return 1
+        return m.get('contractSize')
     
     def findPrecisionForSymbol(cls, symbol)->float:
         m = cls.markets.get(symbol)
-        if( m != None ):
-            p = m.get('precision')
-            if( p != None ):
-                return p.get('amount')
-        return 1.0
+        if( m == None ):
+            cls.print( ' * ERROR: findPrecisionForSymbol called with unknown symbol:', symbol )
+            return 1
+        return m['precision'].get('amount')
     
     def findMinimumAmountForSymbol(cls, symbol)->float:
-        if( cls.exchange.id == 'bingx' ): #exceptions and more exceptions. Nothing is consistent
-            return cls.findPrecisionForSymbol( symbol )
-        
         m = cls.markets.get(symbol)
         if( m != None ):
-            l = m.get('limits')
-            if( l != None ):
-                a = l.get('amount')
-                if( a != None ):
-                    return a.get('min')
-        return 1.0
+            return m['limits']['amount'].get('min')
+        return cls.findPrecisionForSymbol( symbol )
     
     def findMaxLeverageForSymbol(cls, symbol)->float:
         #'leverage': {'min': 1.0, 'max': 50.0}}
         m = cls.markets.get(symbol)
-        if( m != None ):
-            bounds = m['limits']['leverage']
-            maxLeverage = bounds['max']
-            return maxLeverage
-        return 1
+        if( m == None ):
+            cls.print( ' * ERROR: findMaxLeverageForSymbol called with unknown symbol:', symbol )
+            return 0
+        maxLeverage = m['limits']['leverage'].get('max')
+        if( maxLeverage == None ):
+            maxLeverage = 1000
+        return maxLeverage
     
     def contractsFromUSDT(cls, symbol, amount, price, leverage = 1.0 )->float :
         contractSize = cls.findContractSizeForSymbol( symbol )
@@ -417,7 +506,8 @@ class account_c:
     def refreshPositions(cls, v = verbose):
     ### https://docs.ccxt.com/#/?id=position-structure ###
         try:
-            positions = cls.exchange.fetch_positions()
+            positions = cls.exchange.fetch_positions( params = {'settle':'USDT'} ) # the 'settle' param is only required by phemex
+
         except Exception as e:
             for a in e.args:
                 if 'Remote end closed connection' in a :
@@ -435,11 +525,23 @@ class account_c:
                     print( timeNow(), cls.exchange.id, '* Refreshpositions:Unknown Exception raised:', a )
             return
                     
+        # Phemex returns positions that were already closed
+        if( cls.exchange.id == "phemex" ):
+            # reconstruct the list of positions
+            cleanPositionsList = []
+            for element in positions:
+                thisPosition = cls.exchange.parse_positions( element )[0]
+                if( thisPosition.get('contracts') == 0.0 ):
+                    continue
+                cleanPositionsList.append( thisPosition )
+            positions = cleanPositionsList
+
         numPositions = len(positions)
+
         if v:
             if( numPositions > 0 ) : print('------------------------------')
             print('Refreshing positions '+cls.accountName+':', numPositions, "positions found" )
-            
+
         cls.positionslist.clear()
         for element in positions:
             thisPosition = cls.exchange.parse_positions( element )[0]
@@ -526,6 +628,20 @@ class account_c:
                 return True
         return False
     
+    def fetchClosedOrderById(cls, symbol, id ):
+        try:
+            response = cls.exchange.fetch_closed_orders( symbol )
+        except Exception as e:
+            #Exception: ccxt.base.errors.ExchangeError: phemex {"code":39999,"msg":"Please try again.","data":null}
+            return None
+
+        for o in response:
+            if o.get('id') == id :
+                return o
+        print( " * fetchPhemexOrderById: Didn't find the [closed] order" )
+        return None
+
+    
     def removeFirstCompletedOrder(cls):
         # go through the queue and remove the first completed order
         for order in cls.activeOrders:
@@ -534,7 +650,16 @@ class account_c:
                 cls.activeOrders.remove( order )
                 continue
 
-            info = cls.exchange.fetch_order( order.id, order.symbol )
+            ################
+            #### FIXME: Phemex doesn't support fetch_order in swap mode, but it supports fetch_open_orders and fetch_closed_orders
+            ################
+            if( cls.exchange.id == 'phemex' ):
+                info = cls.fetchClosedOrderById( order.symbol, order.id )
+                if( info == None ):
+                    continue
+            else:
+                info = cls.exchange.fetch_order( order.id, order.symbol )
+
             status = info.get('status')
             remaining = int( info.get('remaining') )
             price = info.get('price')
@@ -707,10 +832,6 @@ def is_json( j ):
     except ValueError as e:
         return False
     return True
-
-# def contractsFromUSDT( amount, contractSize, precision, price, leverage = 1.0 )->float :
-#     coin = (amount * leverage) / (contractSize * price)
-#     return roundDownTick( coin, precision ) if ( coin > 0 ) else roundUpTick( coin, precision )
 
 def updateOrdersQueue():
     for account in accounts:
@@ -1012,10 +1133,10 @@ def webhook():
         abort(400)
 
 # start the positions fetching loop
-timerFetchPositions = RepeatTimer(120, refreshPositions)
+timerFetchPositions = RepeatTimer( 5 * 60, refreshPositions )
 timerFetchPositions.start()
 
-timerOrdersQueue = RepeatTimer(0.25, updateOrdersQueue)
+timerOrdersQueue = RepeatTimer( 0.25, updateOrdersQueue )
 timerOrdersQueue.start()
 
 #start the webhook server
