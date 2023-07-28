@@ -106,7 +106,7 @@ The EXCHANGE field is self explanatory. Valid exchange names are:<br>
 ##### Windows:
 
 - Download and install python. During the installation make sure to *enable the system PATH option* and at the end of the installation *allow it to unlimit windows PATH length*: https://www.python.org/downloads/
-- Open the windows cmd prompt (type cmd in the windows search at the taskbar for the cmd prompt). Install the required modules by typing "pip install ccxt" and "pip install flask" in the cmd prompt
+- Open the windows cmd prompt (type cmd in the windows search at the taskbar). Install the required modules by typing "pip install ccxt" and "pip install flask" in the cmd prompt
 
 With these you can already run the script, but it won't have access online. For giving it access to the internet you should use:
 
