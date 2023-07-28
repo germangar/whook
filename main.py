@@ -753,8 +753,11 @@ class account_c:
                     # BITGET: {"code":"40754","msg":"balance not enough","requestTime":1689363604542,"data":null}
                     # [bitget/bitget] bitget {"code":"45110","msg":"less than the minimum amount 5 USDT","requestTime":1689481837614,"data":null}
                     # bingx {"code":101204,"msg":"Insufficient margin","data":{}}
+                    # phemex {"code":11082,"msg":"TE_CANNOT_COVER_ESTIMATE_ORDER_LOSS","data":null}
                     
-                    elif 'Balance insufficient' in a or 'balance not enough' in a or '"code":"40762"' in a or '"code":"40754" ' in a or '"code":101204' in a:
+                    elif ( 'Balance insufficient' in a or 'balance not enough' in a 
+                          or '"code":"40762"' in a or '"code":"40754" ' in a or '"code":101204' in a
+                           or '"code":11082' in a ):
                         precision = cls.findPrecisionForSymbol( order.symbol )
                         # try first reducing it to our estimation of current balance
                         if( not order.reduced ):
