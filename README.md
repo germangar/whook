@@ -1,9 +1,9 @@
 # whook
 
-WHOOK is a web hook for handling Tradingview Alerts to Kucoin and Bitget. Other exchanges may be added in the future.
+WHOOK is a web hook for handling Tradingview Alerts to crypto exchanges in perpetual USDT futures.
 
 Whook prioritizes realiability over speed. If you're looking for high frequency trading, this is not for you.
-It will do everything it can to fullfill orders, including reducing the quantity or the order when the balance is not enough.
+It will do everything it can to fullfill orders, including reducing the quantity or the order when the balance is not enough and dividing the order in two when reversing positions when not enough balance for doing it at once.
 
 
 ##### Disclaimer: This project is for my personal use. I'm not taking feature requests.
@@ -12,8 +12,10 @@ Currently supported exchanges:
 - Kucoin futures
 - Bitget futures
 - Coinex futures
+- Phemex futures (also Phemex testnet)
+- Bybit futures (also Bybit testnet)
 
-Hedge mode is not supported. I'm only using one side mode.
+Hedge mode is not supported. I'm only using one-side mode.
 
 
 ### ALERT SYNTAX ###
@@ -82,8 +84,17 @@ When you first launch the script it will generate a json file. This file is a te
 
 You have to fill your API key and SECRET key information in the accounts.json file.<br>
 The ACCOUNT_ID field is the name you give to the account. It's to be included in the alert message to identify the account.<br>
-The EXCHANGE field is self explanatory. Valid exchange names are: "**kucoinfutures**", "**bitget**", "**bingx**", "**coinex**" and "**mexc**".<br>
 The password field is required by Kucoin and Bitget but other exchanges may or may not use it. If your exchange doesn't give you a password when creating the API key just leave the field blank.<br>
+The EXCHANGE field is self explanatory. Valid exchange names are:<br> 
+- "**kucoinfutures**"<br>
+- "**bitget**"<br>
+- "**coinex**"<br>
+- "**phemex**"<br>
+- "**phemexdemo**" (for testnet)<br>
+- "**bybit**"<br>
+- "**bybitdemo**"(for testnet)<br>
+- "**bingx**" (not fully functional)<br>
+- "**mexc**" (exchange has API orders disabled due to manteinance)<br>
 
 
 ###  HOW TO SET UP ###
@@ -141,6 +152,6 @@ If you have troubles with the cmd prompt or the bat file you can also install Vi
 
 ### KNOWN BUGS ### 
 - BingX contracSize and precision seem to be either wrong or work in a different scale than the rest of exchanges. The USDT to contracts conversion is returning wrong values. BingX support is uncomplete and I don't think I'll complete it. But I won't remove it either since most of it is implemented.
-- Mexc has been in maintainance mode since 2022, and, while it connects and sets up fine, orders are denied. I think Mexc would be functional if the orders went thought, but I don't know if they will ever enable them again.
+- Mexc API has been in maintainance mode since 2022, and, while it connects and sets up fine, orders are denied. I think Mexc would be functional if the orders went thought, but I don't know if they will ever enable them again.
 
 
