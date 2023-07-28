@@ -130,12 +130,12 @@ You can host a server in AWS EC2 for free. It can be a linux server or a windows
 
 I'm not a linux user so I struggled to open the ports in Linux. If you have experience in Linux this may be easy to you.
 
-Here's a (slightly outdated) tutorial for windows: https://youtu.be/9z5YOXhxD9Q - I hosted it in a Windows_server 2022 edition which was the latest at the time I'm writing this readme. 
+Here's a (slightly outdated) tutorial for windows: https://youtu.be/9z5YOXhxD9Q - I hosted it in a Windows_server 2022 edition which was the latest at the time of writing this readme. 
 
 Basic steps are pretty similar to the local install:
 - Download and install python. During the installation make sure to *enable the system PATH option* and at the end of the installation *allow it to unlimit windows PATH length*: https://www.python.org/downloads/
 - Open the windows cmd prompt (type cmd in the windows search at the taskbar for the cmd prompt)
-- pip install ccxt and pip install flask using the cmd prompt
+- "pip install ccxt" and "pip install flask" in the cmd prompt
 
 With these you can already run the script, but it won't have access online. For giving it access to the internet you should use:
 
