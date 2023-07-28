@@ -941,17 +941,17 @@ def parseAlert( data, isJSON, account: account_c ):
     if( isJSON ):
         jdata = json.loads(data)
         for key, value in jdata.items():
-            if key == 'ticker' or key == 'symbol':
+            if key.lower() == 'ticker' or key.lower() == 'symbol':
                 if( account.findSymbolFromPairName(value) != None ): # GMXUSDTM, GMX/USDT:USDT and GMX/USDT are all acceptable formats
                     symbol = account.findSymbolFromPairName(value) 
-            elif key == 'action' or key == 'command':
+            elif key.lower() == 'action' or key.lower() == 'command':
                 command = parseCommandName(value)
-            elif key == 'quantity':
+            elif key.lower() == 'quantity':
                 isUSDT = True
                 quantity = stringToValue( value )
-            elif key == 'contracts':
+            elif key.lower() == 'contracts':
                 quantity = stringToValue( value )
-            elif key == 'leverage':
+            elif key.lower() == 'leverage':
                 leverage = int(value)
     else:
         # Informal plain text syntax
