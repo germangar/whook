@@ -9,7 +9,7 @@ import logging
 #import csv
 
 verbose = False
-_ORDER_TIMEOUT_ = 10
+_ORDER_TIMEOUT_ = 40
 
 from datetime import datetime
 # today = datetime.today()
@@ -158,6 +158,25 @@ class account_c:
                 "enableRateLimit": True
                 })
             self.exchange.set_sandbox_mode( True )
+        elif( exchange.lower() == 'bybit' ):
+            self.exchange = ccxt.bybit({
+                "apiKey": apiKey,
+                "secret": secret,
+                'password': password,
+                "options": {'defaultType': 'swap', 'adjustForTimeDifference' : True},
+                #"timeout": 60000,
+                "enableRateLimit": True
+                })
+        elif( exchange.lower() == 'bybitdemo' ):
+            self.exchange = ccxt.bybit({
+                "apiKey": apiKey,
+                "secret": secret,
+                'password': password,
+                "options": {'defaultType': 'swap', 'adjustForTimeDifference' : True},
+                #"timeout": 60000,
+                "enableRateLimit": True
+                })
+            self.exchange.set_sandbox_mode( True )
         else:
             printf( " * FATAL ERROR: Unsupported exchange:", exchange )
             raise SystemExit()
@@ -221,11 +240,36 @@ class account_c:
             self.symbolStatus[key] = { 'marginMode': '', 'leverage': 0 }
 
 
-
         self.balance = self.fetchBalance()
         print( self.balance )
-            
+
+
         '''
+        if( self.exchange.id == 'bybit' ):
+            print( 'has setPositionMode', self.exchange.has.get('setPositionMode') )
+            #tradeMode integer required
+            #Possible values: [0, 1] 0=crossMargin, 1=isolatedMargin
+            # buyLeverage, sellLeverage string required
+            # params = { 'category':'linear', 'tradeMode':1, 'buyLeverage':'3', 'sellLeverage':'3' }
+            try:
+                print( 'setPositionMode', self.exchange.set_position_mode( False, "ATOM/USDT:USDT" ) )
+            except Exception as e:
+                print(e)
+
+            # isolated or cross
+            try:
+                print( self.exchange.set_margin_mode( 'cross', 'ATOM/USDT:USDT', {'leverage':4} ) )
+            except Exception as e:
+                print(e)
+
+            print( 'has setLeverage', self.exchange.has.get('setLeverage') )
+            #params = {'category':'linear'}
+            params = {}
+            try:
+                print( 'setLeverage', self.exchange.set_leverage( 8, "ATOM/USDT:USDT", params=params ) )
+            except Exception as e:
+                print(e)
+            
         if( self.exchange.id == 'phemex' ):
             print( 'has setPositionMode', self.exchange.has.get('setPositionMode') )
             print( 'setPositionMode', self.exchange.set_position_mode( False, "ATOM/USDT:USDT" ) )
@@ -369,12 +413,57 @@ class account_c:
                 response = cls.exchange.set_position_mode( False, symbol )
                 if( response.get('data') != 'ok' ):
                     cls.print( " * Warning [phemex] updateSymbolLeverage: Failed to set position mode to Swap")
+
                 # from phemex API documentation: The sign of leverageEr indicates margin mode, i.e. leverage <= 0 means cross-margin-mode, leverage > 0 means isolated-margin-mode.
                 response = cls.exchange.set_leverage( leverage, symbol )
                 if( response.get('data') == 'ok' ):
                     cls.symbolStatus[ symbol ]['marginMode'] = 'isolated'
                     cls.symbolStatus[ symbol ]['leverage'] = leverage
+            
+            if( cls.exchange.id == 'bybit' ):
+                #tradeMode integer required
+                #Possible values: [0, 1] 0=crossMargin, 1=isolatedMargin
+                # buyLeverage, sellLeverage string required
 
+                # always set position mode to oneSided
+                # FIXME: we should not do this every time
+                try:
+                    response = cls.exchange.set_position_mode( False, symbol )
+                except Exception as e:
+                    for a in e.args:
+                        # bybit {"retCode":140025,"retMsg":"position mode not modified","result":{},"retExtInfo":{},"time":1690530385019}
+                        if '"retCode":140025' in a:
+                            pass
+                        else:
+                            print( " * Error: updateSymbolLeverage: Unhandled Exception", a )
+                
+                # see if we have to change marginMode (does both) or just leverage
+                if( cls.symbolStatus[ symbol ]['marginMode'] != 'isolated' ):
+                    # isolated or cross
+                    try:
+                        response = cls.exchange.set_margin_mode( 'isolated', symbol, {'leverage':leverage} )
+                        cls.symbolStatus[ symbol ]['marginMode'] = 'isolated'
+                        cls.symbolStatus[ symbol ]['leverage'] = leverage
+                    except Exception as e:
+                        for a in e.args:
+                            # bybit {"retCode":140026,"retMsg":"Isolated not modified","result":{},"retExtInfo":{},"time":1690530385642}
+                            if( '"retCode":140026' in a ):
+                                pass
+                            else:
+                                print( " * Error: updateSymbolLeverage: Unhandled Exception", a )
+                else:
+                    # update only leverage
+                    try:
+                        response = cls.exchange.set_leverage( leverage, symbol )
+                        cls.symbolStatus[ symbol ]['leverage'] = leverage
+                    except Exception as e:
+                        for a in e.args:
+                            # bybit {"retCode":140043,"retMsg":"leverage not modified","result":{},"retExtInfo":{},"time":1690530386264}
+                            if( '"retCode":140043' in a ):
+                                pass
+                            else:
+                                print( " * Error: updateSymbolLeverage: Unhandled Exception", a )
+                
             if( cls.symbolStatus[ symbol ]['marginMode'] == 'isolated' and cls.symbolStatus[ symbol ]['leverage'] == leverage ):
                 cls.print( "* Leverage updated: Margin Mode:", cls.symbolStatus[ symbol ]['marginMode'] + " Leverage: " + str(cls.symbolStatus[ symbol ]['leverage']) + "x" )
 
@@ -524,6 +613,7 @@ class account_c:
                 else:
                     print( timeNow(), cls.exchange.id, '* Refreshpositions:Unknown Exception raised:', a )
             return
+
                     
         # Phemex returns positions that were already closed
         if( cls.exchange.id == "phemex" ):
@@ -543,8 +633,7 @@ class account_c:
             print('Refreshing positions '+cls.accountName+':', numPositions, "positions found" )
 
         cls.positionslist.clear()
-        for element in positions:
-            thisPosition = cls.exchange.parse_positions( element )[0]
+        for thisPosition in positions:
 
             #HACK!! coinx doesn't have 'contracts'. The value comes in 'contractSize' and in info:{'amount'}
             if( cls.exchange.id == 'coinex' ):
@@ -560,66 +649,38 @@ class account_c:
             #try also to refresh the leverage from the exchange (not supported by all exchanges)
             if( cls.exchange.has.get('fetchLeverage') == True ):
                 response = cls.exchange.fetch_leverage( symbol )
-                
-                #response from bitget
-                '''
-                {'code': '00000', 
-                'msg': 'success', 
-                'requestTime': '1689982439816', 
-                'data': 
-                    {
-                        'marginCoin': 'USDT', 
-                        'locked': '0', 
-                        'available': '116.92474171', 
-                        'crossMaxAvailable': '0', 
-                        'fixedMaxAvailable': '0', 
-                        'maxTransferOut': '0', 
-                        'equity': '87.58689171', 
-                        'usdtEquity': '87.586891713849', 
-                        'btcEquity': '0.002929363596', 
-                        'crossRiskRate': '0.036911106865', 
-                        'crossMarginLeverage': '6', 
-                        'fixedLongLeverage': '3', 
-                        'fixedShortLeverage': '3', 
-                        'marginMode': 'fixed', 
-                        'holdMode': 'single_hold', 
-                        'unrealizedPL': '-29.337850001837', 
-                        'bonus': '0'
-                    }
-                }
-                '''
+
                 if( cls.exchange.id == 'bitget' ):
                     # they should always be the same
                     longLeverage = response['data'].get('fixedLongLeverage')
                     shortLeverage = response['data'].get('fixedShortLeverage')
                     if( longLeverage == shortLeverage ):
                         cls.symbolStatus[ symbol ][ 'leverage' ] = longLeverage
-                
-                #response from bingx
-                '''
-                {
-                    'code': '0', 
-                    'msg': '', 
-                    'data': {'longLeverage': '10', 'shortLeverage': '10'}
-                }
-                '''
-                if( cls.exchange.id == 'bingx' ):
+
+                elif( cls.exchange.id == 'bingx' ):
                     # they should always be the same
                     longLeverage = response['data'].get('longLeverage')
                     shortLeverage = response['data'].get('shortLeverage')
                     if( longLeverage == shortLeverage ):
                         cls.symbolStatus[ symbol ][ 'leverage' ] = longLeverage
-                
+
+            elif( thisPosition.get('leverage') != None ):
+                leverage = int(thisPosition.get('leverage'))
+                if( leverage == thisPosition.get('leverage') ): # kucoin sends weird fractional leverage.
+                    cls.symbolStatus[ symbol ][ 'leverage' ] = leverage
 
         if v:
             for pos in cls.positionslist:
                 p = 0.0
-                unrealizedPnl = pos.getKey('unrealizedPnl')
-                initialMargin = pos.getKey('initialMargin')
-                if( unrealizedPnl != None and initialMargin != None ):
+                unrealizedPnl = 0 if(pos.getKey('unrealizedPnl') == None) else float(pos.getKey('unrealizedPnl'))
+                initialMargin = 0 if(pos.getKey('initialMargin') == None) else float(pos.getKey('initialMargin'))
+                collateral = 0.0 if(pos.getKey('collateral') == None) else float(pos.getKey('collateral'))
+                if( initialMargin != 0 ):
                     p = ( unrealizedPnl / initialMargin ) * 100.0
-
-                print(pos.symbol, pos.getKey('side'), pos.getKey('contracts'), pos.getKey('collateral'), pos.getKey('unrealizedPnl'), "{:.2f}".format(p) + '%', sep=' * ')
+                else:
+                    p = ( unrealizedPnl / (collateral - unrealizedPnl) ) * 100
+                
+                print(pos.symbol, pos.getKey('side'), pos.getKey('contracts'), "{:.4f}[$]".format(collateral), "{:.2f}[$]".format(unrealizedPnl), "{:.2f}".format(p) + '%', sep=' * ')
             print('------------------------------')
 
     def activeOrderForSymbol(cls, symbol ):
@@ -630,7 +691,7 @@ class account_c:
     
     def fetchClosedOrderById(cls, symbol, id ):
         try:
-            response = cls.exchange.fetch_closed_orders( symbol )
+            response = cls.exchange.fetch_closed_orders( symbol, params = {'settleCoin':'USDT'} )
         except Exception as e:
             #Exception: ccxt.base.errors.ExchangeError: phemex {"code":39999,"msg":"Please try again.","data":null}
             return None
@@ -640,7 +701,6 @@ class account_c:
                 return o
         if verbose : print( " * fetchPhemexOrderById: Didn't find the [closed] order" )
         return None
-
     
     def removeFirstCompletedOrder(cls):
         # go through the queue and remove the first completed order
@@ -650,16 +710,20 @@ class account_c:
                 cls.activeOrders.remove( order )
                 continue
 
-            ################
-            #### FIXME: Phemex doesn't support fetch_order in swap mode, but it supports fetch_open_orders and fetch_closed_orders
-            ################
-            if( cls.exchange.id == 'phemex' ):
+            # Phemex doesn't support fetch_order in swap mode, but it supports fetch_open_orders and fetch_closed_orders
+            if( cls.exchange.id == 'phemex' or cls.exchange.id == 'bybit' ):
                 info = cls.fetchClosedOrderById( order.symbol, order.id )
                 if( info == None ):
                     continue
             else:
-                info = cls.exchange.fetch_order( order.id, order.symbol )
-
+                try:
+                    info = cls.exchange.fetch_order( order.id, order.symbol )
+                except Exception as e:
+                    for a in e.args:
+                        if( "does not exist" in a ):
+                            cls.activeOrders.remove( order )
+                            return
+                        
             status = info.get('status')
             remaining = int( info.get('remaining') )
             price = info.get('price')
@@ -754,10 +818,11 @@ class account_c:
                     # [bitget/bitget] bitget {"code":"45110","msg":"less than the minimum amount 5 USDT","requestTime":1689481837614,"data":null}
                     # bingx {"code":101204,"msg":"Insufficient margin","data":{}}
                     # phemex {"code":11082,"msg":"TE_CANNOT_COVER_ESTIMATE_ORDER_LOSS","data":null}
+                    # bybit {"retCode":140007,"retMsg":"remark:order[1643476 23006bb4-630a-4917-af0d-5412aaa1c950] fix price failed for CannotAffordOrderCost.","result":{},"retExtInfo":{},"time":1690540657794}
                     
                     elif ( 'Balance insufficient' in a or 'balance not enough' in a 
                           or '"code":"40762"' in a or '"code":"40754" ' in a or '"code":101204' in a
-                           or '"code":11082' in a ):
+                           or '"code":11082' in a or '"retCode":140007' in a ):
                         precision = cls.findPrecisionForSymbol( order.symbol )
                         # try first reducing it to our estimation of current balance
                         if( not order.reduced ):
@@ -788,7 +853,8 @@ class account_c:
                             cls.print( ' * Exception raised: Balance insufficient: Cancelling')
                             cls.ordersQueue.remove( order )
                             break
-                    else: #Unknown exception raised
+                    else:
+                        # ToDo
                         cls.print( ' * ERROR Cancelling: Unhandled Exception raised:', e )
                         cls.ordersQueue.remove( order )
                         break
