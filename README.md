@@ -101,7 +101,7 @@ The EXCHANGE field is self explanatory. Valid exchange names are:<br>
 
 ### HOW TO INSTALL AND RUN ###
 
-"If you want to go for a quick effortless test I recommend to copy/paste the script into a free account at 'https://replit.com'. It installs all modules for you so you don't have to do anything. Do **not** use it to host the real server. It goes idle as soon as you close the browser, and anyone can see your API keys."
+"If you want to go for a quick effortless test I recommend to copy/paste the script into a free account at 'https://replit.com'. It installs all modules for you so you don't have to do anything. Do **not** use it to host the real server. It goes idle as soon as you close the browser, and your API keys could be discovered."
 
 ##### Windows:
 
