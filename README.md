@@ -14,8 +14,8 @@ Currently supported exchanges:
 - Kucoin futures
 - Bitget futures
 - Coinex futures
-- Phemex futures (also Phemex testnet)
-- Bybit futures (also Bybit testnet)
+- Phemex futures ( also Phemex testnet: https://testnet.phemex.com )
+- Bybit futures ( also Bybit testnet: https://testnet.bybit.com )
 
 Hedge mode is not supported. I'm only using one-side mode.
 
