@@ -70,7 +70,7 @@ synonims: symbol, ticker // command, cmd, action
 
 
 ### API KEYS ###
-When you first launch the script it will generate a json file. This file is a template to fill the accounts API data. This file can contain more than one account. It looks like this:
+When you first launch the script it will generate a json file. This file is a template to fill the accounts API data. This file can contain as many accounts as you want separated by commas. It looks like this:
 
 
 [<br>
@@ -99,43 +99,14 @@ The EXCHANGE field is self explanatory. Valid exchange names are:<br>
 - "**mexc**" (exchange has API orders disabled due to manteinance)<br>
 
 
-###  HOW TO SET UP ###
+### HOW TO INSTALL AND RUN ###
 
-If you want to go for a quick effortless test I recommend to copy/paste the script into a free account at 'https://replit.com'. It installs all modules for you so you don't have to do anything. Do **not** use it to host an actual server. It goes idle as soon as you close the browser, and anyone can see your API keys.
+"If you want to go for a quick effortless test I recommend to copy/paste the script into a free account at 'https://replit.com'. It installs all modules for you so you don't have to do anything. Do **not** use it to host an actual server. It goes idle as soon as you close the browser, and anyone can see your API keys."
 
-Local install for testing/working on the script:
+##### Windows:
 
-If you have experience with python: It requires to pip install ccxt and flask.<br>
-The following instructions are for Windows. If you are a Linux user I'm confident you know are familiar with the proccess.
-
-- Install the latest version of Python from their website. During the installation make sure to *enable the system PATH option* and at the end of the installation *allow it to unlimit windows PATH length*
-
-- Install Visual Code and in the extensions tab install the python extension. *Restart visual code*. In the terminal pip install ccxt and flask (just type 'pip install ccxt' and 'pip install flask'. Make sure you restarted VC after enabling the python extension. And make sure python was already installed)
-https://code.visualstudio.com/download
-
-With these you can already run the script, but it won't have access online. For giving it access to the internet you should use:
-
-- ngrok. Create a free ngrok account. Download the last version of ngrok and unzip it. Launch the software and copy paste the auth code they give you on the website (with the authcode ngrok will be able to stay open forever). 
-Then type in the ngrok console: "ngrok http 80". This will create an internet address that you can copy from the console. You have to add /whook to it to access the hook server.
-
-Example of an address: https://e579-139-47-50-49.ngrok-free.app/whook
-
-This address will continue stable until you close ngrok. Launching ngrok again will produce a new address.
-
-
-### HOW TO HOST IN AWS ### 
-(the easy way)
-
-You can host a server in AWS EC2 for free. It can be a linux server or a windows server. You can find many tutorials in Youtube on how to do it.
-
-I'm not a linux user so I struggled to open the ports in Linux. If you have experience in Linux this may be easy to you.
-
-Here's a (slightly outdated) tutorial for windows: https://youtu.be/9z5YOXhxD9Q - I hosted it in a Windows_server 2022 edition which was the latest at the time of writing this readme. 
-
-Basic steps are pretty similar to the local install:
 - Download and install python. During the installation make sure to *enable the system PATH option* and at the end of the installation *allow it to unlimit windows PATH length*: https://www.python.org/downloads/
-- Open the windows cmd prompt (type cmd in the windows search at the taskbar for the cmd prompt)
-- "pip install ccxt" and "pip install flask" in the cmd prompt
+- Open the windows cmd prompt (type cmd in the windows search at the taskbar for the cmd prompt). Install the required modules by typing "pip install ccxt" and "pip install flask" in the cmd prompt
 
 With these you can already run the script, but it won't have access online. For giving it access to the internet you should use:
 
@@ -143,13 +114,24 @@ With these you can already run the script, but it won't have access online. For 
 
 Example of an address: https://e579-139-47-50-49.ngrok-free.app/whook<br>
 
-- You can launch the script by double clicking main.py (as long as you enabled the PATH options at installing python) or by creating a .bat file in the same directory as main.py like this:<br><br>
+- You can launch the script by double clicking main.py (as long as you enabled the PATH options at installing python) or by creating a .bat file in the same directory as main.py like this:<br>
 
 @echo off<br>
 python.exe main.py<br>
 pause<br>
 
 If you have troubles with the cmd prompt or the bat file you can also install Visual Code in the server and run it from there.
+
+
+### HOW TO HOST IN AWS ### 
+(the easy way)
+
+You can host a server in AWS EC2 for free. It can be a linux server or a windows server. You can find many tutorials in Youtube on how to do it. Here's a (slightly outdated) tutorial for windows: https://youtu.be/9z5YOXhxD9Q.<br>
+I host it in a Windows_server 2022 edition which was the latest at the time of writing this readme.<br>
+
+Once you have your virtual machine running follow the steps in the section above ("How to intall and run").
+
+I'm not a linux user so I struggled to open the ports in the Linux virtual machine. If you have experience in Linux this may be easy to you.
 
 
 ### KNOWN BUGS ### 
