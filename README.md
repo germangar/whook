@@ -3,7 +3,7 @@
 WHOOK is a web hook for handling Tradingview Alerts to crypto exchanges in perpetual USDT futures.
 
 Whook prioritizes realiability over speed. If you're looking for high frequency trading, this is not for you.
-It will do everything it can to fullfill orders, including reducing the quantity or the order when the balance is not enough and dividing the order in two when reversing positions when not enough balance for doing it at once.
+It will do everything it can to fullfill orders, including reducing the quantity or the order when the balance is not enough and dividing the order in two at reversing positions when not enough balance for doing it at once.
 
 Whook only makes market orders. Limit orders, take profit and stop loss are not supported. Those can be handled by the strategy.
 
