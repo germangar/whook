@@ -35,6 +35,21 @@ fh = logging.FileHandler('webhook.log')
 logger.addHandler( fh )
 logger.level = logging.INFO
 
+def floor( number ):
+    return number // 1
+
+def ceil( number ):
+    return int(-(-number // 1))
+
+def roundUpTick( value, tick )-> float:
+    return ceil( value / tick ) * tick
+
+def roundDownTick( value, tick )-> float:
+    return floor( value / tick ) * tick
+
+def roundToTick( value, tick )-> float:
+    return round( value / tick ) * tick
+
 def printf(*args, sep=" ", **kwargs):
     logger.info( dateString()+sep.join(map(str,args)), **kwargs)
     print( ""+sep.join(map(str,args)), **kwargs)
@@ -873,20 +888,7 @@ class account_c:
 accounts = []
 
 
-def floor( number ):
-    return number // 1
 
-def ceil( number ):
-    return int(-(-number // 1))
-
-def roundUpTick( value, tick )-> float:
-    return ceil( value / tick ) * tick
-
-def roundDownTick( value, tick )-> float:
-    return floor( value / tick ) * tick
-
-def roundToTick( value, tick )-> float:
-    return round( value / tick ) * tick
 
 def stringToValue( arg )->float:
     if (arg[:1] == "-" ): # this is a minus symbol! What a bitch
@@ -910,6 +912,18 @@ def refreshPositions():
     for account in accounts:
         account.refreshPositions()
 
+def parseCommandName( token )->str:
+    command = 'Invalid'
+    if token.lower()  == 'long' or token.lower() == "buy":
+        command = 'buy'
+    elif token.lower()  == 'short' or token.lower() == "sell":
+        command = 'sell'
+    elif token.lower()  == 'close':
+        command = 'close'
+    elif token.lower()  == 'position' or token.lower()  == 'pos':
+        command = 'position'
+    return command
+
 def parseAlert( data, isJSON, account: account_c ):
 
     if( account == None ):
@@ -931,9 +945,12 @@ def parseAlert( data, isJSON, account: account_c ):
                 if( account.findSymbolFromPairName(value) != None ): # GMXUSDTM, GMX/USDT:USDT and GMX/USDT are all acceptable formats
                     symbol = account.findSymbolFromPairName(value) 
             elif key == 'action' or key == 'command':
-                command = value
+                command = parseCommandName(value)
             elif key == 'quantity':
-                quantity = int(value)
+                isUSDT = True
+                quantity = stringToValue( value )
+            elif key == 'contracts':
+                quantity = stringToValue( value )
             elif key == 'leverage':
                 leverage = int(value)
     else:
@@ -952,7 +969,7 @@ def parseAlert( data, isJSON, account: account_c ):
                 quantity = stringToValue( token )
             elif ( token.isnumeric() ):
                 arg = token
-                quantity = int(arg)
+                quantity = float(arg)
             elif ( token[:1].lower()  == "x" ):
                 arg = token[1:]
                 leverage = int(arg)
