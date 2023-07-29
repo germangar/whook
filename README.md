@@ -66,6 +66,7 @@ Example of a buy order in USDT:
 &emsp;"id" : "myKucoinA"<br>
 }
 
+Valid commands are: "buy", "sell", "long", "short", "position" and "close". "Buy/sell" and "long/short" are synonims. "position" can also be "pos".
 For sending the order in contracts the key "quantity" should be replaced by "contracts"
 
 synonims: symbol, ticker // command, cmd, action
