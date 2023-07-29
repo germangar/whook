@@ -41,29 +41,32 @@ close - closes the position (position 0 also does it).<br>
 
 Examples:<br>
 - Buy command using USDT:<br>
-[account_id] [symbol] [command] [value in USDT] [leverage] - **kucoin000 ETH/USDT buy 300$ x3**<br>
+[account_id] [symbol] [command] [value in USDT] [leverage] - **myKucoinA ETH/USDT buy 300$ x3**<br>
 
 - Position command using contracts:<br>
-[symbol] [command] [value in contracts] [leverage] [account_id] - **ETH/USDT position -300 x3 kucoin000**<br>
+[symbol] [command] [value in contracts] [leverage] [account_id] - **ETH/USDT position -300 x3 myKucoinA**<br>
 Notice: This is a short position. For a long position use a positive value. Same goes when the value is in USDT<br>
 
 - Close position<br>
-[account_id] [symbol] [command] - **kucoin000 ETH/USD close**<br>
+[account_id] [symbol] [command] - **myKucoinA ETH/USD close**<br>
 
 Several orders can be included in the same alert, separated by line breaks. For example, you can send the orders for 2 different accounts inside the same alert.
 
 #### As JSON message:
 
-JSON Messages are barely supported (I don't use them). Only accepts one alert per message and direct USDT orders aren't implemented.
-Orders must come in contracts. The skeleton of the parser is there for anyone to complete it, but don't expect it to fully work as is.
+JSON Messages only accept one order per alert.
+
+Example of a buy order in USDT:
 
 {<br>
 "symbol": "BTC/USDT",<br>
 "command": "buy",<br>
 "quantity": "12",<br>
 "leverage": "3",<br>
-"id" : "kucoin000"<br>
+"id" : "myKucoinA"<br>
 }
+
+For seding the order in contracts the key "quantity" should be replaced by "contracts"
 
 synonims: symbol, ticker // command, cmd, action
 
