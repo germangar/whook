@@ -59,14 +59,14 @@ JSON Messages only accept one order per alert.
 Example of a buy order in USDT:
 
 {<br>
-"symbol": "BTC/USDT",<br>
-"command": "buy",<br>
-"quantity": "12",<br>
-"leverage": "3",<br>
-"id" : "myKucoinA"<br>
+&emsp;"symbol": "BTC/USDT",<br>
+&emsp;"command": "buy",<br>
+&emsp;"quantity": "12",<br>
+&emsp;"leverage": "3",<br>
+&emsp;"id" : "myKucoinA"<br>
 }
 
-For seding the order in contracts the key "quantity" should be replaced by "contracts"
+For sending the order in contracts the key "quantity" should be replaced by "contracts"
 
 synonims: symbol, ticker // command, cmd, action
 
