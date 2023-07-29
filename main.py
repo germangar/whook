@@ -1192,7 +1192,6 @@ for ac in accounts_data:
     else:
         accounts.append( account )
 
-
 if( len(accounts) == 0 ):
     print( " * FATAL ERROR: No valid accounts found. Please edit 'accounts.json' and introduce your API keys" )
     raise SystemExit()
