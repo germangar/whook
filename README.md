@@ -31,7 +31,7 @@ Hedge mode is not supported. I'm only using one-side mode.
 * Commands:<br>
 buy or long - places buy order.<br>
 sell or short - places sell order.<br>
-position or pos - goes to a position of the given value (no matter what the current position is).<br>
+position or pos - goes to a position of the given value. Use a positive value for Long and a negative value for Short.<br>
 close - closes the position (position 0 also does it).<br>
 
 * Quantities:<br>
