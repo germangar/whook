@@ -82,9 +82,6 @@ class order_c:
 
 class account_c:
     def __init__(self, exchange = None, name = 'default', apiKey = None, secret = None, password = None )->None:
-        if( name.isnumeric() ):
-            print( " * FATAL ERROR: Account 'id' can not be only  numeric" )
-            raise SystemExit()
         
         self.accountName = name
         self.canFlipPosition = False
@@ -93,8 +90,10 @@ class account_c:
         self.activeOrders = []
         self.symbolStatus = {}
         if( exchange == None ):
-            print( " * FATAL ERROR: No exchange was resquested" )
-            raise SystemExit()
+            raise ValueError('Exchange not defined')
+        if( name.isnumeric() ):
+            print( " * FATAL ERROR: Account 'id' can not be only  numeric" )
+            raise ValueError('Invalid Account Name')
         
         if( exchange.lower() == 'kucoinfutures' ):
             self.exchange = ccxt.kucoinfutures( {
@@ -183,12 +182,10 @@ class account_c:
                 })
             self.exchange.set_sandbox_mode( True )
         else:
-            print( " * FATAL ERROR: Unsupported exchange:", exchange )
-            raise SystemExit()
+            raise ValueError('Unsupported exchange')
 
         if( self.exchange == None ):
-            print( " * FATAL ERROR: Exchange creation failed" )
-            raise SystemExit()
+            raise ValueError('Exchange creation failed')
         
         # crate a logger for each account
         self.logger = logging.getLogger( self.accountName )
@@ -1188,7 +1185,12 @@ for ac in accounts_data:
         continue
 
     print( timeNow(), " * Initializing account: [", account_id, "] in [", exchange , ']')
-    accounts.append( account_c( exchange, account_id, api_key, secret_key, password ) )
+    try:
+        account = account_c( exchange, account_id, api_key, secret_key, password )
+    except Exception as e:
+        print( 'Account creating failed:', e )
+    else:
+        accounts.append( account )
 
 
 if( len(accounts) == 0 ):
