@@ -29,12 +29,6 @@ def dateString():
 def timeNow():
     return time.strftime("%H:%M:%S")
 
-# create logger for trades
-logger = logging.getLogger('webhook')
-fh = logging.FileHandler('webhook.log')
-logger.addHandler( fh )
-logger.level = logging.INFO
-
 def floor( number ):
     return number // 1
 
@@ -49,10 +43,6 @@ def roundDownTick( value, tick )-> float:
 
 def roundToTick( value, tick )-> float:
     return round( value / tick ) * tick
-
-def printf(*args, sep=" ", **kwargs):
-    logger.info( dateString()+sep.join(map(str,args)), **kwargs)
-    print( ""+sep.join(map(str,args)), **kwargs)
 
 class RepeatTimer(Timer):
     def run(self):
@@ -93,7 +83,7 @@ class order_c:
 class account_c:
     def __init__(self, exchange = None, name = 'default', apiKey = None, secret = None, password = None )->None:
         if( name.isnumeric() ):
-            printf( " * FATAL ERROR: Account 'id' can not be only  numeric" )
+            print( " * FATAL ERROR: Account 'id' can not be only  numeric" )
             raise SystemExit()
         
         self.accountName = name
@@ -103,7 +93,7 @@ class account_c:
         self.activeOrders = []
         self.symbolStatus = {}
         if( exchange == None ):
-            printf( " * FATAL ERROR: No exchange was resquested" )
+            print( " * FATAL ERROR: No exchange was resquested" )
             raise SystemExit()
         
         if( exchange.lower() == 'kucoinfutures' ):
@@ -193,12 +183,18 @@ class account_c:
                 })
             self.exchange.set_sandbox_mode( True )
         else:
-            printf( " * FATAL ERROR: Unsupported exchange:", exchange )
+            print( " * FATAL ERROR: Unsupported exchange:", exchange )
             raise SystemExit()
 
         if( self.exchange == None ):
-            printf( " * FATAL ERROR: Exchange creation failed" )
+            print( " * FATAL ERROR: Exchange creation failed" )
             raise SystemExit()
+        
+        # crate a logger for each account
+        self.logger = logging.getLogger( self.accountName )
+        fh = logging.FileHandler( self.accountName + '.log')
+        self.logger.addHandler( fh )
+        self.logger.level = logging.INFO
         
         # Some exchanges don't have all fields properly filled, but we can find out
         # the values in another field. Instead of adding exceptions at each other function
@@ -256,7 +252,7 @@ class account_c:
 
 
         self.balance = self.fetchBalance()
-        print( self.balance )
+        self.print( self.balance )
 
 
         '''
@@ -341,9 +337,13 @@ class account_c:
 
     ## methods ##
 
-    def print(cls, *args, sep=" ", **kwargs): # adds account and exchange information to the message
-        logger.info( dateString() +'['+ cls.accountName +'/'+ cls.exchange.id +'] '+sep.join(map(str,args)), **kwargs)
+    def print( cls, *args, sep=" ", **kwargs ): # adds account and exchange information to the message
+        cls.logger.info( dateString() +'['+ cls.accountName +'/'+ cls.exchange.id +'] '+sep.join(map(str,args)), **kwargs)
         print( '['+ cls.accountName +'/'+ cls.exchange.id +'] '+sep.join(map(str,args)), **kwargs)
+
+    # def print(cls, *args, sep=" ", **kwargs): # adds account and exchange information to the message
+    #     logger.info( dateString() +'['+ cls.accountName +'/'+ cls.exchange.id +'] '+sep.join(map(str,args)), **kwargs)
+    #     print( '['+ cls.accountName +'/'+ cls.exchange.id +'] '+sep.join(map(str,args)), **kwargs)
 
     def verifyLeverageRange( cls, symbol, leverage )->int:
 
@@ -620,26 +620,24 @@ class account_c:
                     print( timeNow(), cls.exchange.id, '* Refreshpositions:Exception raised: 502 Bad Gateway' )
                 elif 'Internal Server Error' in a:
                     print( timeNow(), cls.exchange.id, '* Refreshpositions:Exception raised: 500 Internal Server Error' )
-                #mexc GET https://contract.mexc.com/api/v1/private/position/open_positions
-                elif 'mexc GET' in a:
-                    print( timeNow(), cls.exchange.id, "* Refreshpositions:Exception raised: couldn't reach mexc GET" )
-                elif a == "OK": #Coinex
-                    if v : print('Refreshing positions '+cls.accountName+': 0 positions found\n------------------------------' )
+                elif 'mexc GET' in a or 'kucoinfutures GET' in a:
+                    print( timeNow(), cls.exchange.id, "* Refreshpositions:Exception raised: no response.")
+                elif a == "OK": #Coinex raises an exception to give an OK message when there are no positions...
+                    positions = []
+                    #if v : print('Refreshing positions '+cls.accountName+': 0 positions found\n------------------------------' )
                 else:
                     print( timeNow(), cls.exchange.id, '* Refreshpositions:Unknown Exception raised:', a )
             return
 
                     
         # Phemex returns positions that were already closed
-        if( cls.exchange.id == "phemex" ):
-            # reconstruct the list of positions
-            cleanPositionsList = []
-            for element in positions:
-                thisPosition = cls.exchange.parse_positions( element )[0]
-                if( thisPosition.get('contracts') == 0.0 ):
-                    continue
-                cleanPositionsList.append( thisPosition )
-            positions = cleanPositionsList
+        # reconstruct the list of positions only with active positions
+        cleanPositionsList = []
+        for thisPosition in positions:
+            if( thisPosition.get('contracts') == 0.0 ):
+                continue
+            cleanPositionsList.append( thisPosition )
+        positions = cleanPositionsList
 
         numPositions = len(positions)
 
@@ -849,7 +847,7 @@ class account_c:
                                 cls.print( ' * Exception raised: Balance insufficient: Minimum contracts required:', cls.findMinimumAmountForSymbol(order.symbol), ' Cancelling')
                                 cls.ordersQueue.remove( order )
                             else:
-                                printf( ' * Exception raised: Balance insufficient: Reducing to', order.quantity, "contracts")
+                                cls.print( ' * Exception raised: Balance insufficient: Reducing to', order.quantity, "contracts")
                                 
                             break
                         elif( order.quantity > precision ):
@@ -876,7 +874,7 @@ class account_c:
                 continue #back to the orders loop
 
             if( response.get('id') == None ):
-                cls.print( "Order denied:", response['info'], "Cancelling" )
+                cls.print( " * Order denied:", response['info'], "Cancelling" )
                 cls.ordersQueue.remove( order )
                 continue
             
@@ -927,8 +925,11 @@ def parseCommandName( token )->str:
 def parseAlert( data, isJSON, account: account_c ):
 
     if( account == None ):
-        printf( timeNow(), " * ERROR: parseAlert called without an account" )
+        print( timeNow(), " * ERROR: parseAlert called without an account" )
         return
+    
+    account.print( '\n' + str(timeNow()), "ALERT:", data.replace('\n', ' | ') )
+    account.print('----------------------------')
 
     symbol = "Invalid"
     quantity = 0
@@ -1015,7 +1016,7 @@ def parseAlert( data, isJSON, account: account_c ):
 
     if( command == 'close' or (command == 'position' and quantity == 0) ):
         if pos == None:
-            printf( timeNow(), " * 'Close", symbol, "' No position found" )
+            account.print( timeNow(), " * 'Close", symbol, "' No position found" )
             return
         positionContracts = pos.getKey('contracts')
         positionSide = pos.getKey( 'side' )
@@ -1115,7 +1116,7 @@ def Alert( data ):
                         account = a
                         break
         if( account == None ):
-            if verbose : print( timeNow(), ' * ERROR * Account ID not found.' )
+            print( timeNow(), ' * ERROR * Account ID not found. ALERT:', data.replace('\n', ' | ') )
             return
         parseAlert( data, isJSON, account )
         return
@@ -1133,7 +1134,7 @@ def Alert( data ):
                     account = a
                     break
         if( account == None ):
-            printf( timeNow(), ' * ERROR * Account ID not found.' )
+            print( timeNow(), ' * ERROR * Account ID not found. ALERT:', data.replace('\n', ' | ') )
             return
 
         parseAlert( line, isJSON, account )
@@ -1163,22 +1164,22 @@ for ac in accounts_data:
 
     exchange = ac.get('EXCHANGE')
     if( exchange == None ):
-        printf( " * ERROR PARSING ACCOUNT INFORMATION: EXCHANGE" )
+        print( " * ERROR PARSING ACCOUNT INFORMATION: EXCHANGE" )
         continue
 
     account_id = ac.get('ACCOUNT_ID')
     if( account_id == None ):
-        printf( " * ERROR PARSING ACCOUNT INFORMATION: ACCOUNT_ID" )
+        print( " * ERROR PARSING ACCOUNT INFORMATION: ACCOUNT_ID" )
         continue
 
     api_key = ac.get('API_KEY')
     if( api_key == None ):
-        printf( " * ERROR PARSING ACCOUNT INFORMATION: API_KEY" )
+        print( " * ERROR PARSING ACCOUNT INFORMATION: API_KEY" )
         continue
 
     secret_key = ac.get('SECRET_KEY')
     if( secret_key == None ):
-        printf( " * ERROR PARSING ACCOUNT INFORMATION: SECRET_KEY" )
+        print( " * ERROR PARSING ACCOUNT INFORMATION: SECRET_KEY" )
         continue
 
     password = ac.get('PASSWORD')
@@ -1191,7 +1192,7 @@ for ac in accounts_data:
 
 
 if( len(accounts) == 0 ):
-    printf( " * FATAL ERROR: No valid accounts found. Please edit 'accounts.json' and introduce your API keys" )
+    print( " * FATAL ERROR: No valid accounts found. Please edit 'accounts.json' and introduce your API keys" )
     raise SystemExit()
 
 ############################################
@@ -1207,8 +1208,6 @@ log.disabled = True
 def webhook():
     if request.method == 'POST':
         data = request.get_data(as_text=True)
-        printf( '\n' + str(timeNow()), "ALERT:", data.replace('\n', ' | ') )
-        printf('----------------------------')
         Alert(data)
         return 'success', 200
     if request.method == 'GET':
@@ -1227,10 +1226,7 @@ timerOrdersQueue.start()
 
 #start the webhook server
 if __name__ == '__main__':
-    printf( " * Listening" )
+    print( " * Listening" )
     app.run(host="0.0.0.0", port=80, debug=False)
 
-
-#timerFetchPositions.cancel()
-#timerOrdersQueue.cancel()
 
