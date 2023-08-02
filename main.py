@@ -87,7 +87,7 @@ class account_c:
         self.positionslist = []
         self.ordersQueue = []
         self.activeOrders = []
-        self.symbolStatus = {}
+
         if( exchange == None ):
             raise ValueError('Exchange not defined')
         if( name.isnumeric() ):
@@ -235,11 +235,11 @@ class account_c:
             if( minAmount == None ): # replace minimum amount with precision value
                 thisMarket['limits']['amount']['min'] = float(precision)
 
+            # also generate an empty list of the USDT symbols to keep track of marginMode and Leverage status
+            thisMarket['local'] = { 'marginMode':'', 'leverage':0 }
+
             # Store the market into the local markets dictionary
             self.markets[key] = thisMarket
-
-            # also generate an empty list of the USDT symbols to keep track of marginMode and Leverage status
-            self.symbolStatus[key] = { 'marginMode': '', 'leverage': 0 }
 
 
         self.balance = self.fetchBalance()
@@ -282,11 +282,11 @@ class account_c:
         if( leverage < 1 ): # leverage 0 indicates we are closing a position
             return
 
-        if( cls.symbolStatus[ symbol ]['marginMode'] != 'isolated' or cls.symbolStatus[ symbol ]['leverage'] != leverage ):
+        if( cls.markets[ symbol ]['local']['marginMode'] != 'isolated' or cls.markets[ symbol ]['local']['leverage'] != leverage ):
             if( cls.exchange.id == 'kucoinfutures' ):
                 # kucoinfutured is always in isolated mode and leverage is passed as a parm. Do nothing
-                cls.symbolStatus[ symbol ]['marginMode'] = 'isolated'
-                cls.symbolStatus[ symbol ]['leverage'] = leverage
+                cls.markets[ symbol ]['local']['marginMode'] = 'isolated'
+                cls.markets[ symbol ]['local']['leverage'] = leverage
             
             if( cls.exchange.id == 'bitget' ):
                 # bitget also requires to set position mode (hedged or one sided)
@@ -295,21 +295,21 @@ class account_c:
                 # in bitget they call 'fixed' to 'isolated' margin
                 response = cls.exchange.set_margin_mode( 'fixed', symbol )
                 if( response.get('marginMode' == 'fixed') ):
-                    cls.symbolStatus[ symbol ]['marginMode'] = 'isolated'
+                    cls.markets[ symbol ]['local']['marginMode'] = 'isolated'
                 response = cls.exchange.set_leverage( leverage, symbol )
                 if( response != None and response.get('code') == '0' ):
-                    cls.symbolStatus[ symbol ]['leverage'] = leverage
+                    cls.markets[ symbol ]['local']['leverage'] = leverage
 
             if( cls.exchange.id == 'bingx' ):
                 # set margin mode to 'cross' or 'isolated'
                 response = cls.exchange.set_margin_mode( 'isolated', symbol )
                 if( response.get('code') == '0' ):
-                    cls.symbolStatus[ symbol ]['marginMode'] = 'isolated'
+                    cls.markets[ symbol ]['local']['marginMode'] = 'isolated'
 
                 response = cls.exchange.set_leverage( 10, symbol, params = {'side':'LONG'} )
                 response2 = cls.exchange.set_leverage( 10, symbol, params = {'side':'SHORT'} )
                 if( response.get('code') == '0' and response2.get('code') == '0' ):
-                    cls.symbolStatus[ symbol ]['leverage'] = leverage
+                    cls.markets[ symbol ]['local']['leverage'] = leverage
                 
             if( cls.exchange.id == 'coinex' ):
                 # margin mode uses the names: 'isolated' and 'cross'
@@ -321,15 +321,15 @@ class account_c:
                 
                 response = cls.exchange.set_margin_mode( 'isolated', symbol, params = {'leverage':leverage} )
                 if( response.get('message') == 'OK' ):
-                    cls.symbolStatus[ symbol ]['marginMode'] = 'isolated'
-                    cls.symbolStatus[ symbol ]['leverage'] = leverage
+                    cls.markets[ symbol ]['local']['marginMode'] = 'isolated'
+                    cls.markets[ symbol ]['local']['leverage'] = leverage
 
             if( cls.exchange.id == 'mexc' ):
                 cls.exchange.set_position_mode( False, symbol )
                 cls.exchange.set_leverage( leverage, symbol, params = {'openType': 1, 'positionType': 1} )
                 cls.exchange.set_leverage( leverage, symbol, params = {'openType': 1, 'positionType': 2} )
-                cls.symbolStatus[ symbol ]['marginMode'] = 'isolated'
-                cls.symbolStatus[ symbol ]['leverage'] = leverage
+                cls.markets[ symbol ]['local']['marginMode'] = 'isolated'
+                cls.markets[ symbol ]['local']['leverage'] = leverage
 
             if( cls.exchange.id == 'phemex' ):
                 response = cls.exchange.set_position_mode( False, symbol )
@@ -339,8 +339,8 @@ class account_c:
                 # from phemex API documentation: The sign of leverageEr indicates margin mode, i.e. leverage <= 0 means cross-margin-mode, leverage > 0 means isolated-margin-mode.
                 response = cls.exchange.set_leverage( leverage, symbol )
                 if( response.get('data') == 'ok' ):
-                    cls.symbolStatus[ symbol ]['marginMode'] = 'isolated'
-                    cls.symbolStatus[ symbol ]['leverage'] = leverage
+                    cls.markets[ symbol ]['local']['marginMode'] = 'isolated'
+                    cls.markets[ symbol ]['local']['leverage'] = leverage
             
             if( cls.exchange.id == 'bybit' ):
                 # tradeMode integer required
@@ -360,12 +360,12 @@ class account_c:
                             print( " * Error: updateSymbolLeverage: Unhandled Exception", a )
                 
                 # see if we have to change marginMode (does both) or just leverage
-                if( cls.symbolStatus[ symbol ]['marginMode'] != 'isolated' ):
+                if( cls.markets[ symbol ]['local']['marginMode'] != 'isolated' ):
                     # isolated or cross
                     try:
                         response = cls.exchange.set_margin_mode( 'isolated', symbol, {'leverage':leverage} )
-                        cls.symbolStatus[ symbol ]['marginMode'] = 'isolated'
-                        cls.symbolStatus[ symbol ]['leverage'] = leverage
+                        cls.markets[ symbol ]['local']['marginMode'] = 'isolated'
+                        cls.markets[ symbol ]['local']['leverage'] = leverage
                     except Exception as e:
                         for a in e.args:
                             # bybit {"retCode":140026,"retMsg":"Isolated not modified","result":{},"retExtInfo":{},"time":1690530385642}
@@ -377,7 +377,7 @@ class account_c:
                     # update only leverage
                     try:
                         response = cls.exchange.set_leverage( leverage, symbol )
-                        cls.symbolStatus[ symbol ]['leverage'] = leverage
+                        cls.markets[ symbol ]['local']['leverage'] = leverage
                     except Exception as e:
                         for a in e.args:
                             # bybit {"retCode":140043,"retMsg":"leverage not modified","result":{},"retExtInfo":{},"time":1690530386264}
@@ -386,14 +386,15 @@ class account_c:
                             else:
                                 print( " * Error: updateSymbolLeverage: Unhandled Exception", a )
                 
-            if( cls.symbolStatus[ symbol ]['marginMode'] == 'isolated' and cls.symbolStatus[ symbol ]['leverage'] == leverage ):
-                cls.print( "* Leverage updated: Margin Mode:", cls.symbolStatus[ symbol ]['marginMode'] + " Leverage: " + str(cls.symbolStatus[ symbol ]['leverage']) + "x" )
+            if( cls.markets[ symbol ]['local']['marginMode'] == 'isolated' and cls.markets[ symbol ]['local']['leverage'] == leverage ):
+                cls.print( "* Leverage updated: Margin Mode:", cls.markets[ symbol ]['local']['marginMode'] + " Leverage: " + str(cls.markets[ symbol ]['local']['leverage']) + "x" )
 
 
     def fetchBalance(cls):
-        params = {}
+        params = { "type":"swap" }
         if( cls.exchange.id == "phemex" ):
-            params = { "type":"swap", "code":"USDT" }
+            params['code'] = 'USDT'
+            #params = { "type":"swap", "code":"USDT" }
         
         response = cls.exchange.fetch_balance( params )
 
@@ -424,9 +425,9 @@ class account_c:
             response = cls.fetchBalance()
             return response.get( 'free' )
         
-        params = {}
+        params = { "type":"swap" }
         if( cls.exchange.id == "phemex" ):
-            params = { "type":"swap", "code":"USDT" }
+            params["code"] = "USDT"
 
         available = cls.exchange.fetch_free_balance( params )
         return available.get('USDT')
@@ -572,7 +573,7 @@ class account_c:
 
             # if the position contains the marginMode information also update the local data
             if( thisPosition.get('marginMode') != None ) :
-                cls.symbolStatus[ symbol ][ 'marginMode' ] = thisPosition.get('marginMode')
+                cls.markets[ symbol ]['local'][ 'marginMode' ] = thisPosition.get('marginMode')
 
             # try also to refresh the leverage from the exchange (not supported by all exchanges)
             if( cls.exchange.has.get('fetchLeverage') == True ):
@@ -583,19 +584,19 @@ class account_c:
                     longLeverage = response['data'].get('fixedLongLeverage')
                     shortLeverage = response['data'].get('fixedShortLeverage')
                     if( longLeverage == shortLeverage ):
-                        cls.symbolStatus[ symbol ][ 'leverage' ] = longLeverage
+                        cls.markets[ symbol ]['local'][ 'leverage' ] = longLeverage
 
                 elif( cls.exchange.id == 'bingx' ):
                     # they should always be the same
                     longLeverage = response['data'].get('longLeverage')
                     shortLeverage = response['data'].get('shortLeverage')
                     if( longLeverage == shortLeverage ):
-                        cls.symbolStatus[ symbol ][ 'leverage' ] = longLeverage
+                        cls.markets[ symbol ]['local'][ 'leverage' ] = longLeverage
 
             elif( thisPosition.get('leverage') != None ):
                 leverage = int(thisPosition.get('leverage'))
                 if( leverage == thisPosition.get('leverage') ): # kucoin sends weird fractional leverage. Ignore it
-                    cls.symbolStatus[ symbol ][ 'leverage' ] = leverage
+                    cls.markets[ symbol ]['local'][ 'leverage' ] = leverage
 
         if v:
             for pos in cls.positionslist:
@@ -895,10 +896,10 @@ def parseAlert( data, account: account_c ):
     # convert quantity to concracts if needed
     if( (isUSDT or isBaseCurrenty)  and quantity != 0.0 ) :
         price = account.fetchAveragePrice(symbol)
-        coin_name = account.markets['quote']
+        coin_name = account.markets[symbol]['quote']
         if( isBaseCurrenty ) :
             quantity *= price
-            coin_name = account.markets['base']
+            coin_name = account.markets[symbol]['base']
 
         print( "CONVERTING (x"+str(leverage)+")", quantity, coin_name, '==>', end = '' )
         # We don't know for sure yet if it's a buy or a sell, so we average
