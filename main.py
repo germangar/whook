@@ -820,19 +820,8 @@ def refreshPositions():
     for account in accounts:
         account.refreshPositions()
 
-def parseCommandName( token )->str:
-    command = 'Invalid'
-    if token.lower()  == 'long' or token.lower() == "buy":
-        command = 'buy'
-    elif token.lower()  == 'short' or token.lower() == "sell":
-        command = 'sell'
-    elif token.lower()  == 'close':
-        command = 'close'
-    elif token.lower()  == 'position' or token.lower()  == 'pos':
-        command = 'position'
-    return command
 
-def parseAlert( data, isJSON, account: account_c ):
+def parseAlert( data, account: account_c ):
 
     if( account == None ):
         print( timeNow(), " * ERROR: parseAlert called without an account" )
@@ -849,58 +838,42 @@ def parseAlert( data, isJSON, account: account_c ):
     isBaseCurrenty = False
     reverse = False
 
-    # FIXME: json commands are pretty incomplete because I don't use them
-    if( isJSON ):
-        jdata = json.loads(data)
-        for key, value in jdata.items():
-            if key.lower() == 'ticker' or key.lower() == 'symbol':
-                if( account.findSymbolFromPairName(value) != None ): # GMXUSDTM, GMX/USDT:USDT and GMX/USDT are all acceptable formats
-                    symbol = account.findSymbolFromPairName(value) 
-            elif key.lower() == 'action' or key.lower() == 'command':
-                command = parseCommandName(value)
-            elif key.lower() == 'quantity':
-                isUSDT = True
-                quantity = stringToValue( value )
-            elif key.lower() == 'contracts':
-                quantity = stringToValue( value )
-            elif key.lower() == 'leverage':
-                leverage = int(value)
-    else:
-        # Informal plain text syntax
-        tokens = data.split()
-        for token in tokens:
-            if( account.findSymbolFromPairName(token) != None ): # GMXUSDTM, GMX/USDT:USDT and GMX/USDT are all acceptable formats
-                symbol = account.findSymbolFromPairName(token) 
-            elif ( token == account.accountName ):
-                pass
-            elif ( token[-1:]  == "$" ): # value in USDT
-                isUSDT = True
-                arg = token[:-1]
-                quantity = stringToValue( arg )
-            elif ( token[-1:]  == "@" ): # value in contracts
-                arg = token[:-1]
-                quantity = stringToValue( arg )
-            elif ( token[:1]  == "-" ): # this is a minus symbol! What a bitch (value in base currency)
-                isBaseCurrenty = True
-                quantity = stringToValue( token )
-            elif ( token.isnumeric() ):
-                isBaseCurrenty = True
-                arg = token
-                quantity = float(arg)
-            elif ( token[:1].lower()  == "x" ):
-                arg = token[1:]
-                leverage = int(arg)
-            elif ( token[-1:].lower()  == "x" ):
-                arg = token[:-1]
-                leverage = int(arg)
-            elif token.lower()  == 'long' or token.lower() == "buy":
-                command = 'buy'
-            elif token.lower()  == 'short' or token.lower() == "sell":
-                command = 'sell'
-            elif token.lower()  == 'close':
-                command = 'close'
-            elif token.lower()  == 'position' or token.lower()  == 'pos':
-                command = 'position'
+
+    # Informal plain text syntax
+    tokens = data.split()
+    for token in tokens:
+        if( account.findSymbolFromPairName(token) != None ): # GMXUSDTM, GMX/USDT:USDT and GMX/USDT are all acceptable formats
+            symbol = account.findSymbolFromPairName(token) 
+        elif ( token == account.accountName ):
+            pass
+        elif ( token[-1:]  == "$" ): # value in USDT
+            isUSDT = True
+            arg = token[:-1]
+            quantity = stringToValue( arg )
+        elif ( token[-1:]  == "@" ): # value in contracts
+            arg = token[:-1]
+            quantity = stringToValue( arg )
+        elif ( token[:1]  == "-" ): # this is a minus symbol! What a bitch (value in base currency)
+            isBaseCurrenty = True
+            quantity = stringToValue( token )
+        elif ( token.isnumeric() ):
+            isBaseCurrenty = True
+            arg = token
+            quantity = float(arg)
+        elif ( token[:1].lower()  == "x" ):
+            arg = token[1:]
+            leverage = int(arg)
+        elif ( token[-1:].lower()  == "x" ):
+            arg = token[:-1]
+            leverage = int(arg)
+        elif token.lower()  == 'long' or token.lower() == "buy":
+            command = 'buy'
+        elif token.lower()  == 'short' or token.lower() == "sell":
+            command = 'sell'
+        elif token.lower()  == 'close':
+            command = 'close'
+        elif token.lower()  == 'position' or token.lower()  == 'pos':
+            command = 'position'
     
 
     # validate the commands
@@ -1023,26 +996,7 @@ def parseAlert( data, isJSON, account: account_c ):
 
 def Alert( data ):
 
-    isJSON = is_json(data)
-
     account = None
-
-    # make a first pass looking for account id
-    if( isJSON ):
-        jdata = json.loads(data)
-        for key, value in jdata.items():
-            if key == 'id':
-                for a in accounts:
-                    if( value == a.id ):
-                        account = a
-                        break
-        if( account == None ):
-            print( timeNow(), ' * ERROR * Account ID not found. ALERT:', data.replace('\n', ' | ') )
-            return
-        parseAlert( data, isJSON, account )
-        return
-
-    # if plain text accept several alerts separated by line breaks
 
     # first lets find out if there's more than one commands inside the alert message
     lines = data.split("\n")
@@ -1058,7 +1012,7 @@ def Alert( data ):
             print( timeNow(), ' * ERROR * Account ID not found. ALERT:', data.replace('\n', ' | ') )
             return
 
-        parseAlert( line, isJSON, account )
+        parseAlert( line, account )
 
 
 
@@ -1136,6 +1090,7 @@ def webhook():
         Alert(data)
         return 'success', 200
     if request.method == 'GET':
+        # Fixme: this isn't doing anything since I removed the global log
         wmsg = open( 'webhook.log', encoding="utf-8" )
         text = wmsg.read()
         return app.response_class(text, mimetype='text/plain; charset=utf-8')
