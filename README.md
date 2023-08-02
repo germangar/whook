@@ -52,26 +52,6 @@ Notice: This is a short position. For a long position use a positive value. Same
 
 Several orders can be included in the same alert, separated by line breaks. For example, you can send the orders for 2 different accounts inside the same alert.
 
-#### As JSON message:
-
-JSON Messages only accept one order per alert.
-
-Example of a buy order in USDT:
-
-{<br>
-&emsp;"symbol": "BTC/USDT",<br>
-&emsp;"command": "buy",<br>
-&emsp;"quantity": "12",<br>
-&emsp;"leverage": "3",<br>
-&emsp;"id" : "myKucoinA"<br>
-}
-
-Valid commands are: "buy", "sell", "long", "short", "position" and "close". "Buy/sell" and "long/short" are synonims. "position" can also be "pos".
-For sending the order in contracts the key "quantity" should be replaced by "contracts"
-
-synonims: symbol, ticker // command, cmd, action
-
-
 
 ### API KEYS ###
 When you first launch the script it will generate a json file. This file is a template to fill the accounts API data. This file can contain as many accounts as you want separated by commas. It looks like this:
