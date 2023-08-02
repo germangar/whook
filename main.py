@@ -338,10 +338,6 @@ class account_c:
         cls.logger.info( dateString() +'['+ cls.accountName +'/'+ cls.exchange.id +'] '+sep.join(map(str,args)), **kwargs)
         print( '['+ cls.accountName +'/'+ cls.exchange.id +'] '+sep.join(map(str,args)), **kwargs)
 
-    # def print(cls, *args, sep=" ", **kwargs): # adds account and exchange information to the message
-    #     logger.info( dateString() +'['+ cls.accountName +'/'+ cls.exchange.id +'] '+sep.join(map(str,args)), **kwargs)
-    #     print( '['+ cls.accountName +'/'+ cls.exchange.id +'] '+sep.join(map(str,args)), **kwargs)
-
     def verifyLeverageRange( cls, symbol, leverage )->int:
 
         leverage = max( leverage, 1 )
@@ -387,7 +383,7 @@ class account_c:
                 if( response.get('marginMode' == 'fixed') ):
                     cls.symbolStatus[ symbol ]['marginMode'] = 'isolated'
                 response = cls.exchange.set_leverage( leverage, symbol )
-                if( response.get('code') == '0' ):
+                if( response != None and response.get('code') == '0' ):
                     cls.symbolStatus[ symbol ]['leverage'] = leverage
 
             if( cls.exchange.id == 'bingx' ):
@@ -612,19 +608,28 @@ class account_c:
         except Exception as e:
             for a in e.args:
                 if 'Remote end closed connection' in a :
-                    print( timeNow(), cls.exchange.id, '* Refreshpositions:Exception raised: Remote end closed connection' )
+                    #print( timeNow(), cls.exchange.id, '* Refreshpositions:Exception raised: Remote end closed connection' )
+                    return
+                elif '500 Internal Server Error' in a:
+                    return
                 elif '502 Bad Gateway' in a:
-                    print( timeNow(), cls.exchange.id, '* Refreshpositions:Exception raised: 502 Bad Gateway' )
+                    #print( timeNow(), cls.exchange.id, '* Refreshpositions:Exception raised: 502 Bad Gateway' )
+                    return
                 elif 'Internal Server Error' in a:
-                    print( timeNow(), cls.exchange.id, '* Refreshpositions:Exception raised: 500 Internal Server Error' )
+                    #print( timeNow(), cls.exchange.id, '* Refreshpositions:Exception raised: 500 Internal Server Error' )
+                    return
+                elif 'Server busy, please retry later' in a:
+                    return
                 elif 'mexc GET' in a or 'kucoinfutures GET' in a:
-                    print( timeNow(), cls.exchange.id, "* Refreshpositions:Exception raised: no response.")
+                    #print( timeNow(), cls.exchange.id, "* Refreshpositions:Exception raised: no response.")
+                    return
                 elif a == "OK": #Coinex raises an exception to give an OK message when there are no positions...
                     positions = []
+                    break
                     #if v : print('Refreshing positions '+cls.accountName+': 0 positions found\n------------------------------' )
                 else:
                     print( timeNow(), cls.exchange.id, '* Refreshpositions:Unknown Exception raised:', a )
-            return
+                    return
 
                     
         # Phemex returns positions that were already closed
@@ -933,6 +938,7 @@ def parseAlert( data, isJSON, account: account_c ):
     leverage = 0
     command = "Invalid"
     isUSDT = False
+    isBaseCurrenty = False
     reverse = False
 
     # FIXME: json commands are pretty incomplete because I don't use them
@@ -959,11 +965,15 @@ def parseAlert( data, isJSON, account: account_c ):
                 symbol = account.findSymbolFromPairName(token) 
             elif ( token == account.accountName ):
                 pass
-            elif ( token[-1:]  == "$" ):
+            elif ( token[-1:]  == "$" ): # value in USDT
                 isUSDT = True
                 arg = token[:-1]
                 quantity = stringToValue( arg )
-            elif ( token[:1]  == "-" ): # this is a minus symbol! What a bitch
+            elif ( token[-1:]  == "β" ): # value in base currency
+                isBaseCurrenty = True
+                arg = token[:-1]
+                quantity = stringToValue( arg )
+            elif ( token[:1]  == "-" ): # this is a minus symbol! What a bitch (value in contracts)
                 quantity = stringToValue( token )
             elif ( token.isnumeric() ):
                 arg = token
@@ -1001,12 +1011,17 @@ def parseAlert( data, isJSON, account: account_c ):
     available = account.fetchAvailableBalance() * 0.985
     
     # convert quantity to concracts if needed
-    if( isUSDT and quantity != 0.0 ) :
-        print( "CONVERTING (x"+str(leverage)+")", quantity, "$ ==>", end = '' )
+    if( (isUSDT or isBaseCurrenty)  and quantity != 0.0 ) :
+        price = account.fetchAveragePrice(symbol)
+        coin_name = account.markets['quote']
+        if( isBaseCurrenty ) :
+            quantity *= price
+            coin_name = account.markets['base']
+
+        print( "CONVERTING (x"+str(leverage)+")", quantity, coin_name, '==>', end = '' )
         #We don't know for sure yet if it's a buy or a sell, so we average
-        quantity = account.contractsFromUSDT( symbol, quantity, account.fetchAveragePrice(symbol), leverage )
+        quantity = account.contractsFromUSDT( symbol, quantity, price, leverage )
         print( ":", quantity, "contracts" )
-        
 
     #check for a existing position
     pos = account.getPositionBySymbol( symbol )
