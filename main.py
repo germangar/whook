@@ -6,7 +6,6 @@ from threading import Timer
 import time
 import json
 import logging
-#import csv
 
 verbose = False
 _ORDER_TIMEOUT_ = 40
@@ -102,7 +101,6 @@ class account_c:
                 'password': password,
                 #'enableRateLimit': True
                 } )
-                #self.exchange.rateLimit = 333
         elif( exchange.lower() == 'bitget' ):
             self.exchange = ccxt.bitget({
                 "apiKey": apiKey,
@@ -113,8 +111,6 @@ class account_c:
                 "enableRateLimit": True
                 })
             self.canFlipPosition = True
-            # self.exchange.set_sandbox_mode( True )
-            #print( self.exchange.set_position_mode( False ) )
         elif( exchange.lower() == 'bingx' ):
             self.exchange = ccxt.bingx({
                 "apiKey": apiKey,
@@ -215,7 +211,6 @@ class account_c:
                     s = description[ description.find('Each contract is worth') + len('Each contract is worth ') : ]
                     list = s.split( ' ', 1 )
                     thisMarket['contractSize'] = float( list[0] )
-                    #print( "MARKET FIX ContractSize", thisMarket['contractSize'], type(thisMarket.get('contractSize')) )
                 else:
                     print( "WARNING: Market", self.exchange.id, "doesn't have contractSize" )
 
@@ -239,7 +234,6 @@ class account_c:
 
             if( minAmount == None ): # replace minimum amount with precision value
                 thisMarket['limits']['amount']['min'] = float(precision)
-                #print( "MARKET FIX minimum AMOUT", thisMarket['limits']['amount']['min'], type(thisMarket['limits']['amount']['min']) )
 
             # Store the market into the local markets dictionary
             self.markets[key] = thisMarket
@@ -250,86 +244,6 @@ class account_c:
 
         self.balance = self.fetchBalance()
         self.print( self.balance )
-
-
-        '''
-        if( self.exchange.id == 'bybit' ):
-            print( 'has setPositionMode', self.exchange.has.get('setPositionMode') )
-            #tradeMode integer required
-            #Possible values: [0, 1] 0=crossMargin, 1=isolatedMargin
-            # buyLeverage, sellLeverage string required
-            # params = { 'category':'linear', 'tradeMode':1, 'buyLeverage':'3', 'sellLeverage':'3' }
-            try:
-                print( 'setPositionMode', self.exchange.set_position_mode( False, "ATOM/USDT:USDT" ) )
-            except Exception as e:
-                print(e)
-
-            # isolated or cross
-            try:
-                print( self.exchange.set_margin_mode( 'cross', 'ATOM/USDT:USDT', {'leverage':4} ) )
-            except Exception as e:
-                print(e)
-
-            print( 'has setLeverage', self.exchange.has.get('setLeverage') )
-            #params = {'category':'linear'}
-            params = {}
-            try:
-                print( 'setLeverage', self.exchange.set_leverage( 8, "ATOM/USDT:USDT", params=params ) )
-            except Exception as e:
-                print(e)
-            
-        if( self.exchange.id == 'phemex' ):
-            print( 'has setPositionMode', self.exchange.has.get('setPositionMode') )
-            print( 'setPositionMode', self.exchange.set_position_mode( False, "ATOM/USDT:USDT" ) )
-            print( 'has setLeverage', self.exchange.has.get('setLeverage') )
-            print( 'setLeverage', self.exchange.set_leverage( 13, "ATOM/USDT:USDT" ) )
-
-        if( self.exchange.id == 'mexc' ):
-            print( self.exchange.has.get('fetchPositionMode') )
-            print( self.exchange.fetch_position_mode("ATOM/USDT:USDT") )
-            # (params, 'openType')  # 1 or 2 -  1: isolated position, 2: full position
-            # (params, 'positionType')  # 1 or 2 - 1: Long 2: short
-            print( self.exchange.has.get('setLeverage') )
-            print( self.exchange.set_leverage( 4, "ATOM/USDT:USDT", params = { 'openType': 1, 'positionType': 1} ) )
-            print( self.exchange.set_leverage( 4, "ATOM/USDT:USDT", params = { 'openType': 1, 'positionType': 2} ) )
-            print( self.exchange.has.get('setPositionMode') )
-            print( self.exchange.set_position_mode( False, "ATOM/USDT:USDT" ) )
-        
-        if( self.exchange.id == 'bingx' ):
-            atomMarket = self.markets.get( "ATOM/USDT:USDT" )
-            print( atomMarket )
-
-            # set margin mode to 'cross' or 'isolated'
-            print( self.exchange.set_margin_mode( 'cross', 'ATOM/USDT:USDT' ) )
-            print( self.exchange.set_leverage( 10, 'ATOM/USDT:USDT', params = {'side':'LONG'} ) )
-            print( self.exchange.set_leverage( 10, 'ATOM/USDT:USDT', params = {'side':'SHORT'} ) )
-            
-        if( self.exchange.id == 'bitget' ):
-            # margin modes: 'fixed' 'crossed'
-            # in bitget they call 'fixed' to 'isolated' margin
-            print( self.exchange.set_margin_mode( 'fixed', 'ATOM/USDT:USDT' ) )
-            print( self.exchange.set_leverage( 3, 'ATOM/USDT:USDT' ) )
-
-        if( self.exchange.id == 'coinex' ):
-            # margin mode uses the names: 'isolated' and 'cross'
-            # it could also be set in the params with the key 'position_type'
-            # position_type	(Integer)	1 Isolated Margin 2 Cross Margin
-            
-            #print( self.exchange.set_margin_mode( 'isolated', 'ATOM/USDT:USDT', params = {'leverage':3, 'position_type':1} ) )
-
-            # Coinex doesn't addept any number as leverage. It must be on the list.
-            atomMarket = self.markets.get( "ATOM/USDT:USDT" )
-            validLeverages = list(map(int, atomMarket['info']['leverages']))
-            targetLeverage = 17
-            leverage = 1
-            for l in validLeverages:
-                if( l > targetLeverage ):
-                    break
-                leverage = l
-            
-            print( self.exchange.set_margin_mode( 'isolated', 'ATOM/USDT:USDT', params = {'leverage':leverage} ) )
-        '''
-
         self.refreshPositions(True)
 
     ## methods ##
@@ -365,12 +279,12 @@ class account_c:
     def updateSymbolLeverage( cls, symbol, leverage ):
         # also sets marginMode to isolated
 
-        if( leverage < 1 ): #leverage 0 indicates we are closing a position
+        if( leverage < 1 ): # leverage 0 indicates we are closing a position
             return
 
         if( cls.symbolStatus[ symbol ]['marginMode'] != 'isolated' or cls.symbolStatus[ symbol ]['leverage'] != leverage ):
             if( cls.exchange.id == 'kucoinfutures' ):
-                #kucoinfutured is always in isolated mode and leverage is passed as a parm. Do nothing
+                # kucoinfutured is always in isolated mode and leverage is passed as a parm. Do nothing
                 cls.symbolStatus[ symbol ]['marginMode'] = 'isolated'
                 cls.symbolStatus[ symbol ]['leverage'] = leverage
             
@@ -429,8 +343,8 @@ class account_c:
                     cls.symbolStatus[ symbol ]['leverage'] = leverage
             
             if( cls.exchange.id == 'bybit' ):
-                #tradeMode integer required
-                #Possible values: [0, 1] 0=crossMargin, 1=isolatedMargin
+                # tradeMode integer required
+                # Possible values: [0, 1] 0=crossMargin, 1=isolatedMargin
                 # buyLeverage, sellLeverage string required
 
                 # always set position mode to oneSided
@@ -540,9 +454,9 @@ class account_c:
         return None
     
     def findSymbolFromPairName(cls, paircmd):
-        #first let's check if the pair string contains
-        #a backslash. If it does it's probably already a symbol
-        #but it also may not include the ':USDT' ending
+        # first let's check if the pair string contains
+        # a backslash. If it does it's probably already a symbol
+        # but it also may not include the ':USDT' ending
         if '/' not in paircmd and paircmd.endswith('USDT'):
             paircmd = paircmd[:-4]
             paircmd += '/USDT:USDT'
@@ -550,12 +464,12 @@ class account_c:
         if '/' in paircmd and not paircmd.endswith(':USDT'):
             paircmd += ':USDT'
 
-        #try the more direct approach
+        # try the more direct approach
         m = cls.markets.get(paircmd)
         if( m != None ):
             return m.get('symbol')
 
-        #so now let's find it in the list using the id
+        # so now let's find it in the list using the id
         for m in cls.markets:
             id = cls.markets[m]['id'] 
             symbol = cls.markets[m]['symbol']
@@ -623,10 +537,9 @@ class account_c:
                 elif 'mexc GET' in a or 'kucoinfutures GET' in a:
                     #print( timeNow(), cls.exchange.id, "* Refreshpositions:Exception raised: no response.")
                     return
-                elif a == "OK": #Coinex raises an exception to give an OK message when there are no positions...
+                elif a == "OK": # Coinex raises an exception to give an OK message when there are no positions... don't look at me, look at them
                     positions = []
                     break
-                    #if v : print('Refreshing positions '+cls.accountName+': 0 positions found\n------------------------------' )
                 else:
                     print( timeNow(), cls.exchange.id, '* Refreshpositions:Unknown Exception raised:', a )
                     return
@@ -650,7 +563,7 @@ class account_c:
         cls.positionslist.clear()
         for thisPosition in positions:
 
-            #HACK!! coinx doesn't have 'contracts'. The value comes in 'contractSize' and in info:{'amount'}
+            # HACK!! coinx doesn't have 'contracts'. The value comes in 'contractSize' and in info:{'amount'}
             if( cls.exchange.id == 'coinex' ):
                 thisPosition['contracts'] = float( thisPosition['info']['amount'] )
 
@@ -661,7 +574,7 @@ class account_c:
             if( thisPosition.get('marginMode') != None ) :
                 cls.symbolStatus[ symbol ][ 'marginMode' ] = thisPosition.get('marginMode')
 
-            #try also to refresh the leverage from the exchange (not supported by all exchanges)
+            # try also to refresh the leverage from the exchange (not supported by all exchanges)
             if( cls.exchange.has.get('fetchLeverage') == True ):
                 response = cls.exchange.fetch_leverage( symbol )
 
@@ -681,7 +594,7 @@ class account_c:
 
             elif( thisPosition.get('leverage') != None ):
                 leverage = int(thisPosition.get('leverage'))
-                if( leverage == thisPosition.get('leverage') ): # kucoin sends weird fractional leverage.
+                if( leverage == thisPosition.get('leverage') ): # kucoin sends weird fractional leverage. Ignore it
                     cls.symbolStatus[ symbol ][ 'leverage' ] = leverage
 
         if v:
@@ -725,7 +638,7 @@ class account_c:
                 cls.activeOrders.remove( order )
                 continue
 
-            # Phemex doesn't support fetch_order in swap mode, but it supports fetch_open_orders and fetch_closed_orders
+            # Phemex doesn't support fetch_order (by id) in swap mode, but it supports fetch_open_orders and fetch_closed_orders
             if( cls.exchange.id == 'phemex' or cls.exchange.id == 'bybit' ):
                 info = cls.fetchClosedOrderById( order.symbol, order.id )
                 if( info == None ):
@@ -762,11 +675,11 @@ class account_c:
 
         numOrders = len(cls.ordersQueue) + len(cls.activeOrders)
 
-        #see if any active order was completed and delete it
+        # see if any active order was completed and delete it
         while cls.removeFirstCompletedOrder():
             continue
 
-        #if we just cleared the orders queue refresh the positions info
+        # if we just cleared the orders queue refresh the positions info
         if( numOrders > 0 and (len(cls.ordersQueue) + len(cls.activeOrders)) == 0 ):
             cls.refreshPositions(True)
 
@@ -796,12 +709,7 @@ class account_c:
                 params['leverage'] = max( order.leverage, 1 )
 
             if( cls.exchange.id == 'bitget' ):
-                try: #disable hedged mode
-                    #response = cls.exchange.set_position_mode( False, order.symbol )
-                    params['side'] = 'buy_single' if( order.type == "buy" ) else 'sell_single'
-                except Exception as e:
-                    cls.print( timeNow(), " * Exception Raised. Failed to set position mode:", e )
-
+                params['side'] = 'buy_single' if( order.type == "buy" ) else 'sell_single'
                 if( order.reverse ): #"reverse":true
                     params['reverse'] = True
 
@@ -864,7 +772,7 @@ class account_c:
                                 else:
                                     cls.print( ' * Exception raised: Balance insufficient: Reducing by 5%')
                             break
-                        else: #cancel the order
+                        else: # cancel the order
                             cls.print( ' * Exception raised: Balance insufficient: Cancelling')
                             cls.ordersQueue.remove( order )
                             break
@@ -873,7 +781,7 @@ class account_c:
                         cls.print( ' * ERROR Cancelling: Unhandled Exception raised:', e )
                         cls.ordersQueue.remove( order )
                         break
-                continue #back to the orders loop
+                continue # back to the orders loop
 
             if( response.get('id') == None ):
                 cls.print( " * Order denied:", response['info'], "Cancelling" )
@@ -995,7 +903,7 @@ def parseAlert( data, isJSON, account: account_c ):
                 command = 'position'
     
 
-    #let's try to validate the commands
+    # validate the commands
     if( symbol == "Invalid"):
         account.print( "ERROR: Couldn't find symbol" )
         return
@@ -1020,11 +928,11 @@ def parseAlert( data, isJSON, account: account_c ):
             coin_name = account.markets['base']
 
         print( "CONVERTING (x"+str(leverage)+")", quantity, coin_name, '==>', end = '' )
-        #We don't know for sure yet if it's a buy or a sell, so we average
+        # We don't know for sure yet if it's a buy or a sell, so we average
         quantity = account.contractsFromUSDT( symbol, quantity, price, leverage )
         print( ":", quantity, "contracts" )
 
-    #check for a existing position
+    # check for a existing position
     pos = account.getPositionBySymbol( symbol )
 
     if( command == 'close' or (command == 'position' and quantity == 0) ):
@@ -1050,7 +958,7 @@ def parseAlert( data, isJSON, account: account_c ):
                 command = 'buy'
             quantity = abs(quantity)
         else:
-            #we need to account for the old position
+            # we need to account for the old position
             positionContracts = pos.getKey('contracts')
             positionSide = pos.getKey( 'side' )
             if( positionSide == 'short' ):
@@ -1066,7 +974,7 @@ def parseAlert( data, isJSON, account: account_c ):
 
     if( command == 'buy' or command == 'sell'):
 
-        #fetch available balance and price
+        # fetch available balance and price
         price = account.fetchSellPrice(symbol) if( command == 'sell' ) else account.fetchBuyPrice(symbol)
         canDoContracts = account.contractsFromUSDT( symbol, available, price, leverage )
         minOrder = account.findMinimumAmountForSymbol(symbol)
@@ -1077,7 +985,7 @@ def parseAlert( data, isJSON, account: account_c ):
             
             if ( positionSide == 'long' and command == 'sell' ) or ( positionSide == 'short' and command == 'buy' ):
                 reverse = True
-                # de we need to divide these in 2 orders?
+                # do we need to divide these in 2 orders?
                 if( account.exchange.id == 'bitget' and canDoContracts < account.findMinimumAmountForSymbol(symbol) ): #convert it to a reversal
                     print( "Quantity =", quantity, "PositionContracts=", positionContracts )
                     quantity = positionContracts
@@ -1091,10 +999,10 @@ def parseAlert( data, isJSON, account: account_c ):
                         if( order1 > minOrder + diff ):
                             order1 -= diff
 
-                    #first order is the contracts in the position and the contracs we can afford with the liquidity
+                    # first order is the contracts in the position and the contracs we can afford with the liquidity
                     account.ordersQueue.append( order_c( symbol, command, order1, leverage ) )
 
-                    #second order is whatever we can affort with the former position contracts + the change
+                    # second order is whatever we can afford with the former position contracts + the change
                     quantity -= order1
                     if( quantity >= minOrder ): #we are done (should never happen)
                         account.ordersQueue.append( order_c( symbol, command, quantity, leverage, 1.0 ) )
@@ -1119,7 +1027,7 @@ def Alert( data ):
 
     account = None
 
-    #make a first pass looking for account id
+    # make a first pass looking for account id
     if( isJSON ):
         jdata = json.loads(data)
         for key, value in jdata.items():
@@ -1136,7 +1044,7 @@ def Alert( data ):
 
     # if plain text accept several alerts separated by line breaks
 
-    #first lets find out if there's more than one commands inside the alert message
+    # first lets find out if there's more than one commands inside the alert message
     lines = data.split("\n")
     for line in lines:
         account = None
@@ -1214,9 +1122,9 @@ if( len(accounts) == 0 ):
 
 ############################################
 
-#define the webhook server
+# define the webhook server
 app = Flask(__name__)
-#silencing flask useless spam
+# silencing flask useless spam
 log = logging.getLogger('werkzeug')
 log.setLevel(logging.ERROR)
 log.disabled = True
@@ -1241,7 +1149,7 @@ timerFetchPositions.start()
 timerOrdersQueue = RepeatTimer( 0.25, updateOrdersQueue )
 timerOrdersQueue.start()
 
-#start the webhook server
+# start the webhook server
 if __name__ == '__main__':
     print( " * Listening" )
     app.run(host="0.0.0.0", port=80, debug=False)
