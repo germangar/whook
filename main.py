@@ -969,13 +969,14 @@ def parseAlert( data, isJSON, account: account_c ):
                 isUSDT = True
                 arg = token[:-1]
                 quantity = stringToValue( arg )
-            elif ( token[-1:]  == "β" ): # value in base currency
-                isBaseCurrenty = True
+            elif ( token[-1:]  == "@" ): # value in base currency
                 arg = token[:-1]
                 quantity = stringToValue( arg )
             elif ( token[:1]  == "-" ): # this is a minus symbol! What a bitch (value in contracts)
+                isBaseCurrenty = True
                 quantity = stringToValue( token )
             elif ( token.isnumeric() ):
+                isBaseCurrenty = True
                 arg = token
                 quantity = float(arg)
             elif ( token[:1].lower()  == "x" ):
