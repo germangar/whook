@@ -249,7 +249,7 @@ class account_c:
     ## methods ##
 
     def print( cls, *args, sep=" ", **kwargs ): # adds account and exchange information to the message
-        cls.logger.info( dateString() +'['+ cls.accountName +'/'+ cls.exchange.id +'] '+sep.join(map(str,args)), **kwargs)
+        cls.logger.info( '['+ dateString()+' | '+timeNow()+'] ' +sep.join(map(str,args)), **kwargs)
         print( '['+ cls.accountName +'/'+ cls.exchange.id +'] '+sep.join(map(str,args)), **kwargs)
 
     def verifyLeverageRange( cls, symbol, leverage )->int:
