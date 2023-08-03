@@ -732,7 +732,7 @@ class account_c:
             
             except Exception as e:
                 for a in e.args:
-                    if 'Too Many Requests' in a : #set a bigger delay and try again
+                    if 'Too Many Requests' in a or 'service too busy' in a: #set a bigger delay and try again
                         order.delay += 0.5
                         break
                     #
