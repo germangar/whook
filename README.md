@@ -35,8 +35,9 @@ position or pos - goes to a position of the given value. Use a positive value fo
 close - closes the position (position 0 also does it).<br>
 
 * Quantities:<br>
-[value] - quantity in contracts. No command associated, just the number.<br>
 [value]$ - quantity in USDT. No command associated. Just the number and the dollar sign.<br>
+[value]@ - quantity in contracts. No command associated. Just the number and the 'at' sign.<br>
+[value] - quantity in base currency. Just the number without any extra character. Base currency is the coin you're trading.<br>
 [value]x or x[value] - defines the leverage.<br>
 
 Examples:<br>
@@ -44,8 +45,13 @@ Examples:<br>
 [account_id] [symbol] [command] [value in USDT] [leverage] - **myKucoinA ETH/USDT buy 300$ x3**<br>
 
 - Position command using contracts:<br>
-[symbol] [command] [value in contracts] [leverage] [account_id] - **ETH/USDT position -300 x3 myKucoinA**<br>
+[symbol] [command] [value in contracts] [leverage] [account_id] - **ETH/USDT position -500@ x3 myKucoinA**<br>
 Notice: This is a short position. For a long position use a positive value. Same goes when the value is in USDT<br>
+The value of a contract differs from exchange to exchange. You have to check it in the exchange under contract information<br>
+
+- Sell command using base currency:<br>
+[account_id] [symbol] [command] [value in USDT] [leverage] - **myKucoinA ETH/USDT sell 0.25 x3**<br>
+This would sell 0.25ETH<br>
 
 - Close position<br>
 [account_id] [symbol] [command] - **myKucoinA ETH/USD close**<br>
