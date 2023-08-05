@@ -249,8 +249,8 @@ class account_c:
     ## methods ##
 
     def print( cls, *args, sep=" ", **kwargs ): # adds account and exchange information to the message
-        cls.logger.info( '['+ dateString()+' | '+timeNow()+'] ' +sep.join(map(str,args)), **kwargs)
-        print( '['+ cls.accountName +'/'+ cls.exchange.id +'] '+sep.join(map(str,args)), **kwargs)
+        cls.logger.info( '['+ dateString()+']['+timeNow()+'] ' +sep.join(map(str,args)), **kwargs)
+        print( timeNow(), '['+ cls.accountName +'/'+ cls.exchange.id +'] '+sep.join(map(str,args)), **kwargs)
 
     def verifyLeverageRange( cls, symbol, leverage )->int:
 
@@ -318,11 +318,14 @@ class account_c:
 
                 # Coinex doesn't accept any number as leverage. It must be on the list.
                 leverage = cls.verifyLeverageRange( symbol, leverage )
-                
-                response = cls.exchange.set_margin_mode( 'isolated', symbol, params = {'leverage':leverage} )
-                if( response.get('message') == 'OK' ):
-                    cls.markets[ symbol ]['local']['marginMode'] = 'isolated'
-                    cls.markets[ symbol ]['local']['leverage'] = leverage
+                try:
+                    response = cls.exchange.set_margin_mode( 'isolated', symbol, params = {'leverage':leverage} )
+                except Exception as e:
+                    cls.print( ' * WARNING: updateSymbolLeverage: Exception raised', e )
+                else:
+                    if( response.get('message') == 'OK' ):
+                        cls.markets[ symbol ]['local']['marginMode'] = 'isolated'
+                        cls.markets[ symbol ]['local']['leverage'] = leverage
 
             if( cls.exchange.id == 'mexc' ):
                 cls.exchange.set_position_mode( False, symbol )
@@ -645,13 +648,15 @@ class account_c:
                 if( info == None ):
                     continue
             else:
-                try:
-                    info = cls.exchange.fetch_order( order.id, order.symbol )
-                except Exception as e:
-                    for a in e.args:
-                        if( "does not exist" in a ):
-                            cls.activeOrders.remove( order )
-                            return
+                info = cls.exchange.fetch_order( order.id, order.symbol )
+                
+            
+            if( info == None ): # FIXME: Check if this is really happening by printing it.
+                print( 'removeFirstCompletedOrder: fetch_order returned None' )
+                continue
+            if( len(info) == 0 ):
+                print( 'removeFirstCompletedOrder: fetch_order returned empty' )
+                continue
                         
             status = info.get('status')
             remaining = int( info.get('remaining') )
