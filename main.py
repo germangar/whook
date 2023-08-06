@@ -811,12 +811,12 @@ def stringToValue( arg )->float:
     else:
         return float(arg)
 
-def is_json( j ):
-    try:
-        json.loads( j )
-    except ValueError as e:
-        return False
-    return True
+# def is_json( j ):
+#     try:
+#         json.loads( j )
+#     except ValueError as e:
+#         return False
+#     return True
 
 def updateOrdersQueue():
     for account in accounts:
@@ -826,6 +826,30 @@ def refreshPositions():
     for account in accounts:
         account.refreshPositions()
 
+def generatePositionsString()->str:
+    msg = ''
+    for account in accounts:
+        account.refreshPositions()
+        numPositions = len(account.positionslist)
+        msg += '---------------------\n'
+        msg += 'Refreshing positions '+account.accountName+': ' + str(numPositions) + ' positions found\n'
+        if( numPositions == 0 ):
+            continue
+
+        for pos in account.positionslist:
+            p = 0.0
+            unrealizedPnl = 0 if(pos.getKey('unrealizedPnl') == None) else float(pos.getKey('unrealizedPnl'))
+            initialMargin = 0 if(pos.getKey('initialMargin') == None) else float(pos.getKey('initialMargin'))
+            collateral = 0.0 if(pos.getKey('collateral') == None) else float(pos.getKey('collateral'))
+            if( initialMargin != 0 ):
+                p = ( unrealizedPnl / initialMargin ) * 100.0
+            else:
+                p = ( unrealizedPnl / (collateral - unrealizedPnl) ) * 100
+
+            msg += pos.symbol + ' * ' + pos.getKey('side') + " * {:.4f}[$]".format(collateral) + " * {:.2f}[$]".format(unrealizedPnl) + " * {:.2f}".format(p) + '%' + '\n'
+
+    return msg
+            
 
 def parseAlert( data, account: account_c ):
 
@@ -1096,8 +1120,17 @@ def webhook():
         Alert(data)
         return 'success', 200
     if request.method == 'GET':
+        # https://b361-139-47-50-177.ngrok-free.app/whook?response=kucoin
+        response = request.args.get('response')
+        if( response == None ):
+            msg = generatePositionsString()
+            return app.response_class( msg, mimetype='text/plain; charset=utf-8' )
+        
+        if response == 'whook':
+            return 'WHOOKITYWOOK'
+
         # Fixme: this isn't doing anything since I removed the global log
-        wmsg = open( 'webhook.log', encoding="utf-8" )
+        wmsg = open( response+'.log', encoding="utf-8" )
         text = wmsg.read()
         return app.response_class(text, mimetype='text/plain; charset=utf-8')
     else:
