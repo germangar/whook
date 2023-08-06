@@ -17,7 +17,8 @@ Currently supported exchanges:
 - Phemex futures ( also Phemex testnet: https://testnet.phemex.com )
 - Bybit futures ( also Bybit testnet: https://testnet.bybit.com )
 
-Hedge mode is not supported. I'm only using one-side mode.
+Hedge mode is not supported. I'm only using one-side mode.<br>
+It's also always using isolated marging. However you should be able to change this relatively easy if you want to.
 
 
 ### ALERT SYNTAX ###
