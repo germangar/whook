@@ -16,6 +16,9 @@ Currently supported exchanges:
 - Coinex futures
 - Phemex futures ( also Phemex testnet: https://testnet.phemex.com )
 - Bybit futures ( also Bybit testnet: https://testnet.bybit.com )
+Broken support:
+- Bingx: There is some problem with the conversion of orders from USDT to contracts.
+- Mexc: The exchange's API has been in mantainance since 2022. It denies placing any order.
 
 Hedge mode is not supported. I'm only using one-side mode.<br>
 It's also always using isolated marging. However you should be able to change this relatively easy if you want to.
