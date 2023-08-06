@@ -1130,9 +1130,14 @@ def webhook():
             return 'WHOOKITYWOOK'
 
         # Fixme: this isn't doing anything since I removed the global log
-        wmsg = open( response+'.log', encoding="utf-8" )
-        text = wmsg.read()
-        return app.response_class(text, mimetype='text/plain; charset=utf-8')
+        try:
+            wmsg = open( response+'.log', encoding="utf-8" )
+        except FileNotFoundError:
+            return 'Not found'
+        else:
+            text = wmsg.read()
+            return app.response_class(text, mimetype='text/plain; charset=utf-8')
+        
     else:
         abort(400)
 
