@@ -16,6 +16,7 @@ Currently supported exchanges:
 - Coinex futures
 - Phemex futures ( also Phemex testnet: https://testnet.phemex.com )
 - Bybit futures ( also Bybit testnet: https://testnet.bybit.com )
+  
 Broken support:
 - Bingx: There is some problem with the conversion of orders from USDT to contracts.
 - Mexc: The exchange's API has been in mantainance since 2022. It denies placing any order.
