@@ -924,6 +924,7 @@ def parseAlert( data, account: account_c ):
     
     # convert quantity to concracts if needed
     if( (isUSDT or isBaseCurrenty)  and quantity != 0.0 ) :
+        # We don't know for sure yet if it's a buy or a sell, so we average
         price = account.fetchAveragePrice(symbol)
         coin_name = account.markets[symbol]['quote']
         if( isBaseCurrenty ) :
@@ -931,7 +932,6 @@ def parseAlert( data, account: account_c ):
             coin_name = account.markets[symbol]['base']
 
         print( "CONVERTING (x"+str(leverage)+")", quantity, coin_name, '==>', end = '' )
-        # We don't know for sure yet if it's a buy or a sell, so we average
         quantity = account.contractsFromUSDT( symbol, quantity, price, leverage )
         print( ":", quantity, "contracts" )
 
