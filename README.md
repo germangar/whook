@@ -5,7 +5,9 @@ WHOOK is a web hook for handling Tradingview Alerts to crypto exchanges in perpe
 Whook prioritizes realiability over speed. If you're looking for high frequency trading, this is not for you.
 It will do everything it can to fullfill orders, including resending the order until it times out, reducing the quantity of the order when the balance is not enough and dividing the order in two at reversing positions when not enough balance for doing it at once.
 
-Whook only makes market orders. Limit orders, take profit and stop loss are not supported.
+Whook only makes market orders. Limit orders, take profit and stop loss are not supported.<br>
+Whook only uses one-side mode. Hedge mode is not supported.<br>
+It's also always using isolated marging. However you should be able to change this relatively easy if you want to.
 
 
 ##### Disclaimer: This project is for my personal use. I'm not taking feature requests.
@@ -20,9 +22,6 @@ Currently supported exchanges:
 Broken support:
 - Bingx: There is some problem with the conversion from USDT to contracts. Sending orders in contracts should work fine.
 - Mexc: The exchange's API has been in mantainance since 2022. It denies placing any order.
-
-Hedge mode is not supported. I'm only using one-side mode.<br>
-It's also always using isolated marging. However you should be able to change this relatively easy if you want to.
 
 
 ### ALERT SYNTAX ###
