@@ -853,15 +853,13 @@ accounts = []
 
 
 def stringToValue( arg )->float:
-    if (arg[:1] == "-" ): # this is a minus symbol! What a bitch
-        arg = arg[1:]
-        if( not arg.isnumeric() ):
-            return None
-        return -float(arg)
+    try:
+        float(arg)
+    except ValueError:
+        value = None
     else:
-        if( not arg.isnumeric() ):
-            return None
-        return float(arg)
+        value = float(arg)
+    return value
 
 # def is_json( j ):
 #     try:
@@ -941,16 +939,16 @@ def parseAlert( data, account: account_c ):
         elif ( token[:1]  == "-" ): # this is a minus symbol! What a bitch (value in base currency)
             isBaseCurrenty = True
             quantity = stringToValue( token )
-        elif ( token.isnumeric() ):
+        elif ( stringToValue( token ) != None ):
             isBaseCurrenty = True
             arg = token
-            quantity = float(arg)
+            quantity = stringToValue(arg)
         elif ( token[:1].lower()  == "x" ):
             arg = token[1:]
-            leverage = int(arg)
+            leverage = int(stringToValue(arg))
         elif ( token[-1:].lower()  == "x" ):
             arg = token[:-1]
-            leverage = int(arg)
+            leverage = int(stringToValue(arg))
         elif token.lower()  == 'long' or token.lower() == "buy":
             command = 'buy'
         elif token.lower()  == 'short' or token.lower() == "sell":
