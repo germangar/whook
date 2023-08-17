@@ -920,6 +920,7 @@ def parseAlert( data, account: account_c ):
     isUSDT = False
     isBaseCurrenty = False
     reverse = False
+    redundant = False
 
 
     # Informal plain text syntax
@@ -949,6 +950,8 @@ def parseAlert( data, account: account_c ):
         elif ( token[-1:].lower()  == "x" ):
             arg = token[:-1]
             leverage = int(stringToValue(arg))
+        elif token.lower()  == 'redundant':
+            redundant = True
         elif token.lower()  == 'long' or token.lower() == "buy":
             command = 'buy'
         elif token.lower()  == 'short' or token.lower() == "sell":
@@ -1020,20 +1023,18 @@ def parseAlert( data, account: account_c ):
             else:
                 command = 'buy'
             quantity = abs(quantity)
-        # elif( pos.getKey('hedged') == True or pos.getKey('marginMode') != 'isolated' ):
-        #     # to change marginMode or positionMode we need to close the old order first
-        #     positionContracts = pos.getKey('contracts')
-        #     positionSide = pos.getKey( 'side' )
-        #     if( positionSide == 'long' ):
-        #         account.ordersQueue.append( order_c( symbol, 'sell', positionContracts, 0 ) )
-        #     else: 
-        #         account.ordersQueue.append( order_c( symbol, 'buy', positionContracts, 0 ) )
-        #      # Then create the order for the new position
-        #     if( quantity < 0 ):
-        #         command = 'sell'
-        #     else:
-        #         command = 'buy'
-        #     quantity = abs(quantity)
+        elif( account.markets[symbol]['local']['marginMode'] != 'isolated' ):
+            # to change marginMode we need to close the old position first
+            if( pos.getKey('side') == 'long' ):
+                account.ordersQueue.append( order_c( symbol, 'sell', pos.getKey('contracts'), 0 ) )
+            else: 
+                account.ordersQueue.append( order_c( symbol, 'buy', pos.getKey('contracts'), 0 ) )
+             # Then create the order for the new position
+            if( quantity < 0 ):
+                command = 'sell'
+            else:
+                command = 'buy'
+            quantity = abs(quantity)
         else:
             # we need to account for the old position
             positionContracts = pos.getKey('contracts')
@@ -1044,7 +1045,10 @@ def parseAlert( data, account: account_c ):
             command = 'sell' if positionContracts > quantity else 'buy'
             quantity = abs( quantity - positionContracts )
             if( quantity == 0 ):
-                account.print( " * Order completed: Request matched current position")
+                if( redundant ):
+                    account.print( " * [redundancy]Position confirmed")
+                else:
+                    account.print( " * Order completed: Request matched current position")
                 return
         # fall through
 
