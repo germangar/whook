@@ -188,6 +188,9 @@ class account_c:
         fh = logging.FileHandler( self.accountName + '.log')
         self.logger.addHandler( fh )
         self.logger.level = logging.INFO
+
+
+        #print( self.exchange.id, 'has setPositionMode:', self.exchange.has.get('setPositionMode') )
         
         # Some exchanges don't have all fields properly filled, but we can find out
         # the values in another field. Instead of adding exceptions at each other function
@@ -236,7 +239,9 @@ class account_c:
                 thisMarket['limits']['amount']['min'] = float(precision)
 
             # also generate an empty list of the USDT symbols to keep track of marginMode and Leverage status
-            thisMarket['local'] = { 'marginMode':'', 'leverage':0 }
+            thisMarket['local'] = { 'marginMode':'', 'leverage':0, 'positionMode':'' }
+            if( self.exchange.has.get('setPositionMode') != True ):
+                thisMarket['local']['positionMode'] = 'oneway'
 
             # Store the market into the local markets dictionary
             self.markets[key] = thisMarket
@@ -283,7 +288,29 @@ class account_c:
 
         if( leverage < 1 ): # leverage 0 indicates we are closing a position
             return
+        
+        # Make sure the exchange is in oneway mode
+        if( cls.markets[ symbol ]['local']['positionMode'] != 'oneway' ):
+            #
+            if( cls.exchange.has.get('setPositionMode') != True ): # if they don't have setPositionMode they only support oneway
+                cls.markets[ symbol ]['local']['positionMode'] = 'oneway'
+            elif( cls.getPositionBySymbol(cls, symbol) != None ):
+                cls.print( ' * WARNING: Cannot change position mode while a position is open' )
+            else:
+                try:
+                    response = cls.exchange.set_position_mode( False, symbol )    
+                except Exception as e:
+                    for a in e.args:
+                        if '"retCode":140025' in a:
+                            # bybit {"retCode":140025,"retMsg":"position mode not modified","result":{},"retExtInfo":{},"time":1690530385019}
+                            pass
+                        else:
+                            print( " * Error: updateSymbolLeverage: Unhandled Exception", a )
+                else:
+                    cls.markets[ symbol ]['local']['positionMode'] = 'oneway'
+                
 
+        # undate marginMode and leverage when needed
         if( cls.markets[ symbol ]['local']['marginMode'] != 'isolated' or cls.markets[ symbol ]['local']['leverage'] != leverage ):
             if( cls.exchange.id == 'kucoinfutures' ):
                 # kucoinfutured is always in isolated mode and leverage is passed as a parm. Do nothing
@@ -291,12 +318,6 @@ class account_c:
                 cls.markets[ symbol ]['local']['leverage'] = leverage
             
             if( cls.exchange.id == 'bitget' ):
-
-                # bitget also requires to set position mode (hedged or one sided)
-                # but it can not be changed while there is a position open
-                if( cls.getPositionBySymbol(cls, symbol) != None ):
-                    response = cls.exchange.set_position_mode( False, symbol )
-
                 # margin modes: 'fixed' 'crossed'
                 # in bitget they call 'fixed' to 'isolated' margin
                 response = cls.exchange.set_margin_mode( 'fixed', symbol )
@@ -334,16 +355,12 @@ class account_c:
                         cls.markets[ symbol ]['local']['leverage'] = leverage
 
             if( cls.exchange.id == 'mexc' ):
-                if( cls.getPositionBySymbol(cls, symbol) != None ):
-                    cls.exchange.set_position_mode( False, symbol )
                 cls.exchange.set_leverage( leverage, symbol, params = {'openType': 1, 'positionType': 1} )
                 cls.exchange.set_leverage( leverage, symbol, params = {'openType': 1, 'positionType': 2} )
                 cls.markets[ symbol ]['local']['marginMode'] = 'isolated'
                 cls.markets[ symbol ]['local']['leverage'] = leverage
 
             if( cls.exchange.id == 'phemex' ):
-                if( cls.getPositionBySymbol(cls, symbol) != None ):
-                    response = cls.exchange.set_position_mode( False, symbol )
                 if( response.get('data') != 'ok' ):
                     cls.print( " * Warning [phemex] updateSymbolLeverage: Failed to set position mode to Swap")
 
@@ -358,19 +375,6 @@ class account_c:
                 # Possible values: [0, 1] 0=crossMargin, 1=isolatedMargin
                 # buyLeverage, sellLeverage string required
 
-                # always set position mode to oneSided
-                # FIXME: we should not do this every time
-                if( cls.getPositionBySymbol(cls, symbol) != None ):
-                    try:
-                        response = cls.exchange.set_position_mode( False, symbol )
-                    except Exception as e:
-                        for a in e.args:
-                            # bybit {"retCode":140025,"retMsg":"position mode not modified","result":{},"retExtInfo":{},"time":1690530385019}
-                            if '"retCode":140025' in a:
-                                pass
-                            else:
-                                print( " * Error: updateSymbolLeverage: Unhandled Exception", a )
-                
                 # see if we have to change marginMode (does both) or just leverage
                 if( cls.markets[ symbol ]['local']['marginMode'] != 'isolated' ):
                     # isolated or cross
@@ -588,11 +592,21 @@ class account_c:
         cls.positionslist.clear()
         for thisPosition in positions:
 
-            # HACK!! coinx doesn't have 'contracts'. The value comes in 'contractSize' and in info:{'amount'}
+            symbol = thisPosition.get('symbol')
+
+            # HACK!! coinex doesn't have 'contracts'. The value comes in 'contractSize' and in info:{'amount'}
             if( cls.exchange.id == 'coinex' ):
                 thisPosition['contracts'] = float( thisPosition['info']['amount'] )
 
-            symbol = thisPosition.get('symbol')
+            # HACK!! bybit response doesn't contain a 'hedge' key, but it contains the information in the 'info' block
+            if( cls.exchange.id == 'bybit' ):
+                thisPosition['hedged'] = True if( thisPosition['info'].get( 'positionIdx' ) != '0' ) else False
+            
+
+            # if the position contains positionMode information update our local data
+            if( thisPosition.get('hedged') != None ) : # None means the exchange only supports oneWay
+                cls.markets[ symbol ]['local'][ 'positionMode' ] = 'hedged' if( thisPosition.get('hedged') == True ) else 'oneway'
+
 
             # if the position contains the marginMode information also update the local data
 
@@ -605,7 +619,6 @@ class account_c:
                 else:
                     print( 'WARNING refreshPositions: Could not get marginMode for', symbol )
 
-            # Update in our market-local status
             cls.markets[ symbol ]['local'][ 'marginMode' ] = thisPosition.get('marginMode')
 
             # try also to refresh the leverage from the exchange (not supported by all exchanges)
@@ -649,10 +662,11 @@ class account_c:
                     p = ( unrealizedPnl / initialMargin ) * 100.0
                 else:
                     p = ( unrealizedPnl / (collateral - unrealizedPnl) ) * 100
+                positionModeChar = '[H]' if (cls.markets[ symbol ]['local']['positionMode'] == 'hedged') else ''
                 narginStr = cls.markets[pos.symbol]['local']['marginMode']
                 levStr = "?x" if( cls.markets[pos.symbol]['local']['leverage'] == 0 ) else str(cls.markets[pos.symbol]['local']['leverage']) + 'x'
-                print(pos.symbol, narginStr+' '+levStr, pos.getKey('side'), pos.getKey('contracts'), "{:.4f}[$]".format(collateral), "{:.2f}[$]".format(unrealizedPnl), "{:.2f}".format(p) + '%', sep=' * ')
-
+                print(pos.symbol+positionModeChar, narginStr+':'+levStr, pos.getKey('side'), pos.getKey('contracts'), "{:.4f}[$]".format(collateral), "{:.2f}[$]".format(unrealizedPnl), "{:.2f}".format(p) + '%', sep=' * ')
+            
             print('------------------------------')
 
 
