@@ -246,11 +246,13 @@ class account_c:
         self.print( self.balance )
         self.refreshPositions(True)
 
+
     ## methods ##
 
     def print( cls, *args, sep=" ", **kwargs ): # adds account and exchange information to the message
         cls.logger.info( '['+ dateString()+']['+timeNow()+'] ' +sep.join(map(str,args)), **kwargs)
         print( timeNow(), '['+ cls.accountName +'/'+ cls.exchange.id +'] '+sep.join(map(str,args)), **kwargs)
+
 
     def verifyLeverageRange( cls, symbol, leverage )->int:
 
@@ -429,6 +431,7 @@ class account_c:
         
         return balance
     
+
     def fetchAvailableBalance(cls)->float:
         if( cls.exchange.id == "bitget" ):
             # Bitget response message is WRONG!!
@@ -442,15 +445,18 @@ class account_c:
         available = cls.exchange.fetch_free_balance( params )
         return available.get('USDT')
     
+
     def fetchBuyPrice(cls, symbol)->float:
         orderbook = cls.exchange.fetch_order_book(symbol)
         ask = orderbook['asks'][0][0] if len (orderbook['asks']) > 0 else None
         return ask
 
+
     def fetchSellPrice(cls, symbol)->float:
         orderbook = cls.exchange.fetch_order_book(symbol)
         bid = orderbook['bids'][0][0] if len (orderbook['bids']) > 0 else None
         return bid
+
 
     def fetchAveragePrice(cls, symbol)->float:
         orderbook = cls.exchange.fetch_order_book(symbol)
@@ -458,12 +464,14 @@ class account_c:
         ask = orderbook['asks'][0][0] if len (orderbook['asks']) > 0 else None
         return ( bid + ask ) * 0.5
 
+
     def getPositionBySymbol(cls, symbol)->position_c:
         for pos in cls.positionslist:
             if( pos.symbol == symbol ):
                 return pos
         return None
     
+
     def findSymbolFromPairName(cls, paircmd):
         # first let's check if the pair string contains
         # a backslash. If it does it's probably already a symbol
@@ -488,6 +496,7 @@ class account_c:
                 return symbol
         return None
     
+
     def findContractSizeForSymbol(cls, symbol)->float:
         m = cls.markets.get(symbol)
         if( m == None ):
@@ -495,6 +504,7 @@ class account_c:
             return 1
         return m.get('contractSize')
     
+
     def findPrecisionForSymbol(cls, symbol)->float:
         m = cls.markets.get(symbol)
         if( m == None ):
@@ -502,12 +512,14 @@ class account_c:
             return 1
         return m['precision'].get('amount')
     
+
     def findMinimumAmountForSymbol(cls, symbol)->float:
         m = cls.markets.get(symbol)
         if( m != None ):
             return m['limits']['amount'].get('min')
         return cls.findPrecisionForSymbol( symbol )
     
+
     def findMaxLeverageForSymbol(cls, symbol)->float:
         #'leverage': {'min': 1.0, 'max': 50.0}}
         m = cls.markets.get(symbol)
@@ -519,12 +531,14 @@ class account_c:
             maxLeverage = 1000
         return maxLeverage
     
+
     def contractsFromUSDT(cls, symbol, amount, price, leverage = 1.0 )->float :
         contractSize = cls.findContractSizeForSymbol( symbol )
         precision = cls.findPrecisionForSymbol( symbol )
         coin = (amount * leverage) / (contractSize * price)
         return roundDownTick( coin, precision ) if ( coin > 0 ) else roundUpTick( coin, precision )
-        
+    
+
     def refreshPositions(cls, v = verbose):
     ### https://docs.ccxt.com/#/?id=position-structure ###
         try:
@@ -626,12 +640,14 @@ class account_c:
                 print(pos.symbol, pos.getKey('side'), pos.getKey('contracts'), "{:.4f}[$]".format(collateral), "{:.2f}[$]".format(unrealizedPnl), "{:.2f}".format(p) + '%', sep=' * ')
             print('------------------------------')
 
+
     def activeOrderForSymbol(cls, symbol ):
         for o in cls.activeOrders:
             if( o.symbol == symbol ):
                 return True
         return False
     
+
     def fetchClosedOrderById(cls, symbol, id ):
         try:
             response = cls.exchange.fetch_closed_orders( symbol, params = {'settleCoin':'USDT'} )
@@ -645,6 +661,7 @@ class account_c:
         if verbose : print( " * fetchPhemexOrderById: Didn't find the [closed] order" )
         return None
     
+
     def removeFirstCompletedOrder(cls):
         # go through the queue and remove the first completed order
         for order in cls.activeOrders:
@@ -687,6 +704,7 @@ class account_c:
                 cls.activeOrders.remove( order )
                 return True
         return False
+
 
     def updateOrdersQueue(cls):
 
@@ -837,13 +855,16 @@ def stringToValue( arg )->float:
 #         return False
 #     return True
 
+
 def updateOrdersQueue():
     for account in accounts:
         account.updateOrdersQueue()
 
+
 def refreshPositions():
     for account in accounts:
         account.refreshPositions()
+
 
 def generatePositionsString()->str:
     msg = ''
