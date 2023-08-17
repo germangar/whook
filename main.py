@@ -593,26 +593,34 @@ class account_c:
                 thisPosition['contracts'] = float( thisPosition['info']['amount'] )
 
             symbol = thisPosition.get('symbol')
-            cls.positionslist.append(position_c( symbol, thisPosition ))
 
             # if the position contains the marginMode information also update the local data
-            if( thisPosition.get('marginMode') != None ) :
-                cls.markets[ symbol ]['local'][ 'marginMode' ] = thisPosition.get('marginMode')
-            elif( cls.exchange.id == 'kucoinfutures' ):
-                cls.markets[ symbol ]['local'][ 'marginMode' ] = 'isolated'
-            elif( cls.exchange.id == 'phemex' ):
-                cls.markets[ symbol ]['local'][ 'marginMode' ] = 'cross' if (thisPosition['info'].get('crossMargin') == True) else 'isolated'
+
+            #some exchanges have the key set to None. Fix it when possible
+            if( thisPosition.get('marginMode') == None ) :
+                if( cls.exchange.id == 'kucoinfutures' ):
+                    thisPosition['marginMode'] = 'isolated'
+                elif( cls.exchange.id == 'phemex' ):
+                    thisPosition['marginMode'] = 'cross' if (thisPosition['info'].get('crossMargin') == True) else 'isolated'
+                else:
+                    print( 'WARNING refreshPositions: Could not get marginMode for', symbol )
+
+            # Update in our market-local status
+            cls.markets[ symbol ]['local'][ 'marginMode' ] = thisPosition.get('marginMode')
 
             # try also to refresh the leverage from the exchange (not supported by all exchanges)
             if( cls.exchange.has.get('fetchLeverage') == True ):
                 response = cls.exchange.fetch_leverage( symbol )
 
                 if( cls.exchange.id == 'bitget' ):
-                    # they should always be the same
-                    longLeverage = response['data'].get('fixedLongLeverage')
-                    shortLeverage = response['data'].get('fixedShortLeverage')
-                    if( longLeverage == shortLeverage ):
-                        cls.markets[ symbol ]['local'][ 'leverage' ] = longLeverage
+                    if( response['data']['marginMode'] == 'crossed' ):
+                        cls.markets[ symbol ]['local'][ 'leverage' ] = int(response['data'].get('crossMarginLeverage'))
+                    else:
+                        # they should always be the same
+                        longLeverage = int(response['data'].get('fixedLongLeverage'))
+                        shortLeverage = int(response['data'].get('fixedShortLeverage'))
+                        if( longLeverage == shortLeverage ):
+                            cls.markets[ symbol ]['local'][ 'leverage' ] = longLeverage
 
                 elif( cls.exchange.id == 'bingx' ):
                     # they should always be the same
@@ -620,11 +628,16 @@ class account_c:
                     shortLeverage = response['data'].get('shortLeverage')
                     if( longLeverage == shortLeverage ):
                         cls.markets[ symbol ]['local'][ 'leverage' ] = longLeverage
+                else:
+                    print( "WARNING: refreshPositions: fetch_leverage not handled for", cls.exchange.id )
+                    print( response, '\n' )
 
             elif( thisPosition.get('leverage') != None ):
                 leverage = int(thisPosition.get('leverage'))
                 if( leverage == thisPosition.get('leverage') ): # kucoin sends weird fractional leverage. Ignore it
                     cls.markets[ symbol ]['local'][ 'leverage' ] = leverage
+
+            cls.positionslist.append(position_c( symbol, thisPosition ))
 
         if v:
             for pos in cls.positionslist:
@@ -636,8 +649,10 @@ class account_c:
                     p = ( unrealizedPnl / initialMargin ) * 100.0
                 else:
                     p = ( unrealizedPnl / (collateral - unrealizedPnl) ) * 100
-                
-                print(pos.symbol, pos.getKey('side'), pos.getKey('contracts'), "{:.4f}[$]".format(collateral), "{:.2f}[$]".format(unrealizedPnl), "{:.2f}".format(p) + '%', sep=' * ')
+                narginStr = cls.markets[pos.symbol]['local']['marginMode']
+                levStr = "?x" if( cls.markets[pos.symbol]['local']['leverage'] == 0 ) else str(cls.markets[pos.symbol]['local']['leverage']) + 'x'
+                print(pos.symbol, narginStr+' '+levStr, pos.getKey('side'), pos.getKey('contracts'), "{:.4f}[$]".format(collateral), "{:.2f}[$]".format(unrealizedPnl), "{:.2f}".format(p) + '%', sep=' * ')
+
             print('------------------------------')
 
 
