@@ -289,8 +289,12 @@ class account_c:
                 cls.markets[ symbol ]['local']['leverage'] = leverage
             
             if( cls.exchange.id == 'bitget' ):
+
                 # bitget also requires to set position mode (hedged or one sided)
-                response = cls.exchange.set_position_mode( False, symbol )
+                # but it can not be changed while there is a position open
+                if( cls.getPositionBySymbol(cls, symbol) != None ):
+                    response = cls.exchange.set_position_mode( False, symbol )
+
                 # margin modes: 'fixed' 'crossed'
                 # in bitget they call 'fixed' to 'isolated' margin
                 response = cls.exchange.set_margin_mode( 'fixed', symbol )
@@ -328,14 +332,16 @@ class account_c:
                         cls.markets[ symbol ]['local']['leverage'] = leverage
 
             if( cls.exchange.id == 'mexc' ):
-                cls.exchange.set_position_mode( False, symbol )
+                if( cls.getPositionBySymbol(cls, symbol) != None ):
+                    cls.exchange.set_position_mode( False, symbol )
                 cls.exchange.set_leverage( leverage, symbol, params = {'openType': 1, 'positionType': 1} )
                 cls.exchange.set_leverage( leverage, symbol, params = {'openType': 1, 'positionType': 2} )
                 cls.markets[ symbol ]['local']['marginMode'] = 'isolated'
                 cls.markets[ symbol ]['local']['leverage'] = leverage
 
             if( cls.exchange.id == 'phemex' ):
-                response = cls.exchange.set_position_mode( False, symbol )
+                if( cls.getPositionBySymbol(cls, symbol) != None ):
+                    response = cls.exchange.set_position_mode( False, symbol )
                 if( response.get('data') != 'ok' ):
                     cls.print( " * Warning [phemex] updateSymbolLeverage: Failed to set position mode to Swap")
 
@@ -352,15 +358,16 @@ class account_c:
 
                 # always set position mode to oneSided
                 # FIXME: we should not do this every time
-                try:
-                    response = cls.exchange.set_position_mode( False, symbol )
-                except Exception as e:
-                    for a in e.args:
-                        # bybit {"retCode":140025,"retMsg":"position mode not modified","result":{},"retExtInfo":{},"time":1690530385019}
-                        if '"retCode":140025' in a:
-                            pass
-                        else:
-                            print( " * Error: updateSymbolLeverage: Unhandled Exception", a )
+                if( cls.getPositionBySymbol(cls, symbol) != None ):
+                    try:
+                        response = cls.exchange.set_position_mode( False, symbol )
+                    except Exception as e:
+                        for a in e.args:
+                            # bybit {"retCode":140025,"retMsg":"position mode not modified","result":{},"retExtInfo":{},"time":1690530385019}
+                            if '"retCode":140025' in a:
+                                pass
+                            else:
+                                print( " * Error: updateSymbolLeverage: Unhandled Exception", a )
                 
                 # see if we have to change marginMode (does both) or just leverage
                 if( cls.markets[ symbol ]['local']['marginMode'] != 'isolated' ):
@@ -577,6 +584,10 @@ class account_c:
             # if the position contains the marginMode information also update the local data
             if( thisPosition.get('marginMode') != None ) :
                 cls.markets[ symbol ]['local'][ 'marginMode' ] = thisPosition.get('marginMode')
+            elif( cls.exchange.id == 'kucoinfutures' ):
+                cls.markets[ symbol ]['local'][ 'marginMode' ] = 'isolated'
+            elif( cls.exchange.id == 'phemex' ):
+                cls.markets[ symbol ]['local'][ 'marginMode' ] = 'cross' if (thisPosition['info'].get('crossMargin') == True) else 'isolated'
 
             # try also to refresh the leverage from the exchange (not supported by all exchanges)
             if( cls.exchange.has.get('fetchLeverage') == True ):
@@ -711,8 +722,12 @@ class account_c:
             # set up exchange specific parameters
             params = {}
 
+            if( order.leverage == 0 ):
+                params['reduce'] = True
+
             if( cls.exchange.id == 'kucoinfutures' ):
                 params['leverage'] = max( order.leverage, 1 )
+                params['marginMode'] = 'isolated'
 
             if( cls.exchange.id == 'bitget' ):
                 params['side'] = 'buy_single' if( order.type == "buy" ) else 'sell_single'
@@ -807,8 +822,12 @@ accounts = []
 def stringToValue( arg )->float:
     if (arg[:1] == "-" ): # this is a minus symbol! What a bitch
         arg = arg[1:]
+        if( not arg.isnumeric() ):
+            return None
         return -float(arg)
     else:
+        if( not arg.isnumeric() ):
+            return None
         return float(arg)
 
 # def is_json( j ):
@@ -911,19 +930,23 @@ def parseAlert( data, account: account_c ):
         account.print( "ERROR: Couldn't find symbol" )
         return
     if( command == "Invalid" ):
-        account.print( "Invalid Order: Missing command")
-        return 
+        account.print( "ERROR: Invalid Order: Missing command" )
+        return
+    if( quantity == None ):
+        account.print( "ERROR: Invalid quantity value" )
+        return
     if( quantity <= 0 and (command == 'buy' or command == 'sell') ):
-        account.print( "Invalid Order: Buy/Sell must have positive amount")
+        account.print( "ERROR: Invalid Order: Buy/Sell must have positive amount" )
         return
 
     #time to put the order on the queue
 
     leverage = account.verifyLeverageRange( symbol, leverage )
     available = account.fetchAvailableBalance() * 0.985
+    minOrder = account.findMinimumAmountForSymbol(symbol)
     
     # convert quantity to concracts if needed
-    if( (isUSDT or isBaseCurrenty)  and quantity != 0.0 ) :
+    if( (isUSDT or isBaseCurrenty) and quantity != 0.0 ) :
         # We don't know for sure yet if it's a buy or a sell, so we average
         price = account.fetchAveragePrice(symbol)
         coin_name = account.markets[symbol]['quote']
@@ -933,6 +956,9 @@ def parseAlert( data, account: account_c ):
 
         print( "CONVERTING (x"+str(leverage)+")", quantity, coin_name, '==>', end = '' )
         quantity = account.contractsFromUSDT( symbol, quantity, price, leverage )
+        if( abs(quantity) < minOrder ):
+            account.print( timeNow(), " * ERROR * Order too small:", quantity, "Minimum required:", minOrder )
+            return
         print( ":", quantity, "contracts" )
 
     # check for a existing position
@@ -960,6 +986,20 @@ def parseAlert( data, account: account_c ):
             else:
                 command = 'buy'
             quantity = abs(quantity)
+        # elif( pos.getKey('hedged') == True or pos.getKey('marginMode') != 'isolated' ):
+        #     # to change marginMode or positionMode we need to close the old order first
+        #     positionContracts = pos.getKey('contracts')
+        #     positionSide = pos.getKey( 'side' )
+        #     if( positionSide == 'long' ):
+        #         account.ordersQueue.append( order_c( symbol, 'sell', positionContracts, 0 ) )
+        #     else: 
+        #         account.ordersQueue.append( order_c( symbol, 'buy', positionContracts, 0 ) )
+        #      # Then create the order for the new position
+        #     if( quantity < 0 ):
+        #         command = 'sell'
+        #     else:
+        #         command = 'buy'
+        #     quantity = abs(quantity)
         else:
             # we need to account for the old position
             positionContracts = pos.getKey('contracts')
@@ -980,7 +1020,6 @@ def parseAlert( data, account: account_c ):
         # fetch available balance and price
         price = account.fetchSellPrice(symbol) if( command == 'sell' ) else account.fetchBuyPrice(symbol)
         canDoContracts = account.contractsFromUSDT( symbol, available, price, leverage )
-        minOrder = account.findMinimumAmountForSymbol(symbol)
 
         if( pos != None ):
             positionContracts = pos.getKey('contracts')
@@ -1020,7 +1059,7 @@ def parseAlert( data, account: account_c ):
         account.ordersQueue.append( order_c( symbol, command, quantity, leverage, reverse = reverse ) )
         return
 
-    account.print( timeNow(), " * WARNING: Something went wrong. No order was placed")
+    account.print( " * WARNING: Something went wrong. No order was placed")
 
 
 
