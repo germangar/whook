@@ -294,7 +294,7 @@ class account_c:
             #
             if( cls.exchange.has.get('setPositionMode') != True ): # if they don't have setPositionMode they only support oneway
                 cls.markets[ symbol ]['local']['positionMode'] = 'oneway'
-            elif( cls.getPositionBySymbol(cls, symbol) != None ):
+            elif( cls.getPositionBySymbol(symbol) != None ):
                 cls.print( ' * WARNING: Cannot change position mode while a position is open' )
             else:
                 try:
@@ -614,7 +614,7 @@ class account_c:
             if( thisPosition.get('marginMode') == None ) :
                 if( cls.exchange.id == 'kucoinfutures' ):
                     thisPosition['marginMode'] = 'isolated'
-                elif( cls.exchange.id == 'phemex' ):
+                elif( cls.exchange.id == 'phemex' ): # delete me after updating ccxt
                     thisPosition['marginMode'] = 'cross' if (thisPosition['info'].get('crossMargin') == True) else 'isolated'
                 else:
                     print( 'WARNING refreshPositions: Could not get marginMode for', symbol )
