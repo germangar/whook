@@ -945,7 +945,7 @@ def parseAlert( data, account: account_c ):
     isUSDT = False
     isBaseCurrenty = False
     reverse = False
-    redundant = False
+    ( redundancy ) = False
 
 
     # Informal plain text syntax
@@ -975,8 +975,8 @@ def parseAlert( data, account: account_c ):
         elif ( token[-1:].lower()  == "x" ):
             arg = token[:-1]
             leverage = int(stringToValue(arg))
-        elif token.lower()  == 'redundant':
-            redundant = True
+        elif token.lower()  == 'redundancy':
+            ( redundancy ) = True
         elif token.lower()  == 'long' or token.lower() == "buy":
             command = 'buy'
         elif token.lower()  == 'short' or token.lower() == "sell":
@@ -1077,8 +1077,8 @@ def parseAlert( data, account: account_c ):
             command = 'sell' if positionContracts > quantity else 'buy'
             quantity = abs( quantity - positionContracts )
             if( quantity == 0 ):
-                if( redundant ):
-                    account.print( " * [redundancy]Position confirmed")
+                if( redundancy ):
+                    account.print( " * Reduncancy check: Ok")
                 else:
                     account.print( " * Order completed: Request matched current position")
                 return
