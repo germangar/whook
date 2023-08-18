@@ -992,9 +992,16 @@ def parseAlert( data, account: account_c ):
 
     #time to put the order on the queue
 
-    leverage = account.verifyLeverageRange( symbol, leverage )
-    available = account.fetchAvailableBalance() * 0.985
+    
+    # ccxt.base.errors.ExchangeError: Service is not available during funding fee settlement. Please try again later.
+    try:
+        available = account.fetchAvailableBalance() * 0.985
+    except ValueError as e:
+        print( " ERROR!: Couldn't fecth balance! Error:\n", e )
+        return
+
     minOrder = account.findMinimumAmountForSymbol(symbol)
+    leverage = account.verifyLeverageRange( symbol, leverage )
     
     # convert quantity to concracts if needed
     if( (isUSDT or isBaseCurrenty) and quantity != 0.0 ) :
