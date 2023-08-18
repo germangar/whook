@@ -26,8 +26,6 @@ Broken support:
 
 ### ALERT SYNTAX ###
 
-#### As plain text:
-
 * Symbol format:: ETHUSDT, ETH/USDT, ETH/USDT:USDT
 
 * Account id: Just add the id. No command associated. Account id must include at least one non-numeric character and obviously it shouldn't be the same as any of the command names.
@@ -52,6 +50,7 @@ Examples:<br>
 [symbol] [command] [value in contracts] [leverage] [account_id] - **ETH/USDT position -500@ x3 myKucoinA**<br>
 Notice: This is a short position. For a long position use a positive value. Same goes when the value is in USDT<br>
 The value of a contract differs from exchange to exchange. You have to check it in the exchange under contract information<br>
+Example of a position alert from a strategy in Tradingview: myKucoinA {{ticker}} pos {{strategy.position_size}} x3
 
 - Sell command using base currency:<br>
 [account_id] [symbol] [command] [value in USDT] [leverage] - **myKucoinA ETH/USDT sell 0.25 x3**<br>
