@@ -7,6 +7,14 @@ import time
 import json
 import logging
 
+minCCXTversion = '4.0.48'
+if( ccxt.__version__ < minCCXTversion ):
+    print( '\n============== * WARNING * ==============')
+    print( 'WHOOK requires CCXT version', minCCXTversion,' or higher.')
+    print( 'While it may run with earlier versions wrong behaviors are expected to happen.' )
+    print( 'Please update CCXT.' )
+    print( '============== * WARNING * ==============\n')
+
 verbose = False
 _ORDER_TIMEOUT_ = 40
 
