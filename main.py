@@ -413,8 +413,8 @@ class account_c:
                             else:
                                 print( " * Error: updateSymbolLeverage: Unhandled Exception", a )
                 
-            if( cls.markets[ symbol ]['local']['marginMode'] == 'isolated' and cls.markets[ symbol ]['local']['leverage'] == leverage ):
-                cls.print( "* Leverage updated: Margin Mode:", cls.markets[ symbol ]['local']['marginMode'] + " Leverage: " + str(cls.markets[ symbol ]['local']['leverage']) + "x" )
+            # if( cls.markets[ symbol ]['local']['marginMode'] == 'isolated' and cls.markets[ symbol ]['local']['leverage'] == leverage ):
+            #     cls.print( "* Leverage updated: Margin Mode:", cls.markets[ symbol ]['local']['marginMode'] + " Leverage: " + str(cls.markets[ symbol ]['local']['leverage']) + "x" )
 
 
     def fetchBalance(cls):
@@ -935,7 +935,8 @@ def parseAlert( data, account: account_c ):
         print( timeNow(), " * ERROR: parseAlert called without an account" )
         return
     
-    account.print( '\n' + str(timeNow()), "ALERT:", data.replace('\n', ' | ') )
+    account.print( '\n' )
+    account.print( " ALERT:", data.replace('\n', ' | ') )
     account.print('----------------------------')
 
     symbol = "Invalid"
@@ -945,7 +946,7 @@ def parseAlert( data, account: account_c ):
     isUSDT = False
     isBaseCurrenty = False
     reverse = False
-    ( redundancy ) = False
+    redundancy = False
 
 
     # Informal plain text syntax
@@ -975,7 +976,7 @@ def parseAlert( data, account: account_c ):
         elif ( token[-1:].lower()  == "x" ):
             arg = token[:-1]
             leverage = int(stringToValue(arg))
-        elif token.lower()  == 'redundancy':
+        elif token.lower()  == 'redundancy' or token.lower()  == 'redundant':
             ( redundancy ) = True
         elif token.lower()  == 'long' or token.lower() == "buy":
             command = 'buy'
@@ -1224,10 +1225,12 @@ log.disabled = True
 
 @app.route('/whook', methods=['GET','POST'])
 def webhook():
+
     if request.method == 'POST':
         data = request.get_data(as_text=True)
         Alert(data)
         return 'success', 200
+    
     if request.method == 'GET':
         # https://b361-139-47-50-177.ngrok-free.app/whook?response=kucoin
         response = request.args.get('response')
@@ -1238,7 +1241,7 @@ def webhook():
         if response == 'whook':
             return 'WHOOKITYWOOK'
 
-        # Fixme: this isn't doing anything since I removed the global log
+        # Return the requested log file
         try:
             wmsg = open( response+'.log', encoding="utf-8" )
         except FileNotFoundError:
