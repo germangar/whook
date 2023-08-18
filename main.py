@@ -221,7 +221,10 @@ class account_c:
                     description = thisMarket['info'].get('description')
                     s = description[ description.find('Each contract is worth') + len('Each contract is worth ') : ]
                     list = s.split( ' ', 1 )
-                    thisMarket['contractSize'] = float( list[0] )
+                    cs = float( list[0] )
+                    if( cs != 1.0 ):
+                        print( "* WARNING: phemex", key, "contractSize reported", cs )
+                    thisMarket['contractSize'] = cs
                 else:
                     print( "WARNING: Market", self.exchange.id, "doesn't have contractSize" )
 
@@ -246,7 +249,7 @@ class account_c:
             if( minAmount == None ): # replace minimum amount with precision value
                 thisMarket['limits']['amount']['min'] = float(precision)
 
-            # also generate an empty list of the USDT symbols to keep track of marginMode and Leverage status
+            # also generate a local list to keep track of marginMode and Leverage status
             thisMarket['local'] = { 'marginMode':'', 'leverage':0, 'positionMode':'' }
             if( self.exchange.has.get('setPositionMode') != True ):
                 thisMarket['local']['positionMode'] = 'oneway'
