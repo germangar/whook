@@ -309,7 +309,9 @@ class account_c:
                 cls.print( ' * WARNING: Cannot change position mode while a position is open' )
             else:
                 try:
-                    response = cls.exchange.set_position_mode( False, symbol )    
+                    response = cls.exchange.set_position_mode( False, symbol )  
+                    if( cls.exchange.id == 'phemex' and response.get('data') != 'ok' ):
+                        cls.print( " * Warning [phemex] updateSymbolLeverage: Failed to set position mode to Swap")  
                 except Exception as e:
                     for a in e.args:
                         if '"retCode":140025' in a:
@@ -372,9 +374,6 @@ class account_c:
                 cls.markets[ symbol ]['local']['leverage'] = leverage
 
             if( cls.exchange.id == 'phemex' ):
-                if( response.get('data') != 'ok' ):
-                    cls.print( " * Warning [phemex] updateSymbolLeverage: Failed to set position mode to Swap")
-
                 # from phemex API documentation: The sign of leverageEr indicates margin mode, i.e. leverage <= 0 means cross-margin-mode, leverage > 0 means isolated-margin-mode.
                 response = cls.exchange.set_leverage( leverage, symbol )
                 if( response.get('data') == 'ok' ):
@@ -1027,7 +1026,7 @@ def parseAlert( data, account: account_c ):
         if( abs(quantity) < minOrder ):
             account.print( timeNow(), " * ERROR * Order too small:", quantity, "Minimum required:", minOrder )
             return
-        print( ":", quantity, "contracts" )
+        if verbose : print( ":", quantity, "contracts" )
 
     # check for a existing position
     pos = account.getPositionBySymbol( symbol )
