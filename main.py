@@ -7,7 +7,7 @@ import time
 import json
 import logging
 
-minCCXTversion = '4.0.48'
+minCCXTversion = '4.0.68'
 if( ccxt.__version__ < minCCXTversion ):
     print( '\n============== * WARNING * ==============')
     print( 'WHOOK requires CCXT version', minCCXTversion,' or higher.')
@@ -625,8 +625,6 @@ class account_c:
             if( thisPosition.get('marginMode') == None ) :
                 if( cls.exchange.id == 'kucoinfutures' ):
                     thisPosition['marginMode'] = 'isolated'
-                elif( cls.exchange.id == 'phemex' ): # delete me after updating ccxt
-                    thisPosition['marginMode'] = 'cross' if (thisPosition['info'].get('crossMargin') == True) else 'isolated'
                 else:
                     print( 'WARNING refreshPositions: Could not get marginMode for', symbol )
 
