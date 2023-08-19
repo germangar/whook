@@ -935,7 +935,7 @@ def parseAlert( data, account: account_c ):
         print( timeNow(), " * ERROR: parseAlert called without an account" )
         return
     
-    account.print( '\n' )
+    account.print( ' ' )
     account.print( " ALERT:", data.replace('\n', ' | ') )
     account.print('----------------------------')
 
@@ -1024,7 +1024,7 @@ def parseAlert( data, account: account_c ):
             quantity *= price
             coin_name = account.markets[symbol]['base']
 
-        print( "CONVERTING (x"+str(leverage)+")", quantity, coin_name, '==>', end = '' )
+        if verbose : print( "CONVERTING (x"+str(leverage)+")", quantity, coin_name, '==>', end = '' )
         quantity = account.contractsFromUSDT( symbol, quantity, price, leverage )
         if( abs(quantity) < minOrder ):
             account.print( timeNow(), " * ERROR * Order too small:", quantity, "Minimum required:", minOrder )
