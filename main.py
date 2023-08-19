@@ -309,12 +309,14 @@ class account_c:
                 cls.print( ' * WARNING: Cannot change position mode while a position is open' )
             else:
                 try:
-                    response = cls.exchange.set_position_mode( False, symbol )  
+                    response = cls.exchange.set_position_mode( False, symbol )
+                    # do we really need this check?
                     if( cls.exchange.id == 'phemex' and response.get('data') != 'ok' ):
                         cls.print( " * Warning [phemex] updateSymbolLeverage: Failed to set position mode to Swap")  
                 except Exception as e:
                     for a in e.args:
                         if '"retCode":140025' in a:
+                            # this is no an error, but just an acknowledge
                             # bybit {"retCode":140025,"retMsg":"position mode not modified","result":{},"retExtInfo":{},"time":1690530385019}
                             pass
                         else:
