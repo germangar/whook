@@ -109,8 +109,6 @@ class account_c:
                 'password': password,
                 #'enableRateLimit': True
                 } )
-            ###HACK!! Kucoin doesn't have has.setLeverage defined
-            self.exchange.has['setLeverage'] = False
         elif( exchange.lower() == 'bitget' ):
             self.exchange = ccxt.bitget({
                 "apiKey": apiKey,
