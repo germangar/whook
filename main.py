@@ -7,7 +7,7 @@ import time
 import json
 import logging
 
-minCCXTversion = '4.0.68'
+minCCXTversion = '4.0.69'
 if( ccxt.__version__ < minCCXTversion ):
     print( '\n============== * WARNING * ==============')
     print( 'WHOOK requires CCXT version', minCCXTversion,' or higher.')
@@ -109,6 +109,8 @@ class account_c:
                 'password': password,
                 #'enableRateLimit': True
                 } )
+            ###HACK!! phemex does NOT have setMarginMode when the type is SWAP
+            self.exchange.has['setLeverage'] = False
         elif( exchange.lower() == 'bitget' ):
             self.exchange = ccxt.bitget({
                 "apiKey": apiKey,
@@ -156,6 +158,8 @@ class account_c:
                 #"timeout": 60000,
                 "enableRateLimit": True
                 })
+            ###HACK!! phemex does NOT have setMarginMode when the type is SWAP
+            self.exchange.has['setMarginMode'] = False
         elif( exchange.lower() == 'phemexdemo' ):
             self.exchange = ccxt.phemex({
                 "apiKey": apiKey,
@@ -166,6 +170,8 @@ class account_c:
                 "enableRateLimit": True
                 })
             self.exchange.set_sandbox_mode( True )
+            ###HACK!! phemex does NOT have setMarginMode when the type is SWAP
+            self.exchange.has['setMarginMode'] = False
         elif( exchange.lower() == 'bybit' ):
             self.exchange = ccxt.bybit({
                 "apiKey": apiKey,
@@ -253,6 +259,8 @@ class account_c:
             thisMarket['local'] = { 'marginMode':'', 'leverage':0, 'positionMode':'' }
             if( self.exchange.has.get('setPositionMode') != True ):
                 thisMarket['local']['positionMode'] = 'oneway'
+            if( self.exchange.has.get('setMarginMode') != True ):
+                thisMarket['local']['marginMode'] = 'isolated'
 
             # Store the market into the local markets dictionary
             self.markets[key] = thisMarket
@@ -261,6 +269,7 @@ class account_c:
         self.balance = self.fetchBalance()
         self.print( self.balance )
         self.refreshPositions(True)
+
 
 
     ## methods ##
@@ -294,128 +303,156 @@ class account_c:
         return safeLeverage
 
 
+    def updateSymbolPositionMode( cls, symbol ):
+        
+        # Make sure the exchange is in oneway mode
+
+        if( cls.exchange.has.get('setPositionMode') != True and cls.markets[ symbol ]['local']['positionMode'] != 'oneway' ):
+            print( " * Error: updateSymbolPositionMode: Exchange", cls.exchange.id, "doesn't have setPositionMode nor is set to oneway" )
+            return
+        
+        if( cls.markets[ symbol ]['local']['positionMode'] != 'oneway' and cls.exchange.has.get('setPositionMode') == True ):
+            if( cls.getPositionBySymbol(symbol) != None ):
+                cls.print( ' * WARNING: Cannot change position mode while a position is open' )
+                return
+        
+            try:
+                response = cls.exchange.set_position_mode( False, symbol ) 
+            except Exception as e:
+                for a in e.args:
+                    if '"retCode":140025' in a:
+                        # this is not an error, but just an acknowledge
+                        # bybit {"retCode":140025,"retMsg":"position mode not modified","result":{},"retExtInfo":{},"time":1690530385019}
+                        cls.markets[ symbol ]['local']['positionMode'] = 'oneway'
+                    else:
+                        print( " * Error: updateSymbolLeverage->set_position_mode: Unhandled Exception", a )
+            else:
+                # was everything correct, tho?
+                code = 0
+                if( cls.exchange.id == 'bybit' ): # they didn't receive enough love as children
+                    code = int(response.get('retCode'))
+                else:
+                    code = int(response.get('code'))
+                # 'code': '0' <- coinex
+                # 'code': '00000' <- bitget
+                # 'code': '0' <- phemex
+                # 'retCode': '0' <- bybit
+
+                if( code != 0 ):
+                    print( " * Error: updateSymbolLeverage->set_position_mode:", response )
+                    return
+                
+                cls.markets[ symbol ]['local']['positionMode'] = 'oneway'
+
+    
     def updateSymbolLeverage( cls, symbol, leverage ):
         # also sets marginMode to isolated
 
         if( leverage < 1 ): # leverage 0 indicates we are closing a position
             return
         
-        # Make sure the exchange is in oneway mode
-        if( cls.markets[ symbol ]['local']['positionMode'] != 'oneway' ):
-            #
-            if( cls.exchange.has.get('setPositionMode') != True ): # if they don't have setPositionMode they only support oneway
-                cls.markets[ symbol ]['local']['positionMode'] = 'oneway'
-            elif( cls.getPositionBySymbol(symbol) != None ):
-                cls.print( ' * WARNING: Cannot change position mode while a position is open' )
+        # Notice: Kucoin is never going to make any of these. 
+        
+        # Coinex doesn't accept any number as leverage. It must be on the list. Also clamp to max allowed
+        leverage = cls.verifyLeverageRange( symbol, leverage )
+        
+        ##########################################
+        # Update marginMode if needed
+        ##########################################   
+        if( cls.markets[ symbol ]['local']['marginMode'] != 'isolated' and cls.exchange.has.get('setMarginMode') == True ):
+
+            params = {}
+            # coinex and bybit expect the leverage as part of the marginMode call
+            if( cls.exchange.id == 'coinex' or cls.exchange.id == 'bybit' ):
+                params['leverage'] = leverage
+
+            try:
+                response = cls.exchange.set_margin_mode( 'isolated', symbol, params )
+
+            except Exception as e:
+                for a in e.args:
+                    if( '"retCode":140026' in a ):
+                        # bybit throws an exception just to inform us the order wasn't neccesary (doh)
+                        # bybit {"retCode":140026,"retMsg":"Isolated not modified","result":{},"retExtInfo":{},"time":1690530385642}
+                        pass
+                    else:
+                        print( " * Error: updateSymbolLeverage->set_margin_mode: Unhandled Exception", a )
             else:
-                try:
-                    response = cls.exchange.set_position_mode( False, symbol )
-                    # do we really need this check?
-                    if( cls.exchange.id == 'phemex' and response.get('data') != 'ok' ):
-                        cls.print( " * Warning [phemex] updateSymbolLeverage: Failed to set position mode to Swap")  
-                except Exception as e:
-                    for a in e.args:
-                        if '"retCode":140025' in a:
-                            # this is no an error, but just an acknowledge
-                            # bybit {"retCode":140025,"retMsg":"position mode not modified","result":{},"retExtInfo":{},"time":1690530385019}
-                            pass
-                        else:
-                            print( " * Error: updateSymbolLeverage: Unhandled Exception", a )
+
+                # was everything correct, tho?
+                code = 0
+                if( cls.exchange.id == 'bybit' ): # they didn't receive enough love as children
+                    code = int(response.get('retCode'))
                 else:
-                    cls.markets[ symbol ]['local']['positionMode'] = 'oneway'
-                
+                    code = int(response.get('code'))
+                # 'code': '0' <- coinex
+                # 'code': '00000' <- bitget
+                # 'code': '0' <- phemex
+                # 'retCode': '0' <- bybit
 
-        # undate marginMode and leverage when needed
-        if( cls.markets[ symbol ]['local']['marginMode'] != 'isolated' or cls.markets[ symbol ]['local']['leverage'] != leverage ):
-            if( cls.exchange.id == 'kucoinfutures' ):
-                # kucoinfutured is always in isolated mode and leverage is passed as a parm. Do nothing
-                cls.markets[ symbol ]['local']['marginMode'] = 'isolated'
-                cls.markets[ symbol ]['local']['leverage'] = leverage
-            
-            if( cls.exchange.id == 'bitget' ):
-                # margin modes: 'fixed' 'crossed'
-                # in bitget they call 'fixed' to 'isolated' margin
-                response = cls.exchange.set_margin_mode( 'fixed', symbol )
-                if( response.get('marginMode' == 'fixed') ):
+                if( code != 0 ):
+                    print( " * Error: updateSymbolLeverage->set_margin_mode:", response )
+                else:
                     cls.markets[ symbol ]['local']['marginMode'] = 'isolated'
-                response = cls.exchange.set_leverage( leverage, symbol )
-                if( response != None and response.get('code') == '0' ):
-                    cls.markets[ symbol ]['local']['leverage'] = leverage
 
+                    # coinex and bybit have already updated the leverage
+                    if( cls.exchange.id == 'coinex' or cls.exchange.id == 'bybit' ):
+                        cls.markets[ symbol ]['local']['leverage'] = leverage
+                        return
+
+        ##########################################
+        # Finally update leverage
+        ##########################################
+        if( cls.markets[ symbol ]['local']['leverage'] != leverage and cls.exchange.has.get('setLeverage') == True ):
+
+            # bingx and mexc are special
             if( cls.exchange.id == 'bingx' ):
-                # set margin mode to 'cross' or 'isolated'
-                response = cls.exchange.set_margin_mode( 'isolated', symbol )
-                if( response.get('code') == '0' ):
-                    cls.markets[ symbol ]['local']['marginMode'] = 'isolated'
-
-                response = cls.exchange.set_leverage( 10, symbol, params = {'side':'LONG'} )
-                response2 = cls.exchange.set_leverage( 10, symbol, params = {'side':'SHORT'} )
+                response = cls.exchange.set_leverage( leverage, symbol, params = {'side':'LONG'} )
+                response2 = cls.exchange.set_leverage( leverage, symbol, params = {'side':'SHORT'} )
                 if( response.get('code') == '0' and response2.get('code') == '0' ):
                     cls.markets[ symbol ]['local']['leverage'] = leverage
-                
-            if( cls.exchange.id == 'coinex' ):
-                # margin mode uses the names: 'isolated' and 'cross'
-                # it could also be set in the params with the key 'position_type'
-                # position_type	(Integer)	1 Isolated Margin 2 Cross Margin
-
-                # Coinex doesn't accept any number as leverage. It must be on the list.
-                leverage = cls.verifyLeverageRange( symbol, leverage )
-                try:
-                    response = cls.exchange.set_margin_mode( 'isolated', symbol, params = {'leverage':leverage} )
-                except Exception as e:
-                    cls.print( ' * WARNING: updateSymbolLeverage: Exception raised', e )
-                else:
-                    if( response.get('message') == 'OK' ):
-                        cls.markets[ symbol ]['local']['marginMode'] = 'isolated'
-                        cls.markets[ symbol ]['local']['leverage'] = leverage
-
+                return
+            
             if( cls.exchange.id == 'mexc' ):
                 cls.exchange.set_leverage( leverage, symbol, params = {'openType': 1, 'positionType': 1} )
                 cls.exchange.set_leverage( leverage, symbol, params = {'openType': 1, 'positionType': 2} )
-                cls.markets[ symbol ]['local']['marginMode'] = 'isolated'
                 cls.markets[ symbol ]['local']['leverage'] = leverage
+                return
 
-            if( cls.exchange.id == 'phemex' ):
-                # from phemex API documentation: The sign of leverageEr indicates margin mode, i.e. leverage <= 0 means cross-margin-mode, leverage > 0 means isolated-margin-mode.
-                response = cls.exchange.set_leverage( leverage, symbol )
-                if( response.get('data') == 'ok' ):
-                    cls.markets[ symbol ]['local']['marginMode'] = 'isolated'
-                    cls.markets[ symbol ]['local']['leverage'] = leverage
-            
-            if( cls.exchange.id == 'bybit' ):
-                # tradeMode integer required
-                # Possible values: [0, 1] 0=crossMargin, 1=isolatedMargin
-                # buyLeverage, sellLeverage string required
+            # from phemex API documentation: The sign of leverageEr indicates margin mode,
+            # i.e. leverage <= 0 means cross-margin-mode, leverage > 0 means isolated-margin-mode.
+            # we only want isolated so we ignore it
 
-                # see if we have to change marginMode (does both) or just leverage
-                if( cls.markets[ symbol ]['local']['marginMode'] != 'isolated' ):
-                    # isolated or cross
-                    try:
-                        response = cls.exchange.set_margin_mode( 'isolated', symbol, {'leverage':leverage} )
-                        cls.markets[ symbol ]['local']['marginMode'] = 'isolated'
-                        cls.markets[ symbol ]['local']['leverage'] = leverage
-                    except Exception as e:
-                        for a in e.args:
-                            # bybit {"retCode":140026,"retMsg":"Isolated not modified","result":{},"retExtInfo":{},"time":1690530385642}
-                            if( '"retCode":140026' in a ):
-                                pass
-                            else:
-                                print( " * Error: updateSymbolLeverage: Unhandled Exception", a )
+            params = {}
+            if( cls.exchange.id == 'coinex' ): # coinex always updates leverage and marginMode at the same time
+                params['marginMode'] = cls.markets[ symbol ]['local']['marginMode'] # use current marginMode to avoid triggering an error
+
+            try:
+                response = cls.exchange.set_leverage( leverage, symbol, params )
+            except Exception as e:
+                for a in e.args:
+                    if( '"retCode":140043' in a ):
+                        # bybit throws an exception just to inform us the order wasn't neccesary (doh)
+                        # bybit {"retCode":140043,"retMsg":"leverage not modified","result":{},"retExtInfo":{},"time":1690530386264}
+                        pass
+                    else:
+                        print( " * Error: updateSymbolLeverage->set_leverage: Unhandled Exception", a )
+            else:
+                # was everything correct, tho?
+                code = 0
+                if( cls.exchange.id == 'bybit' ): # they didn't receive enough love as children
+                    code = int(response.get('retCode'))
                 else:
-                    # update only leverage
-                    try:
-                        response = cls.exchange.set_leverage( leverage, symbol )
-                        cls.markets[ symbol ]['local']['leverage'] = leverage
-                    except Exception as e:
-                        for a in e.args:
-                            # bybit {"retCode":140043,"retMsg":"leverage not modified","result":{},"retExtInfo":{},"time":1690530386264}
-                            if( '"retCode":140043' in a ):
-                                pass
-                            else:
-                                print( " * Error: updateSymbolLeverage: Unhandled Exception", a )
-                
-            # if( cls.markets[ symbol ]['local']['marginMode'] == 'isolated' and cls.markets[ symbol ]['local']['leverage'] == leverage ):
-            #     cls.print( "* Leverage updated: Margin Mode:", cls.markets[ symbol ]['local']['marginMode'] + " Leverage: " + str(cls.markets[ symbol ]['local']['leverage']) + "x" )
+                    code = int(response.get('code'))
+                # 'code': '0' <- coinex
+                # 'code': '00000' <- bitget
+                # 'code': '0' <- phemex
+                # 'retCode': '0' <- bybit
+                if( code != 0 ):
+                    print( " * Error: updateSymbolLeverage->set_margin_mode:", response )
+                else:
+                    cls.markets[ symbol ]['local']['leverage'] = leverage
+
 
 
     def fetchBalance(cls):
@@ -489,13 +526,17 @@ class account_c:
     
 
     def findSymbolFromPairName(cls, paircmd):
+        # this is only for the pair name we receive in the alert.
+        # Once it's converted to ccxt symbol format there is no
+        # need to use this method again.
+
         # first let's check if the pair string contains
         # a backslash. If it does it's probably already a symbol
-        # but it also may not include the ':USDT' ending
         if '/' not in paircmd and paircmd.endswith('USDT'):
             paircmd = paircmd[:-4]
             paircmd += '/USDT:USDT'
 
+        # but it also may not include the ':USDT' ending
         if '/' in paircmd and not paircmd.endswith(':USDT'):
             paircmd += ':USDT'
 
@@ -773,34 +814,38 @@ class account_c:
             if( order.delayed() ):
                 continue
 
-            # see if the leverage in the server needs to be changed and setup marginMode/position mode
+            # disable hedge mode if present
+            cls.updateSymbolPositionMode( order.symbol )
+
+            # see if the leverage in the server needs to be changed and set marginMode
             cls.updateSymbolLeverage( order.symbol, order.leverage )
 
             # set up exchange specific parameters
             params = {}
 
-            if( order.leverage == 0 ):
+            if( order.leverage == 0 ): # leverage 0 indicates we are closing a position
                 params['reduce'] = True
 
-            if( cls.exchange.id == 'kucoinfutures' ):
+            if( cls.exchange.id == 'kucoinfutures' ): # Kucoin doesn't use setLeverage nor setMarginMode
                 params['leverage'] = max( order.leverage, 1 )
                 params['marginMode'] = 'isolated'
 
             if( cls.exchange.id == 'bitget' ):
                 params['side'] = 'buy_single' if( order.type == "buy" ) else 'sell_single'
-                if( order.reverse ): #"reverse":true
+                if( order.reverse ):
                     params['reverse'] = True
 
             if( cls.exchange.id == 'mexc' ):
                 # We could set these up in 'updateSymbolLeverage' but since it can
                 # take them it's one less comunication we need to perform
                 # openType: 1:isolated, 2:cross - positionMode: 1:hedge, 2:one-way, (no parameter): the user's current config
+                # side	int	order direction 1: open long, 2: close short,3: open short 4: close long
+                #params['side'] = 1 if( order.type == "buy" ) else 3
                 params['openType'] = 1
                 params['positionMode'] = 2
                 params['marginMode'] = 'isolated'
                 params['leverage'] = max( order.leverage, 1 )
-                # side	int	order direction 1: open long, 2: close short,3: open short 4: close long
-                #params['side'] = 1 if( order.type == "buy" ) else 3
+                
 
             # send the actual order
             try:
