@@ -109,7 +109,7 @@ class account_c:
                 'password': password,
                 #'enableRateLimit': True
                 } )
-            ###HACK!! phemex does NOT have setMarginMode when the type is SWAP
+            ###HACK!! Kucoin doesn't have has.setLeverage defined
             self.exchange.has['setLeverage'] = False
         elif( exchange.lower() == 'bitget' ):
             self.exchange = ccxt.bitget({
