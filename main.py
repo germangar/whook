@@ -92,6 +92,7 @@ class account_c:
         
         self.accountName = name
         self.canFlipPosition = False
+        self.refreshPositionsFailed = 0
         self.positionslist = []
         self.ordersQueue = []
         self.activeOrders = []
@@ -596,34 +597,35 @@ class account_c:
 
     def refreshPositions(cls, v = verbose):
     ### https://docs.ccxt.com/#/?id=position-structure ###
+        failed = False
         try:
             positions = cls.exchange.fetch_positions( params = {'settle':'USDT'} ) # the 'settle' param is only required by phemex
 
         except Exception as e:
             for a in e.args:
-                if 'Remote end closed connection' in a :
-                    #print( timeNow(), cls.exchange.id, '* Refreshpositions:Exception raised: Remote end closed connection' )
-                    return
-                elif '500 Internal Server Error' in a:
-                    return
-                elif '502 Bad Gateway' in a:
-                    #print( timeNow(), cls.exchange.id, '* Refreshpositions:Exception raised: 502 Bad Gateway' )
-                    return
-                elif 'Internal Server Error' in a:
-                    #print( timeNow(), cls.exchange.id, '* Refreshpositions:Exception raised: 500 Internal Server Error' )
-                    return
-                elif 'Server busy' in a or 'System busy' in a:
-                    return
-                elif cls.exchange.id + ' GET' in a:
-                    #print( timeNow(), cls.exchange.id, "* Refreshpositions:Exception raised: no response.")
-                    return
-                elif a == "OK": # Coinex raises an exception to give an OK message when there are no positions... don't look at me, look at them
+                if a == "OK": # Coinex raises an exception to give an OK message when there are no positions... don't look at me, look at them
                     positions = []
-                    break
+                elif( 'Remote end closed connection' in a
+                or '500 Internal Server Error' in a
+                or '502 Bad Gateway' in a
+                or 'Internal Server Error' in a
+                or 'Server busy' in a or 'System busy' in a
+                or cls.exchange.id + ' GET' in a ):
+                    failed = True
                 else:
                     print( timeNow(), cls.exchange.id, '* Refreshpositions:Unknown Exception raised:', a )
-                    return
+                    failed = True
 
+        if( failed ):
+            cls.refreshPositionsFailed += 1
+            if( cls.refreshPositionsFailed == 10 ):
+                print( timeNow(), cls.exchange.id, '* WARNING: Refreshpositions has failed 10 times in a row' )
+            return
+        
+        if (cls.refreshPositionsFailed >= 10 ):
+            print( timeNow(), cls.exchange.id, '* Refreshpositions has returned to activity' )
+
+        cls.refreshPositionsFailed = 0
                     
         # Phemex returns positions that were already closed
         # reconstruct the list of positions only with active positions
