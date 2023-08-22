@@ -612,9 +612,9 @@ class account_c:
                 elif 'Internal Server Error' in a:
                     #print( timeNow(), cls.exchange.id, '* Refreshpositions:Exception raised: 500 Internal Server Error' )
                     return
-                elif 'Server busy, please retry later' in a:
+                elif 'Server busy' in a or 'System busy' in a:
                     return
-                elif 'mexc GET' in a or 'kucoinfutures GET' in a:
+                elif cls.exchange.id + ' GET' in a:
                     #print( timeNow(), cls.exchange.id, "* Refreshpositions:Exception raised: no response.")
                     return
                 elif a == "OK": # Coinex raises an exception to give an OK message when there are no positions... don't look at me, look at them
