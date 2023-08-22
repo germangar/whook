@@ -979,9 +979,10 @@ def parseAlert( data, account: account_c ):
         print( timeNow(), " * ERROR: parseAlert called without an account" )
         return
     
-    account.print( ' ' )
-    account.print( " ALERT:", data.replace('\n', ' | ') )
-    account.print('----------------------------')
+    if( 'redundancy' not in data ):
+        account.print( ' ' )
+        account.print( " ALERT:", data )
+        account.print('----------------------------')
 
     symbol = "Invalid"
     quantity = 0
@@ -1129,6 +1130,11 @@ def parseAlert( data, account: account_c ):
                 return
         # fall through
 
+    # if we got here with a redundancy alert it means the original was lost
+    if( redundancy ):
+        account.print( ' ' )
+        account.print( " ALERT (r):", data )
+        account.print('----------------------------')
 
     if( command == 'buy' or command == 'sell'):
 
@@ -1196,7 +1202,7 @@ def Alert( data ):
             print( timeNow(), ' * ERROR * Account ID not found. ALERT:', data.replace('\n', ' | ') )
             return
 
-        parseAlert( line, account )
+        parseAlert( line.replace('\n', ''), account )
 
 
 
