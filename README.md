@@ -89,7 +89,7 @@ If you have troubles with the cmd prompt or the bat file you can also install Vi
 
 
 ### CONFIGURATION - API KEYS ###
-When you first launch the script it will exit with an error and generate a json file in the script directory. This file is a template to configure the accounts API data. This file can contain as many accounts as you want separated by commas. It looks like this:
+When you first launch the script it will exit with an error and generate a accounts.json file in the script directory. This file is a template to configure the accounts API data. This file can contain as many accounts as you want separated by commas. It looks like this:
 
 
 [<br>
