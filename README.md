@@ -75,7 +75,7 @@ For a local install:
 
 With these you can already run the script, but it won't have access online. For giving it access to the internet you should use:
 
-- ngrok. Create a free ngrok account. Download the last version of ngrok and unzip it. Copy the auth code the website gives you. Launch the software and paste the auth code into the console (with the authcode ngrok will be able to stay open forever). Then type in the ngrok console: "ngrok http 80". This will create an internet address that you can copy. You have to add /whook at the end of it to access the whook server.<br>
+- ngrok. Create a free ngrok account. Download the last version of ngrok and unzip it. Copy the auth code the website gives you. Launch the software and paste the auth code into the ngrok console (with the authcode ngrok will be able to stay open forever). Then type in the ngrok console: "ngrok http 80". This will create an internet address that you can copy. You have to add /whook at the end of it to access the whook server.<br>
 
 Example of an address: https://e579-139-47-50-49.ngrok-free.app/whook<br>
 
