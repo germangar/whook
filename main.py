@@ -854,7 +854,8 @@ class account_c:
             
             except Exception as e:
                 for a in e.args:
-                    if 'Too Many Requests' in a or 'service too busy' in a: #set a bigger delay and try again
+                    if 'Too Many Requests' in a or 'too many request' in a or 'service too busy' in a: 
+                        #set a bigger delay and try again
                         order.delay += 0.5
                         break
                     #
@@ -867,8 +868,10 @@ class account_c:
                     # bybit {"retCode":140007,"retMsg":"remark:order[1643476 23006bb4-630a-4917-af0d-5412aaa1c950] fix price failed for CannotAffordOrderCost.","result":{},"retExtInfo":{},"time":1690540657794}
                     
                     elif ( 'Balance insufficient' in a or 'balance not enough' in a 
-                          or '"code":"40762"' in a or '"code":"40754" ' in a or '"code":101204' in a
-                           or '"code":11082' in a or '"retCode":140007' in a ):
+                            or '"code":"40762"' in a or '"code":"40754" ' in a or '"code":101204' in a
+                            or '"code":11082' in a or '"retCode":140007' in a 
+                            or 'risk limit exceeded.' in a ):
+
                         precision = cls.findPrecisionForSymbol( order.symbol )
                         # try first reducing it to our estimation of current balance
                         if( not order.reduced ):
