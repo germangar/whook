@@ -66,6 +66,8 @@ Several orders can be included in the same alert, separated by line breaks. For 
 
 "If you want to go for a quick effortless test I recommend to copy/paste the script into a free account at 'https://replit.com'. It installs all modules for you so you don't have to do anything. Do **not** use it to host the real server. It goes idle as soon as you close the browser, and your API keys could be discovered."
 
+For a local install:
+
 ##### Windows:
 
 - Download and install python. During the installation make sure to *enable the system PATH option* and at the end of the installation *allow it to unlimit windows PATH length*: https://www.python.org/downloads/
