@@ -62,36 +62,6 @@ This would sell 0.25ETH<br>
 Several orders can be included in the same alert, separated by line breaks. For example, you can send the orders for 2 different accounts inside the same alert.
 
 
-### API KEYS ###
-When you first launch the script it will generate a json file. This file is a template to fill the accounts API data. This file can contain as many accounts as you want separated by commas. It looks like this:
-
-
-[<br>
-&emsp;	{<br>
-&emsp;&emsp;		"EXCHANGE":"kucoinfutures", <br>
-&emsp;&emsp;		"ACCOUNT_ID":"your_account_name", <br>
-&emsp;&emsp;		"API_KEY":"your_api_key", <br>
-&emsp;&emsp;		"SECRET_KEY":"your_secret_key", <br>
-&emsp;&emsp;		"PASSWORD":"your_API_password"<br>
-&emsp;	}<br>
-]<br>
-
-
-You have to fill your API key and SECRET key information in the accounts.json file.<br>
-The ACCOUNT_ID field is the name you give to the account. It's to be included in the alert message to identify the account.<br>
-The password field is required by Kucoin and Bitget but other exchanges may or may not use it. If your exchange doesn't give you a password when creating the API key just leave the field blank.<br>
-The EXCHANGE field is self explanatory. Valid exchange names are:<br> 
-- "**kucoinfutures**"<br>
-- "**bitget**"<br>
-- "**coinex**"<br>
-- "**phemex**"<br>
-- "**phemexdemo**" (for testnet)<br>
-- "**bybit**"<br>
-- "**bybitdemo**"(for testnet)<br>
-- "**bingx**" (not fully functional)<br>
-- "**mexc**" (exchange has API orders disabled due to manteinance)<br>
-
-
 ### HOW TO INSTALL AND RUN ###
 
 "If you want to go for a quick effortless test I recommend to copy/paste the script into a free account at 'https://replit.com'. It installs all modules for you so you don't have to do anything. Do **not** use it to host the real server. It goes idle as soon as you close the browser, and your API keys could be discovered."
@@ -114,6 +84,37 @@ python.exe main.py<br>
 pause<br>
 
 If you have troubles with the cmd prompt or the bat file you can also install Visual Code in the server and run it from there.
+
+
+### CONFIGURATION - API KEYS ###
+When you first launch the script it will exit with an error and generate a json file in the script directory. This file is a template to configure the accounts API data. This file can contain as many accounts as you want separated by commas. It looks like this:
+
+
+[<br>
+&emsp;	{<br>
+&emsp;&emsp;		"EXCHANGE":"kucoinfutures", <br>
+&emsp;&emsp;		"ACCOUNT_ID":"your_account_name", <br>
+&emsp;&emsp;		"API_KEY":"your_api_key", <br>
+&emsp;&emsp;		"SECRET_KEY":"your_secret_key", <br>
+&emsp;&emsp;		"PASSWORD":"your_API_password"<br>
+&emsp;	}<br>
+]<br>
+
+
+You have to fill your API key and SECRET key information in the accounts.json file.<br>
+The ACCOUNT_ID field is the name you give to the account. It's to be included in the alert message to identify the alert target account.<br>
+The password field is required by Kucoin and Bitget but other exchanges may or may not use it. If your exchange doesn't give you a password when creating the API key just leave the field blank.<br>
+The EXCHANGE field is self explanatory. Valid exchange names are:<br> 
+- "**kucoinfutures**"<br>
+- "**bitget**"<br>
+- "**coinex**"<br>
+- "**phemex**"<br>
+- "**phemexdemo**" (for testnet)<br>
+- "**bybit**"<br>
+- "**bybitdemo**"(for testnet)<br>
+- "**bingx**" (not fully functional)<br>
+- "**mexc**" (exchange has API orders disabled due to manteinance)<br>
+
 
 
 ### HOW TO HOST IN AWS ### 
