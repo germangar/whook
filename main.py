@@ -1049,6 +1049,10 @@ def parseAlert( data, account: account_c ):
     if( quantity <= 0 and (command == 'buy' or command == 'sell') ):
         account.print( "ERROR: Invalid Order: Buy/Sell must have positive amount" )
         return
+    if( redundancy and command != 'position' ):
+        account.print( "ERROR: Invalid Order: 'redundancy' can only be used with 'position' command" )
+        redundancy = False
+        return
 
     #time to put the order on the queue
 
@@ -1125,7 +1129,7 @@ def parseAlert( data, account: account_c ):
 
             command = 'sell' if positionContracts > quantity else 'buy'
             quantity = abs( quantity - positionContracts )
-            if( quantity == 0 ):
+            if( quantity < minOrder ):
                 if( redundancy ):
                     account.print( " * Reduncancy check: Ok")
                 else:
