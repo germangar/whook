@@ -62,8 +62,34 @@ This would sell 0.25ETH<br>
 Several orders can be included in the same alert, separated by line breaks. For example, you can send the orders for 2 different accounts inside the same alert.
 
 
-### API KEYS ###
-When you first launch the script it will generate a json file. This file is a template to fill the accounts API data. This file can contain as many accounts as you want separated by commas. It looks like this:
+### HOW TO INSTALL AND RUN ###
+
+"If you want to go for a quick effortless test I recommend to copy/paste the script into a free account at 'https://replit.com'. It installs all modules for you so you don't have to do anything. Do **not** use it to host the real server. It goes idle as soon as you close the browser, and your API keys could be discovered."
+
+For a local install:
+
+##### Windows:
+
+- Download and install python. During the installation make sure to *enable the system PATH option* and at the end of the installation *allow it to unlimit windows PATH length*: https://www.python.org/downloads/
+- Open the windows cmd prompt (type cmd in the windows search at the taskbar). Install the required modules by typing "pip install ccxt" and "pip install flask" in the cmd prompt
+
+With these you can already run the script, but it won't have access online. For giving it access to the internet you should use:
+
+- ngrok. Create a free ngrok account. Download the last version of ngrok and unzip it. Copy the auth code the website gives you. Launch the software and paste the auth code into the ngrok console (with the authcode ngrok will be able to stay open forever). Then type in the ngrok console: "ngrok http 80". This will create an internet address that you can copy. You have to add /whook at the end of it to access the whook server.<br>
+
+Example of an address: https://e579-139-47-50-49.ngrok-free.app/whook<br>
+
+- You can launch the script by double clicking main.py (as long as you enabled the PATH options at installing python) or by creating a .bat file in the same directory as main.py like this:<br>
+
+@echo off<br>
+python.exe main.py<br>
+pause<br>
+
+If you have troubles with the cmd prompt or the bat file you can also install Visual Code in the server and run it from there.
+
+
+### CONFIGURATION - API KEYS ###
+When you first launch the script it will exit with an error and generate a accounts.json file in the script directory. This file is a template to configure the accounts API data. This file can contain as many accounts as you want separated by commas. It looks like this:
 
 
 [<br>
@@ -78,7 +104,7 @@ When you first launch the script it will generate a json file. This file is a te
 
 
 You have to fill your API key and SECRET key information in the accounts.json file.<br>
-The ACCOUNT_ID field is the name you give to the account. It's to be included in the alert message to identify the account.<br>
+The ACCOUNT_ID field is the name you give to the account. It's to be included in the alert message to identify the alert target account.<br>
 The password field is required by Kucoin and Bitget but other exchanges may or may not use it. If your exchange doesn't give you a password when creating the API key just leave the field blank.<br>
 The EXCHANGE field is self explanatory. Valid exchange names are:<br> 
 - "**kucoinfutures**"<br>
@@ -91,29 +117,6 @@ The EXCHANGE field is self explanatory. Valid exchange names are:<br>
 - "**bingx**" (not fully functional)<br>
 - "**mexc**" (exchange has API orders disabled due to manteinance)<br>
 
-
-### HOW TO INSTALL AND RUN ###
-
-"If you want to go for a quick effortless test I recommend to copy/paste the script into a free account at 'https://replit.com'. It installs all modules for you so you don't have to do anything. Do **not** use it to host the real server. It goes idle as soon as you close the browser, and your API keys could be discovered."
-
-##### Windows:
-
-- Download and install python. During the installation make sure to *enable the system PATH option* and at the end of the installation *allow it to unlimit windows PATH length*: https://www.python.org/downloads/
-- Open the windows cmd prompt (type cmd in the windows search at the taskbar). Install the required modules by typing "pip install ccxt" and "pip install flask" in the cmd prompt
-
-With these you can already run the script, but it won't have access online. For giving it access to the internet you should use:
-
-- ngrok. Create a free ngrok account. Download the last version of ngrok and unzip it. Copy the auth code the website gives you. Launch the software and paste the auth code into the console (with the authcode ngrok will be able to stay open forever). Then type in the ngrok console: "ngrok http 80". This will create an internet address that you can copy. You have to add /whook at the end of it to access the whook server.<br>
-
-Example of an address: https://e579-139-47-50-49.ngrok-free.app/whook<br>
-
-- You can launch the script by double clicking main.py (as long as you enabled the PATH options at installing python) or by creating a .bat file in the same directory as main.py like this:<br>
-
-@echo off<br>
-python.exe main.py<br>
-pause<br>
-
-If you have troubles with the cmd prompt or the bat file you can also install Visual Code in the server and run it from there.
 
 
 ### HOW TO HOST IN AWS ### 
