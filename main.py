@@ -1205,6 +1205,9 @@ def Alert( data ):
     # first lets find out if there's more than one commands inside the alert message
     lines = data.split("\n")
     for line in lines:
+        line = line.rstrip('\n')
+        if( len(line) == 0 ):
+            continue
         account = None
         tokens = line.split()
         for token in tokens:
@@ -1213,8 +1216,8 @@ def Alert( data ):
                     account = a
                     break
         if( account == None ):
-            print( timeNow(), ' * ERROR * Account ID not found. ALERT:', data.replace('\n', ' | ') )
-            return
+            print( timeNow(), ' * ERROR * Account ID not found. ALERT:', line )
+            continue
 
         parseAlert( line.replace('\n', ''), account )
 
