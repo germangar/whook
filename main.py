@@ -746,7 +746,7 @@ class account_c:
         # go through the queue and remove the first completed order
         for order in cls.activeOrders:
             if( order.timedOut() ):
-                cls.print( timeNow(), " * Active Order Timed out", order.symbol, order.type, order.quantity, str(order.leverage)+'x' )
+                cls.print( " * Active Order Timed out", order.symbol, order.type, order.quantity, str(order.leverage)+'x' )
                 cls.activeOrders.remove( order )
                 continue
 
@@ -756,7 +756,14 @@ class account_c:
                 if( info == None ):
                     continue
             else:
-                info = cls.exchange.fetch_order( order.id, order.symbol )
+                try:
+                    info = cls.exchange.fetch_order( order.id, order.symbol )
+                except ccxt.base.errors.ExchangeError as e:
+                    if( 'order not exists' in e ):
+                        continue
+                except Exception as e:
+                    cls.print( " * removeFirstCompletedOrder: fetch_order unhandled exception raised:", e )
+                    continue
                 
             
             if( info == None ): # FIXME: Check if this is really happening by printing it.
