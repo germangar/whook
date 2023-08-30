@@ -983,6 +983,34 @@ def generatePositionsString()->str:
     return msg
             
 
+def validateReduncancy( account: account_c, symbol, quantity, leverage, isUSDT, isBaseCurrency )->bool:
+    pos = account.getPositionBySymbol( symbol )
+    if( pos == None ):
+        return False
+    
+    leverage = account.verifyLeverageRange( symbol, leverage )
+    
+    # convert quantity to concracts if needed
+    if( (isUSDT or isBaseCurrency) and quantity != 0.0 ) :
+        # We don't know for sure yet if it's a buy or a sell, so we average
+        price = pos.get('entryPrice')
+        if( isBaseCurrency ) :
+            quantity *= price
+        quantity = account.contractsFromUSDT( symbol, quantity, price, leverage )
+
+    # we need to account for the old position
+    positionContracts = pos.getKey('contracts')
+    if( pos.getKey( 'side' ) == 'short' ):
+        positionContracts = -positionContracts
+
+    quantity = abs( quantity - positionContracts )
+    if( quantity < account.findMinimumAmountForSymbol(symbol) ):
+        account.print( " * Reduncancy check: Ok")
+        return True
+
+    return False
+
+
 def parseAlert( data, account: account_c ):
 
     if( account == None ):
@@ -1060,6 +1088,15 @@ def parseAlert( data, account: account_c ):
         account.print( "ERROR: Invalid Order: 'redundancy' can only be used with 'position' command" )
         redundancy = False
         return
+    
+    if( redundancy ):
+        if( validateReduncancy(account, symbol, quantity, leverage, isUSDT, isBaseCurrenty) ):
+            account.print( " * Reduncancy check: Ok")
+            return
+        # if we got here with a redundancy alert it means the original was lost
+        account.print( ' ' )
+        account.print( " ALERT (r):", data )
+        account.print('----------------------------')
 
     #time to put the order on the queue
 
@@ -1137,18 +1174,9 @@ def parseAlert( data, account: account_c ):
             command = 'sell' if positionContracts > quantity else 'buy'
             quantity = abs( quantity - positionContracts )
             if( quantity < minOrder ):
-                if( redundancy ):
-                    account.print( " * Reduncancy check: Ok")
-                else:
-                    account.print( " * Order completed: Request matched current position")
-                return
+                account.print( " * Order completed: Request matched current position")
         # fall through
 
-    # if we got here with a redundancy alert it means the original was lost
-    if( redundancy ):
-        account.print( ' ' )
-        account.print( " ALERT (r):", data )
-        account.print('----------------------------')
 
     if( command == 'buy' or command == 'sell'):
 
