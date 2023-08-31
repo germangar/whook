@@ -993,7 +993,7 @@ def validateReduncancy( account: account_c, symbol, quantity, leverage, isUSDT, 
     # convert quantity to concracts if needed
     if( (isUSDT or isBaseCurrency) and quantity != 0.0 ) :
         # We don't know for sure yet if it's a buy or a sell, so we average
-        price = pos.get('entryPrice')
+        price = pos.getKey('entryPrice')
         if( isBaseCurrency ) :
             quantity *= price
         quantity = account.contractsFromUSDT( symbol, quantity, price, leverage )
