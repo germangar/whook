@@ -467,8 +467,8 @@ class account_c:
             # so we reconstruct it from the embedded exchange info
             data = response['info'][0]
             balance = {}
-            balance['free'] = float( data.get('crossMaxAvailable') )
-            balance['used'] = float( data.get('available') )
+            balance['free'] = float( data.get('available') )
+            balance['used'] = float( data.get('usdtEquity') ) - float( data.get('available') )
             balance['total'] = float( data.get('usdtEquity') )
         elif( cls.exchange.id == "coinex" ):
             # Coinex response isn't much better. We also reconstruct it
