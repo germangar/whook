@@ -1090,6 +1090,9 @@ def parseAlert( data, account: account_c ):
         return
     
     if( redundancy ):
+        return
+    # FIXME: This isn't working right
+    if( redundancy ):
         if( validateReduncancy(account, symbol, quantity, leverage, isUSDT, isBaseCurrenty) ):
             account.print( " * Reduncancy check: Ok")
             return
