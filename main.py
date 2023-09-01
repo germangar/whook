@@ -485,10 +485,10 @@ class account_c:
     
 
     def fetchAvailableBalance(cls)->float:
-        if( cls.exchange.id == "bitget" ):
-            # Bitget response message is WRONG!!
-            response = cls.fetchBalance()
-            return response.get( 'free' )
+        # Bitget response message is WRONG?
+        # if( cls.exchange.id == "bitget" ):
+        #     response = cls.fetchBalance()
+        #     return response.get( 'free' )
         
         params = { "type":"swap" }
         if( cls.exchange.id == "phemex" ):
