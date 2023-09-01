@@ -1089,8 +1089,6 @@ def parseAlert( data, account: account_c ):
         redundancy = False
         return
     
-    if( redundancy ):
-        return
     # FIXME: This isn't working right
     if( redundancy ):
         if( validateReduncancy(account, symbol, quantity, leverage, isUSDT, isBaseCurrenty) ):
@@ -1100,6 +1098,8 @@ def parseAlert( data, account: account_c ):
         account.print( ' ' )
         account.print( " ALERT (r):", data )
         account.print('----------------------------')
+        print( 'Redundancy check failed' )
+        return
 
     #time to put the order on the queue
 
