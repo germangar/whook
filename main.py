@@ -759,9 +759,8 @@ class account_c:
                 try:
                     info = cls.exchange.fetch_order( order.id, order.symbol )
                 except Exception as e:
-                    for a in e.args:
-                        if( 'order not exists' in a ):
-                            continue
+                    if( 'order not exists' in e.args[0] ):
+                        continue
 
                     cls.print( " * removeFirstCompletedOrder: fetch_order unhandled exception raised:", e )
                     continue
