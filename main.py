@@ -672,7 +672,47 @@ class account_c:
 
             cls.markets[ symbol ]['local'][ 'marginMode' ] = thisPosition.get('marginMode')
 
-            # try also to refresh the leverage from the exchange (not supported by all exchanges)
+            # update the local leverage as well as we can
+            leverage = -1
+            if( thisPosition.get('leverage') != None ):
+                leverage = int(thisPosition.get('leverage'))
+                if( leverage != thisPosition.get('leverage') ): # kucoin sends weird fractional leverage. Ignore it
+                    leverage = -1
+
+            # still didn't find it, but the exchange has the fetchLeverage method.
+            if( leverage == -1 and cls.exchange.has.get('fetchLeverage') == True ):
+                try:
+                    response = cls.exchange.fetch_leverage( symbol )
+                except Exception as e:
+                    pass
+                else:
+                    if( cls.exchange.id == 'bitget' ):
+                        if( response['data']['marginMode'] == 'crossed' ):
+                            leverage = int(response['data'].get('crossMarginLeverage'))
+                        else:
+                            # they should always be the same
+                            longLeverage = int(response['data'].get('fixedLongLeverage'))
+                            shortLeverage = int(response['data'].get('fixedShortLeverage'))
+                            if( longLeverage == shortLeverage ):
+                                leverage = longLeverage
+
+                    elif( cls.exchange.id == 'bingx' ):
+                        # they should always be the same
+                        longLeverage = response['data'].get('longLeverage')
+                        shortLeverage = response['data'].get('shortLeverage')
+                        if( longLeverage == shortLeverage ):
+                            leverage = longLeverage
+                    else:
+                        print( " * WARNING: refreshPositions: fetch_leverage not handled for", cls.exchange.id )
+                        print( response, '\n' )
+            
+            if( leverage != -1 ):
+                cls.markets[ symbol ]['local'][ 'leverage' ] = leverage
+            elif( cls.exchange.id != "kucoinfutures" ): # we know kucoin is helpless
+                print( " * WARNING: refreshPositions: Couldn't find leverage for", cls.exchange.id )
+
+
+            '''# try also to refresh the leverage from the exchange (not supported by all exchanges)
             if( cls.exchange.has.get('fetchLeverage') == True ):
                 response = cls.exchange.fetch_leverage( symbol )
 
@@ -699,7 +739,7 @@ class account_c:
             elif( thisPosition.get('leverage') != None ):
                 leverage = int(thisPosition.get('leverage'))
                 if( leverage == thisPosition.get('leverage') ): # kucoin sends weird fractional leverage. Ignore it
-                    cls.markets[ symbol ]['local'][ 'leverage' ] = leverage
+                    cls.markets[ symbol ]['local'][ 'leverage' ] = leverage'''
 
             cls.positionslist.append(position_c( symbol, thisPosition ))
 
@@ -776,7 +816,7 @@ class account_c:
             status = info.get('status')
             remaining = int( info.get('remaining') )
             price = info.get('price')
-            if verbose : print( status, 'remaining:', remaining, 'price:', price )
+            if verbose : print( status, '\nremaining:', remaining, 'price:', price )
 
             if( remaining > 0 and (status == 'canceled' or status == 'closed') ):
                 print("r...", end = '')
@@ -882,6 +922,7 @@ class account_c:
                         precision = cls.findPrecisionForSymbol( order.symbol )
                         # try first reducing it to our estimation of current balance
                         if( not order.reduced ):
+                            oldQuantity = order.quantity
                             price = cls.fetchSellPrice(order.symbol) if( type == 'sell' ) else cls.fetchBuyPrice(order.symbol)
                             available = cls.fetchAvailableBalance() * 0.985
                             order.quantity = cls.contractsFromUSDT( order.symbol, available, price, order.leverage )
@@ -890,7 +931,7 @@ class account_c:
                                 cls.print( ' * Exception raised: Balance insufficient: Minimum contracts required:', cls.findMinimumAmountForSymbol(order.symbol), ' Cancelling')
                                 cls.ordersQueue.remove( order )
                             else:
-                                cls.print( ' * Exception raised: Balance insufficient: Reducing to', order.quantity, "contracts")
+                                cls.print( ' * Exception raised: Balance insufficient: Was', oldQuantity, 'Reducing to', order.quantity, "contracts")
                                 
                             break
                         elif( order.quantity > precision ):
@@ -1110,6 +1151,10 @@ def parseAlert( data, account: account_c ):
     except ValueError as e:
         print( " ERROR!: Couldn't fecth balance! Error:\n", e )
         return
+    
+    # bybit is too slow at updating positions after an order is made, so make sure they're updated
+    if( account.exchange.id == 'bybit' and (command == 'position' or command == 'close') ):
+        account.refreshPositions( False )
 
     minOrder = account.findMinimumAmountForSymbol(symbol)
     leverage = account.verifyLeverageRange( symbol, leverage )
@@ -1178,6 +1223,7 @@ def parseAlert( data, account: account_c ):
             quantity = abs( quantity - positionContracts )
             if( quantity < minOrder ):
                 account.print( " * Order completed: Request matched current position")
+                return
         # fall through
 
 
@@ -1238,6 +1284,8 @@ def Alert( data ):
     for line in lines:
         line = line.rstrip('\n')
         if( len(line) == 0 ):
+            continue
+        if( line[:2] == '//' ): # if the line begins with // it's a comment and we skip it
             continue
         account = None
         tokens = line.split()
