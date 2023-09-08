@@ -961,7 +961,7 @@ class account_c:
                 cls.print( " * Order denied:", response['info'], "Cancelling" )
                 cls.ordersQueue.remove( order )
                 continue
-            
+
             order.id = response.get('id')
             if verbose : print( timeNow(), " * Activating Order", order.symbol, order.type, order.quantity, str(order.leverage)+'x', 'id', order.id )
             cls.activeOrders.append( order )
@@ -1122,9 +1122,15 @@ def parseAlert( data, account: account_c ):
     if( quantity == None ):
         account.print( "ERROR: Invalid quantity value" )
         return
-    if( quantity <= 0 and (command == 'buy' or command == 'sell') ):
-        account.print( "ERROR: Invalid Order: Buy/Sell must have positive amount" )
+    if( quantity <= 0 and command == 'buy' ):
+        account.print( "ERROR: Invalid Order: Buy must have a positive amount" )
         return
+    if( quantity <= 0 and command == 'sell' ):
+        if( quantity < 0 ):
+            quantity = abs(quantity) #be flexible with sell having a negative amount
+        else:
+            account.print( "ERROR: Invalid Order: Sell must have an amount" )
+            return
     if( redundancy and command != 'position' ):
         account.print( "ERROR: Invalid Order: 'redundancy' can only be used with 'position' command" )
         redundancy = False
