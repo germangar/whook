@@ -14,6 +14,8 @@ if( ccxt.__version__ < minCCXTversion ):
     print( 'While it may run with earlier versions wrong behaviors are expected to happen.' )
     print( 'Please update CCXT.' )
     print( '============== * WARNING * ==============\n')
+else:
+    print( 'ccxt version:', ccxt.__version__ )
 
 verbose = False
 _ORDER_TIMEOUT_ = 40
@@ -237,8 +239,7 @@ class account_c:
             try:
                 precision = thisMarket['precision'].get('amount')
             except Exception as e:
-                print( " * FATAL ERROR: Market", self.exchange.id, "doesn't have precision value" )
-                SystemError()
+                raise ValueError( "Market", self.exchange.id, "doesn't have precision value" )
 
             # some exchanges don't have a minimum purchase amount defined
             try:
@@ -470,7 +471,8 @@ class account_c:
             balance['free'] = float( data.get('available') )
             balance['used'] = float( data.get('usdtEquity') ) - float( data.get('available') )
             balance['total'] = float( data.get('usdtEquity') )
-        elif( cls.exchange.id == "coinex" ):
+            return balance
+        if( cls.exchange.id == "coinex" ):
             # Coinex response isn't much better. We also reconstruct it
             data = response['info'].get('data')
             data = data.get('USDT')
@@ -478,9 +480,10 @@ class account_c:
             balance['free'] = float( data.get('available') )
             balance['used'] = float( data.get('margin') )
             balance['total'] = balance['free'] + balance['used'] + float( data.get('profit_unreal') )
-        else:
-            balance = response.get('USDT')
+            return balance
         
+
+        balance = response.get('USDT')
         return balance
     
 
@@ -710,36 +713,6 @@ class account_c:
                 cls.markets[ symbol ]['local'][ 'leverage' ] = leverage
             elif( cls.exchange.id != "kucoinfutures" ): # we know kucoin is helpless
                 print( " * WARNING: refreshPositions: Couldn't find leverage for", cls.exchange.id )
-
-
-            '''# try also to refresh the leverage from the exchange (not supported by all exchanges)
-            if( cls.exchange.has.get('fetchLeverage') == True ):
-                response = cls.exchange.fetch_leverage( symbol )
-
-                if( cls.exchange.id == 'bitget' ):
-                    if( response['data']['marginMode'] == 'crossed' ):
-                        cls.markets[ symbol ]['local'][ 'leverage' ] = int(response['data'].get('crossMarginLeverage'))
-                    else:
-                        # they should always be the same
-                        longLeverage = int(response['data'].get('fixedLongLeverage'))
-                        shortLeverage = int(response['data'].get('fixedShortLeverage'))
-                        if( longLeverage == shortLeverage ):
-                            cls.markets[ symbol ]['local'][ 'leverage' ] = longLeverage
-
-                elif( cls.exchange.id == 'bingx' ):
-                    # they should always be the same
-                    longLeverage = response['data'].get('longLeverage')
-                    shortLeverage = response['data'].get('shortLeverage')
-                    if( longLeverage == shortLeverage ):
-                        cls.markets[ symbol ]['local'][ 'leverage' ] = longLeverage
-                else:
-                    print( "WARNING: refreshPositions: fetch_leverage not handled for", cls.exchange.id )
-                    print( response, '\n' )
-
-            elif( thisPosition.get('leverage') != None ):
-                leverage = int(thisPosition.get('leverage'))
-                if( leverage == thisPosition.get('leverage') ): # kucoin sends weird fractional leverage. Ignore it
-                    cls.markets[ symbol ]['local'][ 'leverage' ] = leverage'''
 
             cls.positionslist.append(position_c( symbol, thisPosition ))
 
