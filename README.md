@@ -61,6 +61,8 @@ This would sell 0.25ETH<br>
 
 Several orders can be included in the same alert, separated by line breaks. For example, you can send the orders for 2 different accounts inside the same alert.
 
+It's possible to add comments inside the alert message. The comment must be in a new line and being with double slash '//'. Why? You ask. Because I often forget the setting I used when I created the alert! Whook will simply ignore that line when parsing the alert.
+
 
 ### HOW TO INSTALL AND RUN ###
 
