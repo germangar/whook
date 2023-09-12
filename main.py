@@ -613,6 +613,8 @@ class account_c:
                 or '502 Bad Gateway' in a
                 or 'Internal Server Error' in a
                 or 'Server busy' in a or 'System busy' in a
+                or 'Service is not available' in a
+                or '"code":39999' in a
                 or cls.exchange.id + ' GET' in a ):
                     failed = True
                 else:
