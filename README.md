@@ -88,7 +88,7 @@ Example of an address: https://e579-139-47-50-49.ngrok-free.app/whook<br>
 python.exe main.py<br>
 pause<br>
 
-If you have troubles with the cmd prompt or the bat file you can also install Visual Code in the server and run it from there.
+If you have troubles with the cmd prompt or the bat file you can also install Visual Code and run it from there.
 
 
 ### CONFIGURATION - API KEYS ###
