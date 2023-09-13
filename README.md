@@ -18,6 +18,7 @@ Currently supported exchanges:
 - Coinex futures
 - Phemex futures ( also Phemex testnet: https://testnet.phemex.com )
 - Bybit futures ( also Bybit testnet: https://testnet.bybit.com )
+- Binance futures ( also Binance futures testnet: https://testnet.binancefuture.com )
   
 Broken support:
 - Bingx: There is some problem with the conversion from USDT to contracts. Sending orders in contracts should work fine.
@@ -87,8 +88,6 @@ Example of an address: https://e579-139-47-50-49.ngrok-free.app/whook<br>
 python.exe main.py<br>
 pause<br>
 
-If you have troubles with the cmd prompt or the bat file you can also install Visual Code in the server and run it from there.
-
 
 ### CONFIGURATION - API KEYS ###
 When you first launch the script it will exit with an error and generate a accounts.json file in the script directory. This file is a template to configure the accounts API data. This file can contain as many accounts as you want separated by commas. It looks like this:
@@ -116,6 +115,8 @@ The EXCHANGE field is self explanatory. Valid exchange names are:<br>
 - "**phemexdemo**" (for testnet)<br>
 - "**bybit**"<br>
 - "**bybitdemo**"(for testnet)<br>
+- "**binance**"<br>
+- "**binancedemo**"(for testnet)<br>
 - "**bingx**" (not fully functional)<br>
 - "**mexc**" (exchange has API orders disabled due to manteinance)<br>
 
