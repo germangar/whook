@@ -6,8 +6,14 @@ from threading import Timer
 import time
 import json
 import logging
+from datetime import datetime
 
+
+verbose = False
+ORDER_TIMEOUT = 40
+MARGIN_MODE = 'isolated'
 minCCXTversion = '4.0.69'
+
 if( ccxt.__version__ < minCCXTversion ):
     print( '\n============== * WARNING * ==============')
     print( 'WHOOK requires CCXT version', minCCXTversion,' or higher.')
@@ -17,20 +23,6 @@ if( ccxt.__version__ < minCCXTversion ):
 else:
     print( 'ccxt version:', ccxt.__version__ )
 
-verbose = False
-_ORDER_TIMEOUT_ = 40
-
-from datetime import datetime
-# today = datetime.today()
-# year = today.year
-# month = today.month
-# day = today.day
-#print("Current year:", today.year)
-#print("Current month:", today.month)
-#print("Current day:", today.day)
-#print("Hour =", today.hour)
-#print("Minute =", today.minute)
-#print("Second =", today.second )
 
 def dateString():
     return datetime.today().strftime("%Y/%m/%d")
@@ -85,7 +77,7 @@ class order_c:
     def setQuantity(cls, quantity):
         cls.quantity = int(quantity)
     def timedOut(cls):
-        return ( cls.timestamp + _ORDER_TIMEOUT_ < time.monotonic() )
+        return ( cls.timestamp + ORDER_TIMEOUT < time.monotonic() )
     def delayed(cls):
         return (cls.timestamp + cls.delay > time.monotonic() )
 
@@ -279,7 +271,7 @@ class account_c:
             if( self.exchange.has.get('setPositionMode') != True ):
                 thisMarket['local']['positionMode'] = 'oneway'
             if( self.exchange.has.get('setMarginMode') != True ):
-                thisMarket['local']['marginMode'] = 'isolated'
+                thisMarket['local']['marginMode'] = MARGIN_MODE
 
             # Store the market into the local markets dictionary
             self.markets[key] = thisMarket
@@ -382,7 +374,7 @@ class account_c:
         ##########################################
         # Update marginMode if needed
         ##########################################   
-        if( cls.markets[ symbol ]['local']['marginMode'] != 'isolated' and cls.exchange.has.get('setMarginMode') == True ):
+        if( cls.markets[ symbol ]['local']['marginMode'] != MARGIN_MODE and cls.exchange.has.get('setMarginMode') == True ):
 
             params = {}
             # coinex and bybit expect the leverage as part of the marginMode call
@@ -390,7 +382,7 @@ class account_c:
                 params['leverage'] = leverage
 
             try:
-                response = cls.exchange.set_margin_mode( 'isolated', symbol, params )
+                response = cls.exchange.set_margin_mode( MARGIN_MODE, symbol, params )
 
             except Exception as e:
                 for a in e.args:
@@ -421,7 +413,7 @@ class account_c:
                 if( code != 0 ):
                     print( " * Error: updateSymbolLeverage->set_margin_mode:", response )
                 else:
-                    cls.markets[ symbol ]['local']['marginMode'] = 'isolated'
+                    cls.markets[ symbol ]['local']['marginMode'] = MARGIN_MODE
 
                     # coinex and bybit don't need to continue since they have already updated the leverage
                     if( cls.exchange.id == 'coinex' or cls.exchange.id == 'bybit' ):
@@ -706,7 +698,7 @@ class account_c:
             #some exchanges have the key set to None. Fix it when possible
             if( thisPosition.get('marginMode') == None ) :
                 if( cls.exchange.id == 'kucoinfutures' ):
-                    thisPosition['marginMode'] = 'isolated'
+                    thisPosition['marginMode'] = MARGIN_MODE
                 else:
                     print( 'WARNING refreshPositions: Could not get marginMode for', symbol )
 
@@ -882,7 +874,7 @@ class account_c:
 
             if( cls.exchange.id == 'kucoinfutures' ): # Kucoin doesn't use setLeverage nor setMarginMode
                 params['leverage'] = max( order.leverage, 1 )
-                params['marginMode'] = 'isolated'
+                params['marginMode'] = MARGIN_MODE
 
             if( cls.exchange.id == 'bitget' ):
                 params['side'] = 'buy_single' if( order.type == "buy" ) else 'sell_single'
@@ -897,7 +889,7 @@ class account_c:
                 #params['side'] = 1 if( order.type == "buy" ) else 3
                 params['openType'] = 1
                 params['positionMode'] = 2
-                params['marginMode'] = 'isolated'
+                params['marginMode'] = MARGIN_MODE
                 params['leverage'] = max( order.leverage, 1 )
                 
 
@@ -1213,7 +1205,7 @@ def parseAlert( data, account: account_c ):
             else:
                 command = 'buy'
             quantity = abs(quantity)
-        elif( account.markets[symbol]['local']['marginMode'] != 'isolated' ):
+        elif( account.markets[symbol]['local']['marginMode'] != MARGIN_MODE ):
             # to change marginMode we need to close the old position first
             if( pos.getKey('side') == 'long' ):
                 account.ordersQueue.append( order_c( symbol, 'sell', pos.getKey('contracts'), 0 ) )
