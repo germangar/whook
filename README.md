@@ -18,6 +18,7 @@ Currently supported exchanges:
 - Coinex futures
 - Phemex futures ( also Phemex testnet: https://testnet.phemex.com )
 - Bybit futures ( also Bybit testnet: https://testnet.bybit.com )
+- Binance futures ( also Binance futures testnet: https://testnet.binancefuture.com )
   
 Broken support:
 - Bingx: There is some problem with the conversion from USDT to contracts. Sending orders in contracts should work fine.
@@ -116,6 +117,8 @@ The EXCHANGE field is self explanatory. Valid exchange names are:<br>
 - "**phemexdemo**" (for testnet)<br>
 - "**bybit**"<br>
 - "**bybitdemo**"(for testnet)<br>
+- "**binance**"<br>
+- "**binancedemo**"(for testnet)<br>
 - "**bingx**" (not fully functional)<br>
 - "**mexc**" (exchange has API orders disabled due to manteinance)<br>
 
