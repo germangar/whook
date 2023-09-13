@@ -395,7 +395,7 @@ class account_c:
                 else:
                     cls.markets[ symbol ]['local']['marginMode'] = 'isolated'
 
-                    # coinex and bybit have already updated the leverage
+                    # coinex and bybit don't need to continue since they have already updated the leverage
                     if( cls.exchange.id == 'coinex' or cls.exchange.id == 'bybit' ):
                         cls.markets[ symbol ]['local']['leverage'] = leverage
                         return
@@ -449,7 +449,7 @@ class account_c:
                 # 'code': '0' <- phemex
                 # 'retCode': '0' <- bybit
                 if( code != 0 ):
-                    print( " * Error: updateSymbolLeverage->set_margin_mode:", response )
+                    print( " * Error: updateSymbolLeverage->set_leverage:", response )
                 else:
                     cls.markets[ symbol ]['local']['leverage'] = leverage
 
@@ -459,7 +459,6 @@ class account_c:
         params = { "type":"swap" }
         if( cls.exchange.id == "phemex" ):
             params['code'] = 'USDT'
-            #params = { "type":"swap", "code":"USDT" }
         
         response = cls.exchange.fetch_balance( params )
 
@@ -482,7 +481,6 @@ class account_c:
             balance['total'] = balance['free'] + balance['used'] + float( data.get('profit_unreal') )
             return balance
         
-
         balance = response.get('USDT')
         return balance
     
@@ -684,7 +682,7 @@ class account_c:
                 if( leverage != thisPosition.get('leverage') ): # kucoin sends weird fractional leverage. Ignore it
                     leverage = -1
 
-            # still didn't find it, but the exchange has the fetchLeverage method.
+            # still didn't find the leverage, but the exchange has the fetchLeverage method so we can try that.
             if( leverage == -1 and cls.exchange.has.get('fetchLeverage') == True ):
                 try:
                     response = cls.exchange.fetch_leverage( symbol )
@@ -707,9 +705,6 @@ class account_c:
                         shortLeverage = response['data'].get('shortLeverage')
                         if( longLeverage == shortLeverage ):
                             leverage = longLeverage
-                    else:
-                        print( " * WARNING: refreshPositions: fetch_leverage not handled for", cls.exchange.id )
-                        print( response, '\n' )
             
             if( leverage != -1 ):
                 cls.markets[ symbol ]['local'][ 'leverage' ] = leverage
