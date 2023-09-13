@@ -192,6 +192,25 @@ class account_c:
                 "enableRateLimit": True
                 })
             self.exchange.set_sandbox_mode( True )
+        elif( exchange.lower() == 'binance' ):
+            self.exchange = ccxt.binance({
+                "apiKey": apiKey,
+                "secret": secret,
+                'password': password,
+                "options": {'defaultType': 'swap', 'adjustForTimeDifference' : True},
+                #"timeout": 60000,
+                "enableRateLimit": True
+                })
+        elif( exchange.lower() == 'binancedemo' ):
+            self.exchange = ccxt.binance({
+                "apiKey": apiKey,
+                "secret": secret,
+                'password': password,
+                "options": {'defaultType': 'swap', 'adjustForTimeDifference' : True},
+                #"timeout": 60000,
+                "enableRateLimit": True
+                })
+            self.exchange.set_sandbox_mode( True )
         else:
             raise ValueError('Unsupported exchange')
 
@@ -320,9 +339,10 @@ class account_c:
                 response = cls.exchange.set_position_mode( False, symbol ) 
             except Exception as e:
                 for a in e.args:
-                    if '"retCode":140025' in a:
+                    if '"retCode":140025' in a or '"code":-4059' in a:
                         # this is not an error, but just an acknowledge
                         # bybit {"retCode":140025,"retMsg":"position mode not modified","result":{},"retExtInfo":{},"time":1690530385019}
+                        # binance {"code":-4059,"msg":"No need to change position side."}
                         cls.markets[ symbol ]['local']['positionMode'] = 'oneway'
                     else:
                         print( " * Error: updateSymbolLeverage->set_position_mode: Unhandled Exception", a )
@@ -337,6 +357,9 @@ class account_c:
                 # 'code': '00000' <- bitget
                 # 'code': '0' <- phemex
                 # 'retCode': '0' <- bybit
+                # {'code': '200', 'msg': 'success'} <- binance
+                if( cls.exchange.id == 'binance' and code == 200 or code == -4059 ):
+                    code = 0
 
                 if( code != 0 ):
                     print( " * Error: updateSymbolLeverage->set_position_mode:", response )
@@ -371,9 +394,11 @@ class account_c:
 
             except Exception as e:
                 for a in e.args:
-                    if( '"retCode":140026' in a ):
+                    if( '"retCode":140026' in a or "No need to change margin type" in a ):
                         # bybit throws an exception just to inform us the order wasn't neccesary (doh)
                         # bybit {"retCode":140026,"retMsg":"Isolated not modified","result":{},"retExtInfo":{},"time":1690530385642}
+                        # binance {'code': -4046, 'msg': 'No need to change margin type.'}
+                        # updateSymbolLeverage->set_margin_mode: {'code': -4046, 'msg': 'No need to change margin type.'}
                         pass
                     else:
                         print( " * Error: updateSymbolLeverage->set_margin_mode: Unhandled Exception", a )
@@ -389,6 +414,9 @@ class account_c:
                 # 'code': '00000' <- bitget
                 # 'code': '0' <- phemex
                 # 'retCode': '0' <- bybit
+                # {'code': '200', 'msg': 'success'} <- binance
+                if( cls.exchange.id == 'binance' and code == 200 or code == -4046 ):
+                    code = 0
 
                 if( code != 0 ):
                     print( " * Error: updateSymbolLeverage->set_margin_mode:", response )
@@ -442,12 +470,13 @@ class account_c:
                 code = 0
                 if( cls.exchange.id == 'bybit' ): # they didn't receive enough love as children
                     code = int(response.get('retCode'))
-                else:
+                elif( cls.exchange.id != 'binance' ):
                     code = int(response.get('code'))
                 # 'code': '0' <- coinex
                 # 'code': '00000' <- bitget
                 # 'code': '0' <- phemex
                 # 'retCode': '0' <- bybit
+                # binance doesn't send any code #{'symbol': 'BTCUSDT', 'leverage': '7', 'maxNotionalValue': '40000000'}
                 if( code != 0 ):
                     print( " * Error: updateSymbolLeverage->set_leverage:", response )
                 else:
@@ -592,6 +621,14 @@ class account_c:
     def contractsFromUSDT(cls, symbol, amount, price, leverage = 1.0 )->float :
         contractSize = cls.findContractSizeForSymbol( symbol )
         precision = cls.findPrecisionForSymbol( symbol )
+        #FIXME! either I have been using precision wrong or binance market description has it wrong.
+        if( cls.exchange.id == 'binance' ):
+            filters = cls.markets[symbol]['info']['filters']
+            for filter in filters:
+                if( filter.get('filterType') == 'LOT_SIZE' ):
+                    precision = float(filter.get('stepSize'))
+                    break
+            
         coin = (amount * leverage) / (contractSize * price)
         return roundDownTick( coin, precision ) if ( coin > 0 ) else roundUpTick( coin, precision )
     
@@ -1146,10 +1183,10 @@ def parseAlert( data, account: account_c ):
 
         if verbose : print( "CONVERTING (x"+str(leverage)+")", quantity, coin_name, '==>', end = '' )
         quantity = account.contractsFromUSDT( symbol, quantity, price, leverage )
+        if verbose : print( ":", quantity, "contracts" )
         if( abs(quantity) < minOrder ):
             account.print( timeNow(), " * ERROR * Order too small:", quantity, "Minimum required:", minOrder )
             return
-        if verbose : print( ":", quantity, "contracts" )
 
     # check for a existing position
     pos = account.getPositionBySymbol( symbol )
