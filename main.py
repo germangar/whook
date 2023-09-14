@@ -1021,34 +1021,6 @@ def generatePositionsString()->str:
             msg += pos.symbol + ' * ' + pos.getKey('side') + " * {:.4f}[$]".format(collateral) + " * {:.2f}[$]".format(unrealizedPnl) + " * {:.2f}".format(p) + '%' + '\n'
 
     return msg
-            
-
-def validateReduncancy( account: account_c, symbol, quantity, leverage, isUSDT, isBaseCurrency )->bool:
-    pos = account.getPositionBySymbol( symbol )
-    if( pos == None ):
-        return False
-    
-    leverage = account.verifyLeverageRange( symbol, leverage )
-    
-    # convert quantity to concracts if needed
-    if( (isUSDT or isBaseCurrency) and quantity != 0.0 ) :
-        # We don't know for sure yet if it's a buy or a sell, so we average
-        price = float( pos.getKey('entryPrice') )
-        if( isBaseCurrency ) :
-            quantity *= price
-        quantity = account.contractsFromUSDT( symbol, quantity, price, leverage )
-
-    # we need to account for the old position
-    positionContracts = pos.getKey('contracts')
-    if( pos.getKey( 'side' ) == 'short' ):
-        positionContracts = -positionContracts
-
-    quantity = abs( quantity - positionContracts )
-    if( quantity < account.findMinimumAmountForSymbol(symbol) ):
-        account.print( " * Reduncancy check: Ok")
-        return True
-
-    return False
 
 
 def parseAlert( data, account: account_c ):
@@ -1057,10 +1029,9 @@ def parseAlert( data, account: account_c ):
         print( timeNow(), " * ERROR: parseAlert called without an account" )
         return
     
-    if( 'redundancy' not in data ):
-        account.print( ' ' )
-        account.print( " ALERT:", data )
-        account.print('----------------------------')
+    account.print( ' ' )
+    account.print( " ALERT:", data )
+    account.print('----------------------------')
 
     symbol = "Invalid"
     quantity = 0
@@ -1069,7 +1040,6 @@ def parseAlert( data, account: account_c ):
     isUSDT = False
     isBaseCurrenty = False
     reverse = False
-    redundancy = False
 
 
     # Informal plain text syntax
@@ -1099,8 +1069,6 @@ def parseAlert( data, account: account_c ):
         elif ( token[-1:].lower()  == "x" ):
             arg = token[:-1]
             leverage = int(stringToValue(arg))
-        elif token.lower()  == 'redundancy' or token.lower()  == 'redundant':
-            ( redundancy ) = True
         elif token.lower()  == 'long' or token.lower() == "buy":
             command = 'buy'
         elif token.lower()  == 'short' or token.lower() == "sell":
@@ -1130,31 +1098,18 @@ def parseAlert( data, account: account_c ):
         else:
             account.print( "ERROR: Invalid Order: Sell must have an amount" )
             return
-    if( redundancy and command != 'position' ):
-        account.print( "ERROR: Invalid Order: 'redundancy' can only be used with 'position' command" )
-        redundancy = False
-        return
     
-    # FIXME: This isn't working right
-    if( redundancy ):
-        if( validateReduncancy(account, symbol, quantity, leverage, isUSDT, isBaseCurrenty) ):
-            account.print( " * Reduncancy check: Ok")
-            return
-        # if we got here with a redundancy alert it means the original was lost
-        account.print( ' ' )
-        account.print( " ALERT (r):", data )
-        account.print('----------------------------')
-        print( 'Redundancy check failed' )
-        return
 
     #time to put the order on the queue
-
     
-    # ccxt.base.errors.ExchangeError: Service is not available during funding fee settlement. Please try again later.
     try:
         available = account.fetchAvailableBalance() * 0.985
-    except ValueError as e:
-        print( " ERROR!: Couldn't fecth balance! Error:\n", e )
+    except Exception as e:
+        # This is our first communication with the server, and (afaik) it will only fail when the server is not available.
+        # I'm still unsure if I should create a queue to retry alerts received while the server was down. By now
+        # it will fail to place this order. It's very unlikely to happen, but it has happened.
+        # ccxt.base.errors.ExchangeError: Service is not available during funding fee settlement. Please try again later.
+        print( " ERROR: Order cancelled. Couldn't reach the server:\n", e )
         return
     
     # bybit is too slow at updating positions after an order is made, so make sure they're updated
