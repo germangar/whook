@@ -642,6 +642,7 @@ class account_c:
                 or 'Server busy' in a or 'System busy' in a
                 or 'Service is not available' in a
                 or '"code":39999' in a
+                or '"retCode":10002' in a
                 or cls.exchange.id + ' GET' in a ):
                     failed = True
                 else:
@@ -777,7 +778,7 @@ class account_c:
         for o in response:
             if o.get('id') == id :
                 return o
-        if verbose : print( " * fetchPhemexOrderById: Didn't find the [closed] order" )
+        if verbose : print( "r...", end = '' )
         return None
     
 
@@ -912,11 +913,11 @@ class account_c:
                     # bingx {"code":101204,"msg":"Insufficient margin","data":{}}
                     # phemex {"code":11082,"msg":"TE_CANNOT_COVER_ESTIMATE_ORDER_LOSS","data":null}
                     # bybit {"retCode":140007,"retMsg":"remark:order[1643476 23006bb4-630a-4917-af0d-5412aaa1c950] fix price failed for CannotAffordOrderCost.","result":{},"retExtInfo":{},"time":1690540657794}
-                    
+                    # binance "code":-2019,"msg":"Margin is insufficient."
                     elif ( 'Balance insufficient' in a or 'balance not enough' in a 
                             or '"code":"40762"' in a or '"code":"40754" ' in a or '"code":101204' in a
                             or '"code":11082' in a or '"retCode":140007' in a 
-                            or 'risk limit exceeded.' in a ):
+                            or 'risk limit exceeded.' in a or 'Margin is insufficient' in a ):
 
                         precision = cls.findPrecisionForSymbol( order.symbol )
                         # try first reducing it to our estimation of current balance
@@ -1039,6 +1040,7 @@ def parseAlert( data, account: account_c ):
     command = "Invalid"
     isUSDT = False
     isBaseCurrenty = False
+    isPercentage = False
     reverse = False
 
 
@@ -1056,6 +1058,10 @@ def parseAlert( data, account: account_c ):
         elif ( token[-1:]  == "@" ): # value in contracts
             arg = token[:-1]
             quantity = stringToValue( arg )
+        elif ( token[-1:]  == "%" ): # value in percentage of balance
+            arg = token[:-1]
+            quantity = stringToValue( arg )
+            isPercentage = True
         elif ( token[:1]  == "-" ): # this is a minus symbol! What a bitch (value in base currency)
             isBaseCurrenty = True
             quantity = stringToValue( token )
@@ -1118,6 +1124,14 @@ def parseAlert( data, account: account_c ):
 
     minOrder = account.findMinimumAmountForSymbol(symbol)
     leverage = account.verifyLeverageRange( symbol, leverage )
+
+    # quantity is a percentage of the USDT balance
+    if( isPercentage ):
+        quantity = min( max( quantity, -100.0 ), 100.0 )
+        balance = account.fetchBalance()
+        if verbose : print( 'PERCENTAGE: ' + str(quantity) + '% =', str( balance['total'] * quantity * 0.01) + '$' )
+        quantity = balance['total'] * quantity * 0.01
+        isUSDT = True
     
     # convert quantity to concracts if needed
     if( (isUSDT or isBaseCurrenty) and quantity != 0.0 ) :
