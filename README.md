@@ -38,9 +38,10 @@ position or pos - goes to a position of the given value. Use a positive value fo
 close - closes the position (position 0 also does it).<br>
 
 * Quantities:<br>
+[value] - quantity in base currency. Just the number without any extra character. Base currency is the coin you're trading.<br>
 [value]$ - quantity in USDT. No command associated. Just the number and the dollar sign.<br>
 [value]@ - quantity in contracts. No command associated. Just the number and the 'at' sign.<br>
-[value] - quantity in base currency. Just the number without any extra character. Base currency is the coin you're trading.<br>
+[value]% - quantity as percentage of total USDT balance. Use a negative value for shorts when using the position command.<br>
 [value]x or x[value] - defines the leverage.<br>
 
 Examples:<br>
