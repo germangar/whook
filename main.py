@@ -51,11 +51,39 @@ class RepeatTimer(Timer):
             self.function(*self.args, **self.kwargs)
 
 class position_c:
-    def __init__(self, symbol, position) -> None:
+    def __init__(self, symbol, position, thisMarket = None ) -> None:
         self.symbol = symbol
         self.position = position
+        self.thisMarket = thisMarket
+
     def getKey(cls, key):
         return cls.position.get(key)
+    
+    def generatePrintString(cls)->str:
+        if( cls.thisMarket == None ): 
+            return ''
+        
+        p = 0.0
+        unrealizedPnl = 0 if(cls.getKey('unrealizedPnl') == None) else float(cls.getKey('unrealizedPnl'))
+        initialMargin = 0 if(cls.getKey('initialMargin') == None) else float(cls.getKey('initialMargin'))
+        collateral = 0.0 if(cls.getKey('collateral') == None) else float(cls.getKey('collateral'))
+        if( initialMargin != 0 ):
+            p = ( unrealizedPnl / initialMargin ) * 100.0
+        else:
+            p = ( unrealizedPnl / (collateral - unrealizedPnl) ) * 100
+
+        positionModeChar = '[H]' if (cls.thisMarket['local']['positionMode'] == 'hedged') else ''
+        levStr = "?x" if (cls.thisMarket['local']['leverage'] == 0 ) else str(cls.thisMarket['local']['leverage']) + 'x'
+
+        string = cls.symbol + positionModeChar
+        string += ' * ' + cls.thisMarket['local']['marginMode'] + ':' + levStr
+        string += ' * ' + cls.getKey('side')
+        string += ' * ' + str( cls.getKey('contracts') )
+        string += ' * ' + "{:.4f}[$]".format(collateral)
+        string += ' * ' + "{:.2f}[$]".format(unrealizedPnl)
+        string += ' * ' + "{:.2f}".format(p) + '%'
+        return string
+            
 
 class order_c:
     def __init__(self, symbol = "", type = "", quantity = 0.0, leverage = 1, delay = 0, reverse = False) -> None:
@@ -741,23 +769,12 @@ class account_c:
             elif( cls.exchange.id != "kucoinfutures" ): # we know kucoin is helpless
                 print( " * WARNING: refreshPositions: Couldn't find leverage for", cls.exchange.id )
 
-            cls.positionslist.append(position_c( symbol, thisPosition ))
+            cls.positionslist.append(position_c( symbol, thisPosition, cls.markets[ symbol ] ))
 
         if v:
             for pos in cls.positionslist:
-                p = 0.0
-                unrealizedPnl = 0 if(pos.getKey('unrealizedPnl') == None) else float(pos.getKey('unrealizedPnl'))
-                initialMargin = 0 if(pos.getKey('initialMargin') == None) else float(pos.getKey('initialMargin'))
-                collateral = 0.0 if(pos.getKey('collateral') == None) else float(pos.getKey('collateral'))
-                if( initialMargin != 0 ):
-                    p = ( unrealizedPnl / initialMargin ) * 100.0
-                else:
-                    p = ( unrealizedPnl / (collateral - unrealizedPnl) ) * 100
-                positionModeChar = '[H]' if (cls.markets[ symbol ]['local']['positionMode'] == 'hedged') else ''
-                narginStr = cls.markets[pos.symbol]['local']['marginMode']
-                levStr = "?x" if( cls.markets[pos.symbol]['local']['leverage'] == 0 ) else str(cls.markets[pos.symbol]['local']['leverage']) + 'x'
-                print(pos.symbol+positionModeChar, narginStr+':'+levStr, pos.getKey('side'), pos.getKey('contracts'), "{:.4f}[$]".format(collateral), "{:.2f}[$]".format(unrealizedPnl), "{:.2f}".format(p) + '%', sep=' * ')
-            
+                print( pos.generatePrintString() )
+
             print('------------------------------')
 
 
@@ -1010,16 +1027,7 @@ def generatePositionsString()->str:
             continue
 
         for pos in account.positionslist:
-            p = 0.0
-            unrealizedPnl = 0 if(pos.getKey('unrealizedPnl') == None) else float(pos.getKey('unrealizedPnl'))
-            initialMargin = 0 if(pos.getKey('initialMargin') == None) else float(pos.getKey('initialMargin'))
-            collateral = 0.0 if(pos.getKey('collateral') == None) else float(pos.getKey('collateral'))
-            if( initialMargin != 0 ):
-                p = ( unrealizedPnl / initialMargin ) * 100.0
-            else:
-                p = ( unrealizedPnl / (collateral - unrealizedPnl) ) * 100
-
-            msg += pos.symbol + ' * ' + pos.getKey('side') + " * {:.4f}[$]".format(collateral) + " * {:.2f}[$]".format(unrealizedPnl) + " * {:.2f}".format(p) + '%' + '\n'
+            msg += pos.generatePrintString() + '\n'
 
     return msg
 
