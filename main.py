@@ -1144,15 +1144,15 @@ def parseAlert( data, account: account_c ):
     # convert quantity to concracts if needed
     if( (isUSDT or isBaseCurrenty) and quantity != 0.0 ) :
         # We don't know for sure yet if it's a buy or a sell, so we average
+        oldQuantity = quantity
         price = account.fetchAveragePrice(symbol)
         coin_name = account.markets[symbol]['quote']
         if( isBaseCurrenty ) :
             quantity *= price
             coin_name = account.markets[symbol]['base']
 
-        if verbose : print( "CONVERTING (x"+str(leverage)+")", quantity, coin_name, '==>', end = '' )
         quantity = account.contractsFromUSDT( symbol, quantity, price, leverage )
-        if verbose : print( ":", quantity, "contracts" )
+        if verbose : print( "CONVERTING (x"+str(leverage)+")", oldQuantity, coin_name, '==>', quantity, "contracts" )
         if( abs(quantity) < minOrder ):
             account.print( timeNow(), " * ERROR * Order too small:", quantity, "Minimum required:", minOrder )
             return
