@@ -1117,7 +1117,7 @@ def parseAlert( data, account: account_c ):
         # I'm still unsure if I should create a queue to retry alerts received while the server was down. By now
         # it will fail to place this order. It's very unlikely to happen, but it has happened.
         # ccxt.base.errors.ExchangeError: Service is not available during funding fee settlement. Please try again later.
-        print( " ERROR: Order cancelled. Couldn't reach the server:\n", e )
+        account.print( " ERROR: Order cancelled. Couldn't reach the server:\n", e )
         return
     
     # bybit is too slow at updating positions after an order is made, so make sure they're updated
