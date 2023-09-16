@@ -1328,7 +1328,8 @@ for ac in accounts_data:
     try:
         account = account_c( exchange, account_id, api_key, secret_key, password )
     except Exception as e:
-        print( 'Account creating failed:', e )
+        print( 'Account creation failed:', e )
+        print('------------------------------')
     else:
         accounts.append( account )
 
