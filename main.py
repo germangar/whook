@@ -98,14 +98,6 @@ class order_c:
         self.delay = delay
         self.reverse = reverse
         self.timestamp = time.monotonic()
-    def setType(cls, type):
-        cls.type = type
-    def setSymbol(cls, symbol):
-        cls.symbol = symbol
-    def setLeverage(cls, leverage):
-        cls.leverage = int(leverage)
-    def setQuantity(cls, quantity):
-        cls.quantity = int(quantity)
     def timedOut(cls):
         return ( cls.timestamp + ORDER_TIMEOUT < time.monotonic() )
     def delayed(cls):
