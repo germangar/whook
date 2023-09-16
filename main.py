@@ -11,6 +11,8 @@ from datetime import datetime
 
 verbose = False
 ORDER_TIMEOUT = 40
+REFRESH_POSITIONS_FREQUENCY = 5 * 60    # refresh positions every 5 minutes
+UPDATE_ORDERS_FREQUENCY = 0.25          # frametime in seconds at which the orders queue is refreshed.
 MARGIN_MODE = 'isolated'
 minCCXTversion = '4.0.69'
 
@@ -1382,10 +1384,10 @@ def webhook():
         abort(400)
 
 # start the positions fetching loop
-timerFetchPositions = RepeatTimer( 5 * 60, refreshPositions )
+timerFetchPositions = RepeatTimer( REFRESH_POSITIONS_FREQUENCY, refreshPositions )
 timerFetchPositions.start()
 
-timerOrdersQueue = RepeatTimer( 0.25, updateOrdersQueue )
+timerOrdersQueue = RepeatTimer( UPDATE_ORDERS_FREQUENCY, updateOrdersQueue )
 timerOrdersQueue.start()
 
 # start the webhook server
