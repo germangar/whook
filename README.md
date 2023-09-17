@@ -119,8 +119,6 @@ The EXCHANGE field is self explanatory. Valid exchange names are:<br>
 - "**binance**"<br>
 - "**binancedemo**"(for testnet)<br>
 - "**bingx**" (not fully functional)<br>
-- "**mexc**" (exchange has API orders disabled due to manteinance)<br>
-
 
 
 ### HOW TO HOST IN AWS ### 
