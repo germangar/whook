@@ -22,6 +22,12 @@ if( ccxt.__version__ < minCCXTversion ):
     print( 'While it may run with earlier versions wrong behaviors are expected to happen.' )
     print( 'Please update CCXT.' )
     print( '============== * WARNING * ==============\n')
+elif( ccxt.__version__ >= '4.0.87' ):
+    print( '\n============== * WARNING * ==============')
+    print( 'There is a problem with CCXT versions superior to 4.0.87 and')
+    print( 'changing marginMode in *Bybit*. Please downgrade CCXT to ' )
+    print( 'version 4.0.87 until I find a solution.' )
+    print( '============== * WARNING * ==============\n')
 else:
     print( 'ccxt version:', ccxt.__version__ )
 
@@ -344,9 +350,11 @@ class account_c:
                 response = cls.exchange.set_position_mode( False, symbol ) 
             except Exception as e:
                 for a in e.args:
-                    if '"retCode":140025' in a or '"code":-4059' in a:
+                    if( '"retCode":140025' in a or '"code":-4059' in a
+                        or 'retCode":110025' in a ):
                         # this is not an error, but just an acknowledge
                         # bybit {"retCode":140025,"retMsg":"position mode not modified","result":{},"retExtInfo":{},"time":1690530385019}
+                        # bybit {"retCode":110025,"retMsg":"Position mode is not modified","result":{},"retExtInfo":{},"time":1694988241696}
                         # binance {"code":-4059,"msg":"No need to change position side."}
                         cls.markets[ symbol ]['local']['positionMode'] = 'oneway'
                     else:
@@ -402,6 +410,7 @@ class account_c:
                     if( '"retCode":140026' in a or "No need to change margin type" in a ):
                         # bybit throws an exception just to inform us the order wasn't neccesary (doh)
                         # bybit {"retCode":140026,"retMsg":"Isolated not modified","result":{},"retExtInfo":{},"time":1690530385642}
+                        # bybit setMarginMode() marginMode must be either ISOLATED_MARGIN or REGULAR_MARGIN or PORTFOLIO_MARGIN
                         # binance {'code': -4046, 'msg': 'No need to change margin type.'}
                         # updateSymbolLeverage->set_margin_mode: {'code': -4046, 'msg': 'No need to change margin type.'}
                         pass
@@ -458,8 +467,9 @@ class account_c:
                 response = cls.exchange.set_leverage( leverage, symbol, params )
             except Exception as e:
                 for a in e.args:
-                    if( '"retCode":140043' in a ):
+                    if( '"retCode":140043' in a or '"retCode":110043' in a ):
                         # bybit throws an exception just to inform us the order wasn't neccesary (doh)
+                        # bybit {"retCode":110043,"retMsg":"Set leverage not modified","result":{},"retExtInfo":{},"time":1694988242174}
                         # bybit {"retCode":140043,"retMsg":"leverage not modified","result":{},"retExtInfo":{},"time":1690530386264}
                         pass
                     else:
