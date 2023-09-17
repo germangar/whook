@@ -36,7 +36,7 @@ buy or long - places buy order.<br>
 sell or short - places sell order.<br>
 position or pos - goes to a position of the given value. Use a positive value for Long and a negative value for Short.<br>
 close - closes the position (position 0 also does it).<br>
-limit:[customID]:[price]. Combined with buy/sell commads creates a limit order. CustomID is a order identification you can use to cancel the order with another alert. The three fields must be separated by a colon with no spaces<br>
+limit:[customID]:[price] - Combined with buy/sell commads creates a limit order. CustomID is a order identification you can use to cancel the order with another alert. The three fields must be separated by a colon with no spaces<br>
 
 * Quantities:<br>
 [value] - quantity in base currency. Just the number without any extra character. Base currency is the coin you're trading.<br>
