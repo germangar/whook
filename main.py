@@ -785,12 +785,12 @@ class account_c:
 
             # Phemex doesn't support fetch_order (by id) in swap mode, but it supports fetch_open_orders and fetch_closed_orders
             if( cls.exchange.id == 'phemex' or cls.exchange.id == 'bybit' ):
-                info = cls.fetchClosedOrderById( order.symbol, order.id )
-                if( info == None ):
+                response = cls.fetchClosedOrderById( order.symbol, order.id )
+                if( response == None ):
                     continue
             else:
                 try:
-                    info = cls.exchange.fetch_order( order.id, order.symbol )
+                    response = cls.exchange.fetch_order( order.id, order.symbol )
                 except Exception as e:
                     if( 'order not exists' in e.args[0] ):
                         continue
@@ -799,16 +799,16 @@ class account_c:
                     continue
                 
             
-            if( info == None ): # FIXME: Check if this is really happening by printing it.
+            if( response == None ): # FIXME: Check if this is really happening by printing it.
                 print( 'removeFirstCompletedOrder: fetch_order returned None' )
                 continue
-            if( len(info) == 0 ):
+            if( len(response) == 0 ):
                 print( 'removeFirstCompletedOrder: fetch_order returned empty' )
                 continue
                         
-            status = info.get('status')
-            remaining = int( info.get('remaining') )
-            price = info.get('price')
+            status = response.get('status')
+            remaining = int( response.get('remaining') )
+            price = response.get('price')
             if verbose : print( status, '\nremaining:', remaining, 'price:', price )
 
             if( remaining > 0 and (status == 'canceled' or status == 'closed') ):
