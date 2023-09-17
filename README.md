@@ -9,6 +9,7 @@ Whook only makes market orders. Limit orders, take profit and stop loss are not 
 Whook only uses one-side mode. Hedge mode is not supported.<br>
 It's also always using isolated marging. However you should be able to change this relatively easy if you want to.
 
+You don't need to be a programmer to use Whook. All you need is to download the main.py file and follow the instructions below.
 
 ##### Disclaimer: This project is for my personal use. I'm not taking feature requests.
 
