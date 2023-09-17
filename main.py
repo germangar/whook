@@ -830,7 +830,6 @@ class account_c:
             remaining = int( response.get('remaining') )
             price = response.get('price')
             if verbose : print( status, '\nremaining:', remaining, 'price:', price )
-            print( "client ID:", response.get('clientOrderId') )
 
             if( order.type == 'limit' ):
                 cls.print( " * Linmit order placed:", order.symbol, order.side, order.quantity, str(order.leverage)+"x", "at price", price, 'id', response.get('clientOrderId') )
