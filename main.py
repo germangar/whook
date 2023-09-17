@@ -237,9 +237,6 @@ class account_c:
         self.logger.addHandler( fh )
         self.logger.level = logging.INFO
 
-
-        #print( self.exchange.id, 'has setPositionMode:', self.exchange.has.get('setPositionMode') )
-        
         # Some exchanges don't have all fields properly filled, but we can find out
         # the values in another field. Instead of adding exceptions at each other function
         # let's reconstruct the markets dictionary trying to fix those values
