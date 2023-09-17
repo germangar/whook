@@ -134,7 +134,7 @@ I'm not a linux user so I struggled to open the ports in the Linux virtual machi
 
 ### KNOWN BUGS ### 
 - BingX contracSize and precision seem to be either wrong or work in a different scale than the rest of exchanges. The USDT to contracts conversion is returning wrong values. BingX support is uncomplete and I don't think I'll complete it. But I won't remove it either since most of it is implemented.
-- Things will most likely go south if you have a position with a leverage and you order the same position with a different leverage. Some exchanges may take the leverage change as you trying to change the leverage of the current position but not changing the amount of contracts. I'll try to handle it but it's not a big priority for me.
+- Things will most likely go south if you have a position with a leverage and you order the same position with a different leverage. Some exchanges may take the leverage change as you trying to change the leverage of the current position but not changing the amount of contracts. The order will go through, but the resulting position will depend on the exchange. I'll try to handle it but it's not a big priority for me.
 
 ### TO DO LIST ### 
 - Add limit orders
