@@ -50,7 +50,7 @@ Examples:<br>
 [account_id] [symbol] [command] [value in USDT] [leverage] - **myKucoinA ETH/USDT buy 300$ x3**<br>
 
 - Limit buy command using USDT:<br>
-[account_id] [symbol] [command] [value in USDT] [leverage] [limit:[customID]:[price]] - **myKucoinA ETH/USDT buy 300$ x3 limit:order002:21012 **<br>
+[account_id] [symbol] [command] [value in USDT] [leverage] [limit:[customID]:[price]] - **myKucoinA ETH/USDT buy 300$ x3 limit:order002:21012**<br>
 Will open a buy order at 21021. The management of the customID falls on you if you ever want to cancel it. Remember you can't open 2 orders with the same customID<br>
 
 - Position command using contracts:<br>
