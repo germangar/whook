@@ -918,14 +918,15 @@ class account_c:
                     # KUCOIN: kucoinfutures Balance insufficient. The order would cost 304.7268292695.
                     # BITGET: bitget {"code":"40762","msg":"The order size is greater than the max open size","requestTime":1689179675919,"data":null}
                     # BITGET: {"code":"40754","msg":"balance not enough","requestTime":1689363604542,"data":null}
-                    # [bitget/bitget] bitget {"code":"45110","msg":"less than the minimum amount 5 USDT","requestTime":1689481837614,"data":null}
                     # bingx {"code":101204,"msg":"Insufficient margin","data":{}}
                     # phemex {"code":11082,"msg":"TE_CANNOT_COVER_ESTIMATE_ORDER_LOSS","data":null}
+                    # phemex {"code":11001,"msg":"TE_NO_ENOUGH_AVAILABLE_BALANCE","data":null}
                     # bybit {"retCode":140007,"retMsg":"remark:order[1643476 23006bb4-630a-4917-af0d-5412aaa1c950] fix price failed for CannotAffordOrderCost.","result":{},"retExtInfo":{},"time":1690540657794}
                     # binance "code":-2019,"msg":"Margin is insufficient."
                     elif ( 'Balance insufficient' in a or 'balance not enough' in a 
                             or '"code":"40762"' in a or '"code":"40754" ' in a or '"code":101204' in a
-                            or '"code":11082' in a or '"retCode":140007' in a 
+                            or '"code":11082' in a or '"code":11001' in a
+                            or '"retCode":140007' in a 
                             or 'risk limit exceeded.' in a or 'Margin is insufficient' in a ):
 
                         precision = cls.findPrecisionForSymbol( order.symbol )
@@ -960,7 +961,7 @@ class account_c:
                             cls.ordersQueue.remove( order )
                             break
                     else:
-                        # ToDo
+                        # [bitget/bitget] bitget {"code":"45110","msg":"less than the minimum amount 5 USDT","requestTime":1689481837614,"data":null}
                         cls.print( ' * ERROR Cancelling: Unhandled Exception raised:', e )
                         cls.ordersQueue.remove( order )
                         break
