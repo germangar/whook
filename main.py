@@ -837,8 +837,6 @@ class account_c:
             
             if ( status == 'closed' ):
                 cls.print( " * Order succesful:", order.symbol, order.type, order.quantity, str(order.leverage)+"x", "at price", price, 'id', order.id )
-                order.quantity = 0
-                order.leverage = 0
                 cls.activeOrders.remove( order )
                 return True
         return False
