@@ -37,6 +37,7 @@ sell or short - places sell order.<br>
 position or pos - goes to a position of the given value. Use a positive value for Long and a negative value for Short.<br>
 close - closes the position (position 0 also does it).<br>
 limit:[customID]:[price] - Combined with buy/sell commads creates a limit order. CustomID is a order identification you can use to cancel the order with another alert. The three fields must be separated by a colon with no spaces<br>
+cancel:[customID] - Cancels a limit order by its customID. The symbol is required in the order.
 
 * Quantities:<br>
 [value] - quantity in base currency. Just the number without any extra character. Base currency is the coin you're trading.<br>
@@ -52,6 +53,15 @@ Examples:<br>
 - Limit buy command using USDT:<br>
 [account_id] [symbol] [command] [value in USDT] [leverage] [limit:[customID]:[price]] - **myKucoinA ETH/USDT buy 300$ x3 limit:order002:21012**<br>
 Will open a buy order at 21021. The management of the customID falls on you if you ever want to cancel it. Remember you can't open 2 orders with the same customID<br>
+Some exchange peculiarities to be aware of:<br>
+Bybit will not accept the same customID twice, even if the previous order is already cancelled.<br>
+Coinex only accepts numeric customIDs.<br>
+
+- Cancel limit order:<br>
+[account_id] [symbol] [cancel:[customID]] - **myKucoinA ETH/USDT cancel:order002**<br>
+Some exchange peculiarities to be aware of:<br>
+Bybit will not accept the same customID twice, even if the previous order is already cancelled.<br>
+Coinex only accepts numeric customIDs.<br>
 
 - Position command using contracts:<br>
 [symbol] [command] [value in contracts] [leverage] [account_id] - **ETH/USDT position -500@ x3 myKucoinA**<br>

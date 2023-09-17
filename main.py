@@ -848,6 +848,38 @@ class account_c:
                 return True
         return False
 
+    def cancelLimitOrder(cls, symbol, customID )->bool:
+
+        try:
+            id = customID
+            if( cls.exchange.id == 'coinex' ):
+                params={ 'order_id':customID }
+            elif( cls.exchange.id == 'bybit' ):
+                id = None
+                params={ 'orderLinkId':customID }
+            else:
+                params={ 'clientOrderId':customID }
+            response = cls.exchange.cancel_order( id, symbol, params )
+
+        except Exception as e:
+            for a in e.args:
+            # todo: need to check errors in all exchanges
+            # phemex {"code":10002,"msg":"OM_ORDER_NOT_FOUND","data":null}
+            # bitget {"code":"40020","msg":"Parameter orderId or clientOid error","requestTime":1694984090051,"data":null}
+            # coinex: order not exists
+            # binance {"code":-2011,"msg":"Unknown order sent."}
+                if( 'OM_ORDER_NOT_FOUND' in a or 'order not exists' in a
+                   or 'The order cannot be canceled' in a # Kucoin always so helpful
+                   or '"code":"40020' in a or '"code":-2011' in a
+                   
+                   ):
+                    cls.print( 'Limit order [', customID, '] not found' )
+                else:
+                    print( 'cancelLimitOrder: Unhandled exception:', e )
+
+        else:
+            cls.print( " * Linmit order [", response.get('clientOrderId'), "] cancelled." )
+        return True
 
     def updateOrdersQueue(cls):
 
@@ -875,6 +907,12 @@ class account_c:
                 continue
 
             if( order.delayed() ):
+                continue
+
+            if( order.type == 'cancel' ):
+                # it always returns true
+                if( cls.cancelLimitOrder( order.symbol, order.customID) ):
+                    cls.ordersQueue.remove( order )
                 continue
 
             # disable hedge mode if present
@@ -958,6 +996,13 @@ class account_c:
                             cls.print( ' * Exception raised: Balance insufficient: Cancelling')
                             cls.ordersQueue.remove( order )
                             break
+
+                    # bybit {"retCode":20094,"retMsg":"OrderLinkedID is duplicate","result":{},"retExtInfo":{},"time":1694985713343}
+                    elif '"retCode":20094' in a :
+                        cls.print( ' * Error Cancelling: Linmit order ID [', order.customID, '] was used before' )
+                        cls.ordersQueue.remove( order )
+                        break
+                        
                     else:
                         # [bitget/bitget] bitget {"code":"45110","msg":"less than the minimum amount 5 USDT","requestTime":1689481837614,"data":null}
                         cls.print( ' * ERROR Cancelling: Unhandled Exception raised:', e )
@@ -1084,7 +1129,7 @@ def parseAlert( data, account: account_c ):
             command = 'close'
         elif token.lower()  == 'position' or token.lower()  == 'pos':
             command = 'position'
-        elif ( token[:5].lower()  == "limit" ): # format-> limit:id:price
+        elif ( token[:5].lower()  == "limit" ):
             v = token.split(':')
             if( len(v) != 3 ):
                 account.print( " Error: Limit command must be formatted as 'limit:customID:price' ")
@@ -1096,6 +1141,23 @@ def parseAlert( data, account: account_c ):
                     account.print( " Error: customID must be longer than 2 characters and shorter than 30' ")
                     return
                 priceLimit = stringToValue(v[2])
+            if( account.exchange.id == 'coinex' and not customID.isdigit() ):
+                account.print( " Error: Coinex only accepts numeric customID' ")
+                return
+
+        elif ( token[:6].lower()  == "cancel" ):
+            v = token.split(':')
+            if( len(v) != 2 ):
+                account.print( " Error: Cancel command must be formatted as 'cancel:customID' ")
+                return
+            command = 'cancel'
+            customID = v[1]
+            if( len(customID) < 2 or len(customID) > 30 ):
+                account.print( " Error: customID must be longer than 2 characters and shorter than 30' ")
+                return
+            if( account.exchange.id == 'coinex' and not customID.isdigit() ):
+                account.print( " Error: Coinex only accepts numeric customID' ")
+                return
     
 
     # validate the commands
@@ -1133,6 +1195,16 @@ def parseAlert( data, account: account_c ):
         # ccxt.base.errors.ExchangeError: Service is not available during funding fee settlement. Please try again later.
         account.print( " ERROR: Order cancelled. Couldn't reach the server:\n", e )
         return
+    
+    
+    if( command == 'cancel' ):
+        # we verified the server is online so just put the cancel order in the queue and leave.
+        order = order_c( symbol )
+        order.type = 'cancel'
+        order.customID = customID
+        account.ordersQueue.append( order )
+        return
+
     
     # bybit is too slow at updating positions after an order is made, so make sure they're updated
     if( account.exchange.id == 'bybit' and (command == 'position' or command == 'close') ):
