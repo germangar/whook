@@ -155,15 +155,6 @@ class account_c:
                 "enableRateLimit": True
                 })
             self.canFlipPosition = False
-        elif( exchange.lower() == 'mexc' ):
-            self.exchange = ccxt.mexc({
-                "apiKey": apiKey,
-                "secret": secret,
-                'password': password,
-                "options": {'defaultType': 'swap', 'adjustForTimeDifference' : True},
-                #"timeout": 60000,
-                "enableRateLimit": True
-                })
         elif( exchange.lower() == 'phemex' ):
             self.exchange = ccxt.phemex({
                 "apiKey": apiKey,
@@ -444,18 +435,12 @@ class account_c:
         ##########################################
         if( cls.markets[ symbol ]['local']['leverage'] != leverage and cls.exchange.has.get('setLeverage') == True ):
 
-            # bingx and mexc are special
+            # bingx is special
             if( cls.exchange.id == 'bingx' ):
                 response = cls.exchange.set_leverage( leverage, symbol, params = {'side':'LONG'} )
                 response2 = cls.exchange.set_leverage( leverage, symbol, params = {'side':'SHORT'} )
                 if( response.get('code') == '0' and response2.get('code') == '0' ):
                     cls.markets[ symbol ]['local']['leverage'] = leverage
-                return
-            
-            if( cls.exchange.id == 'mexc' ):
-                cls.exchange.set_leverage( leverage, symbol, params = {'openType': 1, 'positionType': 1} )
-                cls.exchange.set_leverage( leverage, symbol, params = {'openType': 1, 'positionType': 2} )
-                cls.markets[ symbol ]['local']['leverage'] = leverage
                 return
 
             # from phemex API documentation: The sign of leverageEr indicates margin mode,
@@ -888,17 +873,6 @@ class account_c:
                 if( order.reverse ):
                     params['reverse'] = True
 
-            if( cls.exchange.id == 'mexc' ):
-                # We could set these up in 'updateSymbolLeverage' but since it can
-                # take them it's one less comunication we need to perform
-                # openType: 1:isolated, 2:cross - positionMode: 1:hedge, 2:one-way, (no parameter): the user's current config
-                # side	int	order direction 1: open long, 2: close short,3: open short 4: close long
-                #params['side'] = 1 if( order.aisw == "buy" ) else 3
-                params['openType'] = 1
-                params['positionMode'] = 2
-                params['marginMode'] = MARGIN_MODE
-                params['leverage'] = max( order.leverage, 1 )
-                
 
             # send the actual order
             try:
