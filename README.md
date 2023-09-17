@@ -5,7 +5,7 @@ WHOOK is a web hook for handling Tradingview Alerts to crypto exchanges in perpe
 Whook prioritizes realiability over speed. If you're looking for high frequency trading Whook is not for you.
 Whook will do everything it can to fullfill orders, including resending rejected orders until they time out (currently 40 seconds), reducing the quantity of the order when the balance is not enough and dividing the order in two at reversing positions when there's not enough balance for doing it at once.
 
-Whook only makes market orders. Limit orders, take profit and stop loss are not supported.<br>
+Whook only makes market orders and limit orders. Take profit and stop loss are not supported.<br>
 Whook only uses one-side mode. Hedge mode is not supported.<br>
 It's also always using isolated marging. However you should be able to change this relatively easy if you want to.
 
@@ -36,6 +36,7 @@ buy or long - places buy order.<br>
 sell or short - places sell order.<br>
 position or pos - goes to a position of the given value. Use a positive value for Long and a negative value for Short.<br>
 close - closes the position (position 0 also does it).<br>
+limit:[customID]:[price]. Combined with buy/sell commads creates a limit order. CustomID is a order identification you can use to cancel the order with another alert. The three fields must be separated by a colon with no spaces<br>
 
 * Quantities:<br>
 [value] - quantity in base currency. Just the number without any extra character. Base currency is the coin you're trading.<br>
@@ -47,6 +48,10 @@ close - closes the position (position 0 also does it).<br>
 Examples:<br>
 - Buy command using USDT:<br>
 [account_id] [symbol] [command] [value in USDT] [leverage] - **myKucoinA ETH/USDT buy 300$ x3**<br>
+
+- Limit buy command using USDT:<br>
+[account_id] [symbol] [command] [value in USDT] [leverage] [limit:[customID]:[price]] - **myKucoinA ETH/USDT buy 300$ x3 limit:order002:21012 **<br>
+Will open a buy order at 21021. The management of the customID falls on you if you ever want to cancel it. Remember you can't open 2 orders with the same customID<br>
 
 - Position command using contracts:<br>
 [symbol] [command] [value in contracts] [leverage] [account_id] - **ETH/USDT position -500@ x3 myKucoinA**<br>

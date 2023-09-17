@@ -89,10 +89,13 @@ class position_c:
 
 class order_c:
     def __init__(self, symbol = "", side = "", quantity = 0.0, leverage = 1, delay = 0, reverse = False) -> None:
-        self.side = side
         self.symbol = symbol
+        self.type = 'market'
+        self.side = side
         self.quantity = quantity
         self.leverage = leverage
+        self.price = None
+        self.customID = None
         self.reduced = False
         self.id = ""
         self.delay = delay
@@ -775,6 +778,20 @@ class account_c:
         return None
     
 
+    def fetchOpenOrderById(cls, symbol, id ):
+        try:
+            response = cls.exchange.fetch_open_orders( symbol, params = {'settleCoin':'USDT'} )
+        except Exception as e:
+            #Exception: ccxt.base.errors.ExchangeError: phemex {"code":39999,"msg":"Please try again.","data":null}
+            return None
+
+        for o in response:
+            if o.get('id') == id :
+                return o
+        if verbose : print( "r...", end = '' )
+        return None
+    
+
     def removeFirstCompletedOrder(cls):
         # go through the queue and remove the first completed order
         for order in cls.activeOrders:
@@ -785,7 +802,10 @@ class account_c:
 
             # Phemex doesn't support fetch_order (by id) in swap mode, but it supports fetch_open_orders and fetch_closed_orders
             if( cls.exchange.id == 'phemex' or cls.exchange.id == 'bybit' ):
-                response = cls.fetchClosedOrderById( order.symbol, order.id )
+                if( order.type == 'limit' ):
+                    response = cls.fetchOpenOrderById( order.symbol, order.id )
+                else:
+                    response = cls.fetchClosedOrderById( order.symbol, order.id )
                 if( response == None ):
                     continue
             else:
@@ -810,6 +830,12 @@ class account_c:
             remaining = int( response.get('remaining') )
             price = response.get('price')
             if verbose : print( status, '\nremaining:', remaining, 'price:', price )
+            print( "client ID:", response.get('clientOrderId') )
+
+            if( order.type == 'limit' ):
+                cls.print( " * Linmit order placed:", order.symbol, order.side, order.quantity, str(order.leverage)+"x", "at price", price, 'id', response.get('clientOrderId') )
+                cls.activeOrders.remove( order )
+                return True
 
             if( remaining > 0 and (status == 'canceled' or status == 'closed') ):
                 print("r...", end = '')
@@ -873,10 +899,12 @@ class account_c:
                 if( order.reverse ):
                     params['reverse'] = True
 
+            if( order.type == 'limit' ):
+                params['clientOrderId'] = order.customID
 
             # send the actual order
             try:
-                response = cls.exchange.create_order( order.symbol, 'market', order.side, order.quantity, None, params )
+                response = cls.exchange.create_order( order.symbol, order.type, order.side, order.quantity, order.price, params )
                 #print( response )
             
             except Exception as e:
@@ -1010,6 +1038,8 @@ def parseAlert( data, account: account_c ):
     quantity = 0
     leverage = 0
     command = "Invalid"
+    isLimit = False
+    priceLimit = 0
     isUSDT = False
     isBaseCurrenty = False
     isPercentage = False
@@ -1055,6 +1085,18 @@ def parseAlert( data, account: account_c ):
             command = 'close'
         elif token.lower()  == 'position' or token.lower()  == 'pos':
             command = 'position'
+        elif ( token[:5].lower()  == "limit" ): # format-> limit:id:price
+            v = token.split(':')
+            if( len(v) != 3 ):
+                account.print( " Error: Limit command must be formatted as 'limit:customID:price' ")
+                return
+            else:
+                isLimit = True
+                customID = v[1]
+                if( len(customID) < 2 or len(customID) > 30 ):
+                    account.print( " Error: customID must be longer than 2 characters and shorter than 30' ")
+                    return
+                priceLimit = stringToValue(v[2])
     
 
     # validate the commands
@@ -1066,6 +1108,9 @@ def parseAlert( data, account: account_c ):
         return
     if( quantity == None ):
         account.print( "ERROR: Invalid quantity value" )
+        return
+    if( isLimit and command != 'buy' and command != 'sell' ):
+        account.print( "ERROR: Limit orders can only be used with buy/sell commands" )
         return
     if( quantity <= 0 and command == 'buy' ):
         account.print( "ERROR: Invalid Order: Buy must have a positive amount" )
@@ -1183,7 +1228,7 @@ def parseAlert( data, account: account_c ):
             positionContracts = pos.getKey('contracts')
             positionSide = pos.getKey( 'side' )
             
-            if ( positionSide == 'long' and command == 'sell' ) or ( positionSide == 'short' and command == 'buy' ):
+            if not isLimit and (( positionSide == 'long' and command == 'sell' ) or ( positionSide == 'short' and command == 'buy' )):
                 reverse = True
                 # do we need to divide these in 2 orders?
                 if( account.exchange.id == 'bitget' and canDoContracts < account.findMinimumAmountForSymbol(symbol) ): #convert it to a reversal
@@ -1214,7 +1259,13 @@ def parseAlert( data, account: account_c ):
             account.print( timeNow(), " * ERROR * Order too small:", quantity, "Minimum required:", minOrder )
             return
 
-        account.ordersQueue.append( order_c( symbol, command, quantity, leverage, reverse = reverse ) )
+        order = order_c( symbol, command, quantity, leverage, reverse = reverse )
+        if( isLimit ):
+            order.type = 'limit'
+            order.customID = customID
+            order.price = priceLimit
+
+        account.ordersQueue.append( order )
         return
 
     account.print( " * WARNING: Something went wrong. No order was placed")
