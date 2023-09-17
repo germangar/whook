@@ -88,8 +88,8 @@ class position_c:
             
 
 class order_c:
-    def __init__(self, symbol = "", type = "", quantity = 0.0, leverage = 1, delay = 0, reverse = False) -> None:
-        self.type = type
+    def __init__(self, symbol = "", side = "", quantity = 0.0, leverage = 1, delay = 0, reverse = False) -> None:
+        self.side = side
         self.symbol = symbol
         self.quantity = quantity
         self.leverage = leverage
@@ -794,7 +794,7 @@ class account_c:
         # go through the queue and remove the first completed order
         for order in cls.activeOrders:
             if( order.timedOut() ):
-                cls.print( " * Active Order Timed out", order.symbol, order.type, order.quantity, str(order.leverage)+'x' )
+                cls.print( " * Active Order Timed out", order.symbol, order.side, order.quantity, str(order.leverage)+'x' )
                 cls.activeOrders.remove( order )
                 continue
 
@@ -828,12 +828,12 @@ class account_c:
 
             if( remaining > 0 and (status == 'canceled' or status == 'closed') ):
                 print("r...", end = '')
-                cls.ordersQueue.append( order_c( order.symbol, order.type, remaining, order.leverage, 0.5 ) )
+                cls.ordersQueue.append( order_c( order.symbol, order.side, remaining, order.leverage, 0.5 ) )
                 cls.activeOrders.remove( order )
                 return True
             
             if ( status == 'closed' ):
-                cls.print( " * Order succesful:", order.symbol, order.type, order.quantity, str(order.leverage)+"x", "at price", price, 'id', order.id )
+                cls.print( " * Order succesful:", order.symbol, order.side, order.quantity, str(order.leverage)+"x", "at price", price, 'id', order.id )
                 cls.activeOrders.remove( order )
                 return True
         return False
@@ -860,7 +860,7 @@ class account_c:
                 continue
 
             if( order.timedOut() ):
-                cls.print( timeNow(), " * Order Timed out", order.symbol, order.type, order.quantity, str(order.leverage)+'x' )
+                cls.print( timeNow(), " * Order Timed out", order.symbol, order.side, order.quantity, str(order.leverage)+'x' )
                 cls.ordersQueue.remove( order )
                 continue
 
@@ -884,7 +884,7 @@ class account_c:
                 params['marginMode'] = MARGIN_MODE
 
             if( cls.exchange.id == 'bitget' ):
-                params['side'] = 'buy_single' if( order.type == "buy" ) else 'sell_single'
+                params['side'] = 'buy_single' if( order.side == "buy" ) else 'sell_single'
                 if( order.reverse ):
                     params['reverse'] = True
 
@@ -893,7 +893,7 @@ class account_c:
                 # take them it's one less comunication we need to perform
                 # openType: 1:isolated, 2:cross - positionMode: 1:hedge, 2:one-way, (no parameter): the user's current config
                 # side	int	order direction 1: open long, 2: close short,3: open short 4: close long
-                #params['side'] = 1 if( order.type == "buy" ) else 3
+                #params['side'] = 1 if( order.aisw == "buy" ) else 3
                 params['openType'] = 1
                 params['positionMode'] = 2
                 params['marginMode'] = MARGIN_MODE
@@ -902,7 +902,7 @@ class account_c:
 
             # send the actual order
             try:
-                response = cls.exchange.create_market_order( order.symbol, order.type, order.quantity, None, params )
+                response = cls.exchange.create_order( order.symbol, 'market', order.side, order.quantity, None, params )
                 #print( response )
             
             except Exception as e:
@@ -970,7 +970,7 @@ class account_c:
                 continue
 
             order.id = response.get('id')
-            if verbose : print( timeNow(), " * Activating Order", order.symbol, order.type, order.quantity, str(order.leverage)+'x', 'id', order.id )
+            if verbose : print( timeNow(), " * Activating Order", order.symbol, order.side, order.quantity, str(order.leverage)+'x', 'id', order.id )
             cls.activeOrders.append( order )
             cls.ordersQueue.remove( order )
 
