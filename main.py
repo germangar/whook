@@ -22,7 +22,7 @@ if( ccxt.__version__ < minCCXTversion ):
     print( 'While it may run with earlier versions wrong behaviors are expected to happen.' )
     print( 'Please update CCXT.' )
     print( '============== * WARNING * ==============\n')
-elif( ccxt.__version__ >= '4.0.87' ):
+elif( ccxt.__version__ > '4.0.87' ):
     print( '\n============== * WARNING * ==============')
     print( 'There is a problem with CCXT versions superior to 4.0.87 and')
     print( 'changing marginMode in *Bybit*. Please downgrade CCXT to ' )
