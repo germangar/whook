@@ -859,16 +859,17 @@ class account_c:
         return False
 
     def cancelLimitOrder(cls, symbol, customID )->bool:
+        id = customID
+        params = {}
+        if( cls.exchange.id == 'coinex' ):
+            params['order_id'] = customID
+        elif( cls.exchange.id == 'bybit' ):
+            id = None
+            params['orderLinkId'] = customID
+        else:
+            params['clientOrderId'] = customID
 
         try:
-            id = customID
-            if( cls.exchange.id == 'coinex' ):
-                params={ 'order_id':customID }
-            elif( cls.exchange.id == 'bybit' ):
-                id = None
-                params={ 'orderLinkId':customID }
-            else:
-                params={ 'clientOrderId':customID }
             response = cls.exchange.cancel_order( id, symbol, params )
 
         except Exception as e:
@@ -890,6 +891,7 @@ class account_c:
         else:
             cls.print( " * Linmit order [", response.get('clientOrderId'), "] cancelled." )
         return True
+
 
     def updateOrdersQueue(cls):
 
@@ -917,12 +919,6 @@ class account_c:
                 continue
 
             if( order.delayed() ):
-                continue
-
-            if( order.type == 'cancel' ):
-                # it always returns true
-                if( cls.cancelLimitOrder( order.symbol, order.customID) ):
-                    cls.ordersQueue.remove( order )
                 continue
 
             # disable hedge mode if present
@@ -1206,15 +1202,10 @@ def parseAlert( data, account: account_c ):
         account.print( " ERROR: Order cancelled. Couldn't reach the server:\n", e )
         return
     
-    
+    # No point in putting cancel orders in the queue. Just do it and leave.
     if( command == 'cancel' ):
-        # we verified the server is online so just put the cancel order in the queue and leave.
-        order = order_c( symbol )
-        order.type = 'cancel'
-        order.customID = customID
-        account.ordersQueue.append( order )
+        account.cancelLimitOrder( symbol, customID )
         return
-
     
     # bybit is too slow at updating positions after an order is made, so make sure they're updated
     if( account.exchange.id == 'bybit' and (command == 'position' or command == 'close') ):
