@@ -44,7 +44,10 @@ Broken support:
 **[value]$** - quantity in USDT. No command associated. Just the number and the dollar sign.<br>
 **[value]@** - quantity in contracts. No command associated. Just the number and the 'at' sign.<br>
 **[value]%** - quantity as percentage of total USDT balance. Use a negative value for shorts when using the position command.<br>
-**[value]x or x[value]** - defines the leverage.<br>
+All quantity types are interchangeable. All can be used with buy/sell/position commands.
+
+* Leverage:<br>
+**[value]x or x[value]** - The x identifies this value as the leverage.<br>
 
 Examples:<br>
 - **Buy command using USDT:**<br>
