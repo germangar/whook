@@ -857,8 +857,23 @@ class account_c:
                 cls.activeOrders.remove( order )
                 return True
         return False
+    
 
     def cancelLimitOrder(cls, symbol, customID )->bool:
+        if( customID.lower() == 'all' ):
+            # def cancel_all_orders(self, symbol: Optional[str] = None, params={}):
+            try:
+                response = cls.exchange.cancel_all_orders(symbol)
+            except Exception as e:
+                print( 'Exception:', e )
+                # I've tried cancelling when there were no orders but it reported no error. Maybe I missed something.
+            else:
+                cls.print( 'All', symbol, 'orders have been cancelled' )
+                # binance {'code': '200', 'msg': 'The operation of cancel all open order is done.'}
+                # phemex {'code': '0', 'msg': '', 'data': '1'}
+                # ( a list of orders ) bybit [{'info': {'orderId': '35ef0faf-27e5-44f0-a136-132350da72f0', 'orderLinkId': 'id004'}, 'id': '35ef0faf-27e5-44f0-a136-132350da72f0', 'clientOrderId': 'id004', 'timestamp': None, 'datetime': None, 'lastTradeTimestamp': None, 'lastUpdateTimestamp': None, 'symbol': 'BTC/USDT:USDT', 'type': None, 'timeInForce': None, 'postOnly': None, 'reduceOnly': None, 'side': None, 'price': None, 'stopPrice': None, 'triggerPrice': None, 'takeProfitPrice': None, 'stopLossPrice': None, 'amount': None, 'cost': None, 'average': None, 'filled': None, 'remaining': None, 'status': None, 'fee': None, 'trades': [], 'fees': []}, {'info': {'orderId': 'f1d6a649-0a71-4970-bd78-8eaa2a14f8f5', 'orderLinkId': 'id002'}, 'id': 'f1d6a649-0a71-4970-bd78-8eaa2a14f8f5', 'clientOrderId': 'id002', 'timestamp': None, 'datetime': None, 'lastTradeTimestamp': None, 'lastUpdateTimestamp': None, 'symbol': 'BTC/USDT:USDT', 'type': None, 'timeInForce': None, 'postOnly': None, 'reduceOnly': None, 'side': None, 'price': None, 'stopPrice': None, 'triggerPrice': None, 'takeProfitPrice': None, 'stopLossPrice': None, 'amount': None, 'cost': None, 'average': None, 'filled': None, 'remaining': None, 'status': None, 'fee': None, 'trades': [], 'fees': []}]
+            return True
+        
         id = customID
         params = {}
         if( cls.exchange.id == 'coinex' ):
@@ -1004,8 +1019,9 @@ class account_c:
                             break
 
                     # bybit {"retCode":20094,"retMsg":"OrderLinkedID is duplicate","result":{},"retExtInfo":{},"time":1694985713343}
-                    elif '"retCode":20094' in a :
-                        cls.print( ' * Error Cancelling: Linmit order ID [', order.customID, '] was used before' )
+                    # binance {"code":-4015,"msg":"Client order id is not valid."}
+                    elif '"retCode":20094' in a or '"code":-4015' in a:
+                        cls.print( ' * Error Cancelling Linmit order: ID [', order.customID, '] was used before' )
                         cls.ordersQueue.remove( order )
                         break
                         

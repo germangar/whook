@@ -37,7 +37,8 @@ Broken support:
 **position or pos** - goes to a position of the given value. Use a positive value for Long and a negative value for Short.<br>
 **close** - closes the position (position 0 also does it).<br>
 **limit:[customID]:[price]** - Combined with buy/sell commads creates a limit order. The three fields must be separated by a colon with no spaces. CustomID is required and must always be different<br>
-**cancel:[customID]** - Cancels a limit order by its customID. The symbol is required in the order.
+**cancel:[customID]** - Cancels a limit order by its customID. The symbol is required in the order.<br>
+**cancel:all** - Special keyword which cancels all orders from that symbol at once.<br>
 
 * Quantities:<br>
 **[value]** - quantity in base currency. Just the number without any extra character. Base currency is the coin you're trading.<br>
@@ -75,6 +76,7 @@ Coinex only accepts numeric customIDs.<br>
 
 - **Cancel limit order:**<br>
 [account_id] [symbol] [cancel:[customID]] - **myKucoinA ETH/USDT cancel:order002**<br>
+[account_id] [symbol] [cancel:all] - **myKucoinA ETH/USDT cancel:all** all orders from this symbol<br>
 
 
 Several orders can be included in the same alert, separated by line breaks. For example, you can send the orders for 2 different accounts inside the same alert.
