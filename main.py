@@ -14,22 +14,26 @@ ORDER_TIMEOUT = 40
 REFRESH_POSITIONS_FREQUENCY = 5 * 60    # refresh positions every 5 minutes
 UPDATE_ORDERS_FREQUENCY = 0.25          # frametime in seconds at which the orders queue is refreshed.
 MARGIN_MODE = 'isolated'
-minCCXTversion = '4.0.69'
 
-if( ccxt.__version__ < minCCXTversion ):
+def fixVersionFormat( version )->str:
+    vl = version.split(".")
+    return f'{vl[0]}.{vl[1]}.{vl[2].zfill(3)}'
+
+minCCXTversion = '4.0.69'
+CCXTversion = fixVersionFormat(ccxt.__version__)
+print( 'CCXT Version:', ccxt.__version__)
+if( CCXTversion < fixVersionFormat(minCCXTversion) ):
     print( '\n============== * WARNING * ==============')
     print( 'WHOOK requires CCXT version', minCCXTversion,' or higher.')
     print( 'While it may run with earlier versions wrong behaviors are expected to happen.' )
     print( 'Please update CCXT.' )
     print( '============== * WARNING * ==============\n')
-elif( ccxt.__version__ > '4.0.87' ):
+elif( CCXTversion > fixVersionFormat('4.0.88') and CCXTversion < fixVersionFormat('4.0.101') ):
     print( '\n============== * WARNING * ==============')
-    print( 'There is a problem with CCXT versions superior to 4.0.87 and')
-    print( 'changing marginMode in *Bybit*. Please downgrade CCXT to ' )
-    print( 'version 4.0.87 until I find a solution.' )
+    print( 'There is a problem with CCXT versions between to 4.0.88 and 4.0.101')
+    print( 'when changing marginMode in *Bybit*. Please update CCXT module' )
     print( '============== * WARNING * ==============\n')
-else:
-    print( 'ccxt version:', ccxt.__version__ )
+    
 
 
 def dateString():
@@ -294,6 +298,12 @@ class account_c:
 
             # Store the market into the local markets dictionary
             self.markets[key] = thisMarket
+
+        if( self.exchange.id == 'bybit' ):
+            print( self.exchange.set_margin_mode( 'cross', 'BTC/USDT:USDT', { 'leverage':6 } ) )
+            # {'retCode': '0', 'retMsg': 'OK', 'result': {}, 'retExtInfo': {}, 'time': '1695143130914'}
+            # {"retCode":110026,"retMsg":"Cross/isolated margin mode is not modified","result":{},"retExtInfo":{},"time":1695143191074}
+            # {'retCode': '0', 'retMsg': 'OK', 'result': {}, 'retExtInfo': {}, 'time': '1695143254772'}
 
 
         self.balance = self.fetchBalance()
