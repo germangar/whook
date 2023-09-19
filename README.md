@@ -14,12 +14,12 @@ You don't need to be a programmer to use Whook. All you need is to download the 
 ##### Disclaimer: This project is for my personal use. I'm not taking feature requests.
 
 Currently supported exchanges:
-- Kucoin futures
-- Bitget futures
-- Coinex futures
-- Phemex futures ( also Phemex testnet: https://testnet.phemex.com )
-- Bybit futures ( also Bybit testnet: https://testnet.bybit.com )
-- Binance futures ( also Binance futures testnet: https://testnet.binancefuture.com )
+- **Kucoin** futures
+- **Bitget** futures
+- **Coinex** futures
+- **Phemex** futures ( also Phemex testnet: https://testnet.phemex.com )
+- **Bybit** futures ( also Bybit testnet: https://testnet.bybit.com )
+- **Binance** futures ( also Binance futures testnet: https://testnet.binancefuture.com )
   
 Broken support:
 - Bingx: There is some problem with the conversion from USDT to contracts. Sending orders in contracts should work fine.
@@ -68,48 +68,42 @@ This would sell 0.25ETH<br>
 [account_id] [symbol] [command] - **myKucoinA ETH/USD close**<br>
 
 - **Limit buy command using USDT:**<br>
-[account_id] [symbol] [command] [value in USDT] [leverage] [limit:[customID]:[price]] - **myKucoinA ETH/USDT buy 300$ x3 limit:order002:21012**<br>
-Will open a buy order at 21021. The management of the customID falls on you if you ever want to cancel it. Remember you can't open 2 orders with the same customID<br>
+[account_id] [symbol] [command] [value in USDT] [leverage] [limit:[customID]:[price]] - **myKucoinA ETH/USDT buy 300$ x3 limit:myid002:1012**<br>
+Will open a buy order at 1012. The management of the customID falls on you if you ever want to cancel it. Remember you can't open 2 orders with the same customID<br>
 Some exchange peculiarities to be aware of:<br>
 Bybit will not accept the same customID twice, even if the previous order is already cancelled.<br>
 Coinex only accepts numeric customIDs.<br>
 
 - **Cancel limit order:**<br>
-[account_id] [symbol] [cancel:[customID]] - **myKucoinA ETH/USDT cancel:order002**<br>
+[account_id] [symbol] [cancel:[customID]] - **myKucoinA ETH/USDT cancel:myid002**<br>
 [account_id] [symbol] [cancel:all] - **myKucoinA ETH/USDT cancel:all** all orders from this symbol<br>
 
 
-Several orders can be included in the same alert, separated by line breaks. For example, you can send the orders for 2 different accounts inside the same alert.
+Several orders can be included in the same alert, separated by line breaks. For example, you can send the orders for 2 different accounts inside the same alert. (the console will be a little messy when doing this, but the logs will be clean)<br>
 
 It's possible to add comments inside the alert message. The comment must be in a new line and being with double slash '//'. Why? You ask. Because I often forget the setting I used when I created the alert! Whook will simply ignore that line when parsing the alert.
 
 
 ### HOW TO INSTALL AND RUN ###
 
-"If you want to go for a quick effortless test I recommend to copy/paste the script into a free account at 'https://replit.com'. It installs all modules for you so you don't have to do anything. Do **not** use it to host the real server. It goes idle as soon as you close the browser, and your API keys could be discovered."
-
 For a local install:
 
 ##### Windows:
 
-- Download and install python. During the installation make sure to *enable the system PATH option* and at the end of the installation *allow it to unlimit windows PATH length*: https://www.python.org/downloads/
-- Open the windows cmd prompt (type cmd in the windows search at the taskbar). Install the required modules by typing "pip install ccxt" and "pip install flask" in the cmd prompt
+- Download and install python. During the installation make sure to *enable the system PATH option* and at the end of the installation *allow it to unlimit windows PATH length*: https://www.python.org/downloads/<br>
+- Open the windows cmd prompt (type cmd in the windows search at the taskbar). Install the required python modules by typing "pip install ccxt" and "pip install flask" in the cmd prompt.<br>
 
-With these you can already run the script, but it won't have access online. For giving it access to the internet you should use:
+With these you can already run the script, but it won't have access online. For giving it access to the internet I recommend to use:<br>
 
-- ngrok. Create a free ngrok account. Download the last version of ngrok and unzip it. Copy the auth code the website gives you. Launch the software and paste the auth code into the ngrok console (with the authcode ngrok will be able to stay open forever). Then type in the ngrok console: "ngrok http 80". This will create an internet address that you can copy. You have to add /whook at the end of it to access the whook server.<br>
+- ngrok. Create a free ngrok account. Download the last version of ngrok and unzip it. In the ngrok website they provide an auth key, copy it. Launch the software and paste the auth code into the ngrok console (with the authcode ngrok will be able to stay open forever). Then type in the ngrok console: "ngrok http 80". This will create an internet address for your webhook. You have to add /whook at the end of it to comunicate with the Whook server.<br>
 
 Example of an address: https://e579-139-47-50-49.ngrok-free.app/whook<br>
 
-- You can launch the script by double clicking main.py (as long as you enabled the PATH options at installing python) or by creating a .bat file in the same directory as main.py like this:<br>
-
-@echo off<br>
-python.exe main.py<br>
-pause<br>
+- You can launch the script by double clicking main.py (as long as you enabled the PATH options at installing python).<br>
 
 
 ### CONFIGURATION - API KEYS ###
-When you first launch the script it will exit with an error and generate a accounts.json file in the script directory. This file is a template to configure the accounts API data. This file can contain as many accounts as you want separated by commas. It looks like this:
+When you first launch the script it will create an accounts.json file in the script directory and exit with a no accounts found error. This file is a template to configure the accounts API data. This file can contain as many accounts as you want separated by commas. It looks like this:
 
 
 [<br>
@@ -155,5 +149,4 @@ I'm not a linux user so I struggled to open the ports in the Linux virtual machi
 - Things will most likely go south if you have a position with a leverage and you order the same position with a different leverage. Some exchanges may take the leverage change as you trying to change the leverage of the current position but not changing the amount of contracts. The order will go through, but the resulting position will depend on the exchange. I'll try to handle it but it's not a big priority for me.
 
 ### TO DO LIST ### 
-- Add limit orders
 - Create some form of past trades storage better than the logs. Usable for trading performance analytics.
