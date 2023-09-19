@@ -957,6 +957,9 @@ class account_c:
                 if( order.reverse ):
                     params['reverse'] = True
 
+            if( cls.exchange.id == 'bingx' ):
+                params['positionSide'] = 'LONG' if order.side == 'buy' else 'SHORT'
+
             if( order.type == 'limit' ):
                 params['clientOrderId'] = order.customID
 
