@@ -298,14 +298,8 @@ class account_c:
 
             # Store the market into the local markets dictionary
             self.markets[key] = thisMarket
-
-        if( self.exchange.id == 'bybit' ):
-            print( self.exchange.set_margin_mode( 'cross', 'BTC/USDT:USDT', { 'leverage':6 } ) )
-            # {'retCode': '0', 'retMsg': 'OK', 'result': {}, 'retExtInfo': {}, 'time': '1695143130914'}
-            # {"retCode":110026,"retMsg":"Cross/isolated margin mode is not modified","result":{},"retExtInfo":{},"time":1695143191074}
-            # {'retCode': '0', 'retMsg': 'OK', 'result': {}, 'retExtInfo': {}, 'time': '1695143254772'}
-
-
+            
+            
         self.balance = self.fetchBalance()
         self.print( self.balance )
         self.refreshPositions(True)
