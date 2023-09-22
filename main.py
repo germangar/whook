@@ -499,9 +499,7 @@ class account_c:
 
 
     def fetchBalance(cls):
-        params = { "type":"swap", "settle":'USDT' }
-        
-        response = cls.exchange.fetch_balance( params )
+        response = cls.exchange.fetch_balance( { "settle":'USDT' } )
 
         if( cls.exchange.id == "bitget" ):
             # Bitget response message is all over the place!!
