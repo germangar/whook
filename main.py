@@ -138,13 +138,14 @@ class account_c:
                 'secret': secret,
                 'password': password,
                 #'enableRateLimit': True
+                "options": {'defaultType': 'swap', 'defaultMarginMode':MARGIN_MODE, 'adjustForTimeDifference' : True},
                 } )
         elif( exchange.lower() == 'bitget' ):
             self.exchange = ccxt.bitget({
                 "apiKey": apiKey,
                 "secret": secret,
                 'password': password,
-                "options": {'defaultType': 'swap', 'adjustForTimeDifference' : True},
+                "options": {'defaultType': 'swap', 'defaultMarginMode':MARGIN_MODE, 'adjustForTimeDifference' : True},
                 #"timeout": 60000,
                 "enableRateLimit": True
                 })
@@ -154,7 +155,7 @@ class account_c:
                 "apiKey": apiKey,
                 "secret": secret,
                 'password': password,
-                "options": {'defaultType': 'swap', 'adjustForTimeDifference' : True},
+                "options": {'defaultType': 'swap', 'defaultMarginMode':MARGIN_MODE, 'adjustForTimeDifference' : True},
                 #"timeout": 60000,
                 "enableRateLimit": True
                 })
@@ -163,7 +164,7 @@ class account_c:
                 "apiKey": apiKey,
                 "secret": secret,
                 'password': password,
-                "options": {'defaultType': 'swap', 'adjustForTimeDifference' : True},
+                "options": {'defaultType': 'swap', 'defaultMarginMode':MARGIN_MODE, 'adjustForTimeDifference' : True},
                 #"timeout": 60000,
                 "enableRateLimit": True
                 })
@@ -173,7 +174,7 @@ class account_c:
                 "apiKey": apiKey,
                 "secret": secret,
                 'password': password,
-                "options": {'defaultType': 'swap', 'adjustForTimeDifference' : True},
+                "options": {'defaultType': 'swap', 'defaultMarginMode':MARGIN_MODE, 'adjustForTimeDifference' : True},
                 #"timeout": 60000,
                 "enableRateLimit": True
                 })
@@ -184,7 +185,7 @@ class account_c:
                 "apiKey": apiKey,
                 "secret": secret,
                 'password': password,
-                "options": {'defaultType': 'swap', 'adjustForTimeDifference' : True},
+                "options": {'defaultType': 'swap', 'defaultMarginMode':MARGIN_MODE, 'adjustForTimeDifference' : True},
                 #"timeout": 60000,
                 "enableRateLimit": True
                 })
@@ -196,7 +197,7 @@ class account_c:
                 "apiKey": apiKey,
                 "secret": secret,
                 'password': password,
-                "options": {'defaultType': 'swap', 'adjustForTimeDifference' : True},
+                "options": {'defaultType': 'swap', 'defaultMarginMode':MARGIN_MODE, 'adjustForTimeDifference' : True},
                 #"timeout": 60000,
                 "enableRateLimit": True
                 })
@@ -205,7 +206,7 @@ class account_c:
                 "apiKey": apiKey,
                 "secret": secret,
                 'password': password,
-                "options": {'defaultType': 'swap', 'adjustForTimeDifference' : True},
+                "options": {'defaultType': 'swap', 'defaultMarginMode':MARGIN_MODE, 'adjustForTimeDifference' : True},
                 #"timeout": 60000,
                 "enableRateLimit": True
                 })
@@ -215,7 +216,7 @@ class account_c:
                 "apiKey": apiKey,
                 "secret": secret,
                 'password': password,
-                "options": {'defaultType': 'swap', 'adjustForTimeDifference' : True},
+                "options": {'defaultType': 'swap', 'defaultMarginMode':MARGIN_MODE, 'adjustForTimeDifference' : True},
                 #"timeout": 60000,
                 "enableRateLimit": True
                 })
@@ -498,9 +499,7 @@ class account_c:
 
 
     def fetchBalance(cls):
-        params = { "type":"swap" }
-        if( cls.exchange.id == "phemex" ):
-            params['code'] = 'USDT'
+        params = { "type":"swap", "settle":'USDT' }
         
         response = cls.exchange.fetch_balance( params )
 
