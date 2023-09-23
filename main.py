@@ -1046,6 +1046,19 @@ class account_c:
                 continue
 
             order.id = response.get('id')
+            status = response.get('status')
+            remaining = float(response.get('remaining'))
+            if( remaining > 0 and (status == 'canceled' or status == 'closed') ):
+                print("r...", end = '')
+                cls.ordersQueue.append( order_c( order.symbol, order.side, remaining, order.leverage, 0.5 ) )
+                cls.activeOrders.remove( order )
+                continue
+            if( response.get('status') == 'closed' ):
+                cls.print( " * Order succesful:", order.symbol, order.side, order.quantity, str(order.leverage)+"x", "at price", response.get('price'), 'id', order.id )
+                cls.ordersQueue.remove( order )
+                cls.refreshPositions(True)
+                continue
+
             if verbose : print( timeNow(), " * Activating Order", order.symbol, order.side, order.quantity, str(order.leverage)+'x', 'id', order.id )
             cls.activeOrders.append( order )
             cls.ordersQueue.remove( order )
