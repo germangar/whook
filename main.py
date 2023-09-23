@@ -48,14 +48,18 @@ def floor( number ):
 def ceil( number ):
     return int(-(-number // 1))
 
+def truncate(number: float, digits: int) -> float:
+    pow10 = 10 ** digits
+    return number * pow10 // 1 / pow10
+
 def roundUpTick( value, tick )-> float:
-    return ceil( value / tick ) * tick
+    return truncate( ceil( value / tick ) * tick, 10 )
 
 def roundDownTick( value, tick )-> float:
-    return floor( value / tick ) * tick
+    return truncate( floor( value / tick ) * tick, 10 )
 
 def roundToTick( value, tick )-> float:
-    return round( value / tick ) * tick
+    return truncate( round( value / tick ) * tick, 10 )
 
 class RepeatTimer(Timer):
     def run(self):
@@ -81,7 +85,7 @@ class position_c:
         collateral = 0.0 if(cls.getKey('collateral') == None) else float(cls.getKey('collateral'))
         if( initialMargin != 0 ):
             p = ( unrealizedPnl / initialMargin ) * 100.0
-        else:
+        elif( collateral != 0):
             p = ( unrealizedPnl / (collateral - unrealizedPnl) ) * 100
 
         positionModeChar = '[H]' if (cls.thisMarket['local']['positionMode'] == 'hedged') else ''
@@ -838,7 +842,7 @@ class account_c:
                 continue
                         
             status = response.get('status')
-            remaining = int( response.get('remaining') )
+            remaining = float( response.get('remaining') )
             price = response.get('price')
             if verbose : print( status, '\nremaining:', remaining, 'price:', price )
 
