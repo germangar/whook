@@ -7,6 +7,7 @@ import time
 import json
 import logging
 from datetime import datetime
+from decimal import Decimal, ROUND_CEILING, ROUND_FLOOR, ROUND_HALF_EVEN
 
 
 verbose = False
@@ -48,18 +49,20 @@ def floor( number ):
 def ceil( number ):
     return int(-(-number // 1))
 
-def truncate(number: float, digits: int) -> float:
-    pow10 = 10 ** digits
-    return number * pow10 // 1 / pow10
+def roundUpTick( value: float, tick: str ):
+    if type(tick) is not str: tick = str(tick)
+    if type(value) is not Decimal: value = Decimal( value )
+    return float( value.quantize( Decimal(tick), ROUND_CEILING ) )
 
-def roundUpTick( value, tick )-> float:
-    return truncate( ceil( value / tick ) * tick, 10 )
+def roundDownTick( value: float, tick: str ):
+    if type(tick) is not str: tick = str(tick)
+    if type(value) is not Decimal: value = Decimal( value )
+    return float( value.quantize( Decimal(tick), ROUND_FLOOR ) )
 
-def roundDownTick( value, tick )-> float:
-    return truncate( floor( value / tick ) * tick, 10 )
-
-def roundToTick( value, tick )-> float:
-    return truncate( round( value / tick ) * tick, 10 )
+def roundToTick( value: float, tick: float ):
+    if type(tick) is not str: tick = str(tick)
+    if type(value) is not Decimal: value = Decimal( value )
+    return float( value.quantize( Decimal(tick), ROUND_HALF_EVEN ) )
 
 class RepeatTimer(Timer):
     def run(self):
@@ -630,22 +633,24 @@ class account_c:
         if( maxLeverage == None ):
             maxLeverage = 1000
         return maxLeverage
-    
+
 
     def contractsFromUSDT(cls, symbol, amount, price, leverage = 1.0 )->float :
         contractSize = cls.findContractSizeForSymbol( symbol )
-        precision = cls.findPrecisionForSymbol( symbol )
+
+        coin = Decimal( (amount * leverage) / (contractSize * price) )
+
+        precision = str(cls.findPrecisionForSymbol( symbol ))
         #FIXME! either I have been using precision wrong or binance market description has it wrong.
         if( cls.exchange.id == 'binance' ):
             filters = cls.markets[symbol]['info']['filters']
             for filter in filters:
                 if( filter.get('filterType') == 'LOT_SIZE' ):
-                    precision = float(filter.get('stepSize'))
+                    precision = str(filter.get('stepSize'))
                     break
-            
-        coin = (amount * leverage) / (contractSize * price)
-        return roundDownTick( coin, precision ) if ( coin > 0 ) else roundUpTick( coin, precision )
-    
+
+        return roundDownTick( coin, precision ) if ( coin > 0 ) else roundUpTick( coin, precision ) 
+
 
     def refreshPositions(cls, v = verbose):
     ### https://docs.ccxt.com/#/?id=position-structure ###
@@ -967,6 +972,9 @@ class account_c:
 
             if( order.type == 'limit' ):
                 params['clientOrderId'] = order.customID
+
+            # make sure it's precision adjusted properly
+            order.quantity = roundToTick( order.quantity, cls.findPrecisionForSymbol(order.symbol) )
 
             # send the actual order
             try:
