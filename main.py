@@ -439,10 +439,12 @@ class account_c:
 
             except Exception as e:
                 for a in e.args:
-                    if( '"retCode":140026' in a or "No need to change margin type" in a ):
+                    if( '"retCode":140026' in a or "No need to change margin type" in a
+                       or '"retCode":110026' in a ):
                         # bybit throws an exception just to inform us the order wasn't neccesary (doh)
                         # bybit {"retCode":140026,"retMsg":"Isolated not modified","result":{},"retExtInfo":{},"time":1690530385642}
                         # bybit setMarginMode() marginMode must be either ISOLATED_MARGIN or REGULAR_MARGIN or PORTFOLIO_MARGIN
+                        # bybit {"retCode":110026,"retMsg":"Cross/isolated margin mode is not modified","result":{},"retExtInfo":{},"time":1695526888984}
                         # binance {'code': -4046, 'msg': 'No need to change margin type.'}
                         # updateSymbolLeverage->set_margin_mode: {'code': -4046, 'msg': 'No need to change margin type.'}
                         pass
@@ -1040,11 +1042,12 @@ class account_c:
                     # phemex {"code":11082,"msg":"TE_CANNOT_COVER_ESTIMATE_ORDER_LOSS","data":null}
                     # phemex {"code":11001,"msg":"TE_NO_ENOUGH_AVAILABLE_BALANCE","data":null}
                     # bybit {"retCode":140007,"retMsg":"remark:order[1643476 23006bb4-630a-4917-af0d-5412aaa1c950] fix price failed for CannotAffordOrderCost.","result":{},"retExtInfo":{},"time":1690540657794}
+                    # bybit {"retCode":110007,"retMsg":"Insufficient available balance","result":{},"retExtInfo":{},"
                     # binance "code":-2019,"msg":"Margin is insufficient."
                     # krakenfutures: createOrder failed due to insufficientAvailableFunds
                     elif ( 'Balance insufficient' in a or 'balance not enough' in a 
                             or '"code":"40762"' in a or '"code":"40754" ' in a or '"code":101204' in a
-                            or '"code":11082' in a or '"code":11001' in a
+                            or '"code":11082' in a or '"code":11001' in a or '"retCode":110007' in a
                             or '"retCode":140007' in a or 'insufficientAvailableFunds' in a
                             or 'risk limit exceeded.' in a or 'Margin is insufficient' in a ):
 
@@ -1106,13 +1109,13 @@ class account_c:
 
             order.id = response.get('id')
             status = response.get('status')
-            remaining = float(response.get('remaining'))
-            if( remaining > 0 and (status == 'canceled' or status == 'closed') ):
+            remaining = response.get('remaining')
+            if( remaining != None and remaining > 0 and (status == 'canceled' or status == 'closed') ):
                 print("r...", end = '')
                 cls.ordersQueue.append( order_c( order.symbol, order.side, remaining, order.leverage, 0.5 ) )
                 cls.ordersQueue.remove( order )
                 continue
-            if( response.get('status') == 'closed' ):
+            if( (remaining == None or remaining == 0) and response.get('status') == 'closed' ):
                 cls.print( " * Order succesful:", order.symbol, order.side, order.quantity, str(order.leverage)+"x", "at price", response.get('price'), 'id', order.id )
                 cls.ordersQueue.remove( order )
                 cls.refreshPositions(True)
