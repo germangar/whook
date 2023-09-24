@@ -15,6 +15,7 @@ ORDER_TIMEOUT = 40
 REFRESH_POSITIONS_FREQUENCY = 5 * 60    # refresh positions every 5 minutes
 UPDATE_ORDERS_FREQUENCY = 0.25          # frametime in seconds at which the orders queue is refreshed.
 MARGIN_MODE = 'isolated'
+MARGIN_MODE_NONE = '------'
 
 def fixVersionFormat( version )->str:
     vl = version.split(".")
@@ -319,11 +320,9 @@ class account_c:
                 thisMarket['limits']['amount']['min'] = float(precision)
 
             # also generate a local list to keep track of marginMode and Leverage status
-            thisMarket['local'] = { 'marginMode':'', 'leverage':0, 'positionMode':'' }
+            thisMarket['local'] = { 'marginMode':MARGIN_MODE_NONE, 'leverage':0, 'positionMode':'' }
             if( self.exchange.has.get('setPositionMode') != True ):
                 thisMarket['local']['positionMode'] = 'oneway'
-            if( self.exchange.has.get('setMarginMode') != True ):
-                thisMarket['local']['marginMode'] = MARGIN_MODE
 
             # Store the market into the local markets dictionary
             self.markets[key] = thisMarket
@@ -753,8 +752,8 @@ class account_c:
 
             #some exchanges have the key set to None. Fix it when possible
             if( thisPosition.get('marginMode') == None ) :
-                if( cls.exchange.id == 'kucoinfutures' or cls.exchange.id == 'krakenfutures' ):
-                    thisPosition['marginMode'] = MARGIN_MODE
+                if( cls.exchange.has.get('setMarginMode') != True ):
+                    thisPosition['marginMode'] = MARGIN_MODE_NONE
                 else:
                     print( 'WARNING refreshPositions: Could not get marginMode for', symbol )
 
@@ -1363,7 +1362,7 @@ def parseAlert( data, account: account_c ):
             else:
                 command = 'buy'
             quantity = abs(quantity)
-        elif( account.markets[symbol]['local']['marginMode'] != MARGIN_MODE ):
+        elif( account.markets[symbol]['local']['marginMode'] != MARGIN_MODE and account.exchange.has['setMarginMode'] ):
             # to change marginMode we need to close the old position first
             if( pos.getKey('side') == 'long' ):
                 account.ordersQueue.append( order_c( symbol, 'sell', pos.getKey('contracts'), 0 ) )
