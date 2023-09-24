@@ -1031,75 +1031,66 @@ class account_c:
                 response = cls.exchange.create_order( order.symbol, order.type, order.side, order.quantity, order.price, params )
                 #print( response )
             
+            except ccxt.InsufficientFunds as e:
+                # KUCOIN: kucoinfutures Balance insufficient. The order would cost 304.7268292695.
+                # BITGET: bitget {"code":"40762","msg":"The order size is greater than the max open size","requestTime":1689179675919,"data":null}
+                # BITGET: {"code":"40754","msg":"balance not enough","requestTime":1689363604542,"data":null}
+                # bingx {"code":101204,"msg":"Insufficient margin","data":{}}
+                # phemex {"code":11082,"msg":"TE_CANNOT_COVER_ESTIMATE_ORDER_LOSS","data":null}
+                # phemex {"code":11001,"msg":"TE_NO_ENOUGH_AVAILABLE_BALANCE","data":null}
+                # bybit {"retCode":140007,"retMsg":"remark:order[1643476 23006bb4-630a-4917-af0d-5412aaa1c950] fix price failed for CannotAffordOrderCost.","result":{},"retExtInfo":{},"time":1690540657794}
+                # bybit {"retCode":110007,"retMsg":"Insufficient available balance","result":{},"retExtInfo":{},"
+                # binance "code":-2019,"msg":"Margin is insufficient."
+                # krakenfutures: createOrder failed due to insufficientAvailableFunds
+                # binance {"code":-2027,"msg":"Exceeded the maximum allowable position at current leverage."}
+                precision = cls.findPrecisionForSymbol( order.symbol )
+                # try first reducing it to our estimation of current balance
+                if( not order.reduced ):
+                    oldQuantity = order.quantity
+                    price = cls.fetchSellPrice(order.symbol) if( type == 'sell' ) else cls.fetchBuyPrice(order.symbol)
+                    available = cls.fetchAvailableBalance() * 0.985
+                    order.quantity = cls.contractsFromUSDT( order.symbol, available, price, order.leverage )
+                    order.reduced = True
+                    if( order.quantity < cls.findMinimumAmountForSymbol(order.symbol) ):
+                        cls.print( ' * E: Balance insufficient: Minimum contracts required:', cls.findMinimumAmountForSymbol(order.symbol), ' Cancelling')
+                        cls.ordersQueue.remove( order )
+                    else:
+                        cls.print( ' * E: Balance insufficient: Was', oldQuantity, 'Reducing to', order.quantity, "contracts")
+                        
+                elif( order.quantity > precision ):
+                    if( order.quantity < 20 and precision >= 1 ):
+                        cls.print( ' * E: Balance insufficient: Reducing by one contract')
+                        order.quantity -= precision
+                    else:
+                        order.quantity = roundDownTick( order.quantity * 0.95, precision )
+                        if( order.quantity < cls.findMinimumAmountForSymbol(order.symbol) ):
+                            cls.print( ' * E: Balance insufficient: Cancelling' )
+                            cls.ordersQueue.remove( order )
+                        else:
+                            cls.print( ' * E: Balance insufficient: Reducing by 5%')
+
+                else: # cancel the order
+                    cls.print( ' * E: Balance insufficient: Cancelling')
+                    cls.ordersQueue.remove( order )
+
+                continue # back to the orders loop
+
             except Exception as e:
                 for a in e.args:
                     if 'Too Many Requests' in a or 'too many request' in a or 'service too busy' in a: 
                         #set a bigger delay and try again
                         order.delay += 0.5
                         break
-                    #
-                    # KUCOIN: kucoinfutures Balance insufficient. The order would cost 304.7268292695.
-                    # BITGET: bitget {"code":"40762","msg":"The order size is greater than the max open size","requestTime":1689179675919,"data":null}
-                    # BITGET: {"code":"40754","msg":"balance not enough","requestTime":1689363604542,"data":null}
-                    # bingx {"code":101204,"msg":"Insufficient margin","data":{}}
-                    # phemex {"code":11082,"msg":"TE_CANNOT_COVER_ESTIMATE_ORDER_LOSS","data":null}
-                    # phemex {"code":11001,"msg":"TE_NO_ENOUGH_AVAILABLE_BALANCE","data":null}
-                    # bybit {"retCode":140007,"retMsg":"remark:order[1643476 23006bb4-630a-4917-af0d-5412aaa1c950] fix price failed for CannotAffordOrderCost.","result":{},"retExtInfo":{},"time":1690540657794}
-                    # bybit {"retCode":110007,"retMsg":"Insufficient available balance","result":{},"retExtInfo":{},"
-                    # binance "code":-2019,"msg":"Margin is insufficient."
-                    # krakenfutures: createOrder failed due to insufficientAvailableFunds
-                    # binance {"code":-2027,"msg":"Exceeded the maximum allowable position at current leverage."}
-                    elif ( 'Balance insufficient' in a or 'balance not enough' in a 
-                            or '"code":"40762"' in a or '"code":"40754" ' in a or '"code":101204' in a
-                            or '"code":11082' in a or '"code":11001' in a or '"retCode":110007' in a
-                            or '"retCode":140007' in a or '"code":-2027' in a
-                            or 'insufficientAvailableFunds' in a
-                            or 'risk limit exceeded.' in a or 'Margin is insufficient' in a ):
-
-                        precision = cls.findPrecisionForSymbol( order.symbol )
-                        # try first reducing it to our estimation of current balance
-                        if( not order.reduced ):
-                            oldQuantity = order.quantity
-                            price = cls.fetchSellPrice(order.symbol) if( type == 'sell' ) else cls.fetchBuyPrice(order.symbol)
-                            available = cls.fetchAvailableBalance() * 0.985
-                            order.quantity = cls.contractsFromUSDT( order.symbol, available, price, order.leverage )
-                            order.reduced = True
-                            if( order.quantity < cls.findMinimumAmountForSymbol(order.symbol) ):
-                                cls.print( ' * Exception raised: Balance insufficient: Minimum contracts required:', cls.findMinimumAmountForSymbol(order.symbol), ' Cancelling')
-                                cls.ordersQueue.remove( order )
-                            else:
-                                cls.print( ' * Exception raised: Balance insufficient: Was', oldQuantity, 'Reducing to', order.quantity, "contracts")
-                                
-                            break
-                        elif( order.quantity > precision ):
-                            if( order.quantity < 20 and precision >= 1 ):
-                                cls.print( ' * Exception raised: Balance insufficient: Reducing by one contract')
-                                order.quantity -= precision
-                            else:
-                                order.quantity = roundDownTick( order.quantity * 0.95, precision )
-                                if( order.quantity < cls.findMinimumAmountForSymbol(order.symbol) ):
-                                    cls.print( ' * Exception raised: Balance insufficient: Cancelling' )
-                                    cls.ordersQueue.remove( order )
-                                else:
-                                    cls.print( ' * Exception raised: Balance insufficient: Reducing by 5%')
-                            break
-                        else: # cancel the order
-                            cls.print( ' * Exception raised: Balance insufficient: Cancelling')
-                            cls.ordersQueue.remove( order )
-                            break
-
                     elif 'invalidSize' in a:
                         cls.print( ' * Error. Order size invalid:', order.quantity, 'x'+str(order.leverage) )
                         cls.ordersQueue.remove( order )
                         break
-
                     # bybit {"retCode":20094,"retMsg":"OrderLinkedID is duplicate","result":{},"retExtInfo":{},"time":1694985713343}
                     # binance {"code":-4015,"msg":"Client order id is not valid."}
                     elif '"retCode":20094' in a or '"code":-4015' in a:
                         cls.print( ' * Error Cancelling Linmit order: ID [', order.customID, '] was used before' )
                         cls.ordersQueue.remove( order )
                         break
-                        
                     else:
                         # [bitget/bitget] bitget {"code":"45110","msg":"less than the minimum amount 5 USDT","requestTime":1689481837614,"data":null}
                         # The deviation between your delegated price and the index price is greater than 20%, you can appropriately adjust your delegation price and try again
@@ -1111,7 +1102,7 @@ class account_c:
             if( response.get('id') == None ):
                 cls.print( " * Order denied:", response['info'], "Cancelling" )
                 cls.ordersQueue.remove( order )
-                continue
+                continue # back to the orders loop
 
             order.id = response.get('id')
             status = response.get('status')
