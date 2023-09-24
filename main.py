@@ -914,9 +914,8 @@ class account_c:
         
         id = customID
         params = {}
-        if( cls.exchange.id == 'coinex' ):
-            params['order_id'] = customID
-        if( cls.exchange.id == 'krakenfutures' ):
+        
+        if( cls.exchange.id == 'krakenfutures' or cls.exchange.id == 'kucoinfutures' ):
             # uuuggggghhhh. why do you do this to me
             try:
                 response = cls.exchange.fetch_open_orders( symbol, params = {'settleCoin':cls.SETTLE_COIN} )
@@ -925,8 +924,11 @@ class account_c:
                 return
             else:
                 for o in response:
-                    if( o['info']['cliOrdId'] == customID ):
+                    if( ( o['info'].get('cliOrdId' != None) and o['info']['cliOrdId'] == customID )
+                        or o['clientOrderId'] == customID ):
                         id = o['id']
+        elif( cls.exchange.id == 'coinex' ):
+            params['order_id'] = customID
         elif( cls.exchange.id == 'bybit' ):
             id = None
             params['orderLinkId'] = customID
