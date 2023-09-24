@@ -8,6 +8,7 @@ import json
 import logging
 from datetime import datetime
 from decimal import Decimal, ROUND_CEILING, ROUND_FLOOR, ROUND_HALF_EVEN
+from pprint import pprint
 
 
 verbose = False
@@ -1031,6 +1032,38 @@ class account_c:
                 response = cls.exchange.create_order( order.symbol, order.type, order.side, order.quantity, order.price, params )
                 #print( response )
             
+            except ccxt.InsufficientFunds as e:
+                precision = cls.findPrecisionForSymbol( order.symbol )
+                # try first reducing it to our estimation of current balance
+                if( not order.reduced ):
+                    oldQuantity = order.quantity
+                    price = cls.fetchSellPrice(order.symbol) if( type == 'sell' ) else cls.fetchBuyPrice(order.symbol)
+                    available = cls.fetchAvailableBalance() * 0.985
+                    order.quantity = cls.contractsFromUSDT( order.symbol, available, price, order.leverage )
+                    order.reduced = True
+                    if( order.quantity < cls.findMinimumAmountForSymbol(order.symbol) ):
+                        cls.print( ' * Exception raised: Balance insufficient: Minimum contracts required:', cls.findMinimumAmountForSymbol(order.symbol), ' Cancelling')
+                        cls.ordersQueue.remove( order )
+                    else:
+                        cls.print( ' * Exception raised: Balance insufficient: Was', oldQuantity, 'Reducing to', order.quantity, "contracts")
+                        
+                elif( order.quantity > precision ):
+                    if( order.quantity < 20 and precision >= 1 ):
+                        cls.print( ' * Exception raised: Balance insufficient: Reducing by one contract')
+                        order.quantity -= precision
+                    else:
+                        order.quantity = roundDownTick( order.quantity * 0.95, precision )
+                        if( order.quantity < cls.findMinimumAmountForSymbol(order.symbol) ):
+                            cls.print( ' * Exception raised: Balance insufficient: Cancelling' )
+                            cls.ordersQueue.remove( order )
+                        else:
+                            cls.print( ' * Exception raised: Balance insufficient: Reducing by 5%')
+
+                else: # cancel the order
+                    cls.print( ' * Exception raised: Balance insufficient: Cancelling')
+                    cls.ordersQueue.remove( order )
+
+                continue
             except Exception as e:
                 for a in e.args:
                     if 'Too Many Requests' in a or 'too many request' in a or 'service too busy' in a: 
