@@ -640,7 +640,14 @@ class account_c:
         if( m == None ):
             cls.print( ' * ERROR: findPrecisionForSymbol called with unknown symbol:', symbol )
             return 1
-        return m['precision'].get('amount')
+        if( cls.exchange.id == 'binance' ):
+            filters = m['info']['filters']
+            for filter in filters:
+                if( filter.get('filterType') == 'LOT_SIZE' ):
+                    precision = str(filter.get('stepSize'))
+        else :
+            precision = m['precision'].get('amount')
+        return precision
     
 
     def findMinimumAmountForSymbol(cls, symbol)->float:
@@ -664,17 +671,8 @@ class account_c:
 
     def contractsFromUSDT(cls, symbol, amount, price, leverage = 1.0 )->float :
         contractSize = cls.findContractSizeForSymbol( symbol )
-
         coin = Decimal( (amount * leverage) / (contractSize * price) )
-
         precision = str(cls.findPrecisionForSymbol( symbol ))
-        #FIXME! either I have been using precision wrong or binance market description has it wrong.
-        if( cls.exchange.id == 'binance' ):
-            filters = cls.markets[symbol]['info']['filters']
-            for filter in filters:
-                if( filter.get('filterType') == 'LOT_SIZE' ):
-                    precision = str(filter.get('stepSize'))
-                    break
 
         return roundDownTick( coin, precision ) if ( coin > 0 ) else roundUpTick( coin, precision ) 
 
@@ -1047,10 +1045,12 @@ class account_c:
                     # bybit {"retCode":110007,"retMsg":"Insufficient available balance","result":{},"retExtInfo":{},"
                     # binance "code":-2019,"msg":"Margin is insufficient."
                     # krakenfutures: createOrder failed due to insufficientAvailableFunds
+                    # binance {"code":-2027,"msg":"Exceeded the maximum allowable position at current leverage."}
                     elif ( 'Balance insufficient' in a or 'balance not enough' in a 
                             or '"code":"40762"' in a or '"code":"40754" ' in a or '"code":101204' in a
                             or '"code":11082' in a or '"code":11001' in a or '"retCode":110007' in a
-                            or '"retCode":140007' in a or 'insufficientAvailableFunds' in a
+                            or '"retCode":140007' in a or '"code":-2027' in a
+                            or 'insufficientAvailableFunds' in a
                             or 'risk limit exceeded.' in a or 'Margin is insufficient' in a ):
 
                         precision = cls.findPrecisionForSymbol( order.symbol )
