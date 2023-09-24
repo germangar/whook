@@ -878,6 +878,7 @@ class account_c:
 
             if( order.type == 'limit' ):
                 if( cls.exchange.id == 'krakenfutures' ) : response['clientOrderId'] = response['info']['cliOrdId'] #HACK!!
+                if( cls.exchange.id == 'coinex' ) : response['clientOrderId'] = response['info']['client_id'] #HACK!!
                 cls.print( " * Linmit order placed:", order.symbol, order.side, order.quantity, str(order.leverage)+"x", "at price", price, 'id', response.get('clientOrderId') )
                 cls.activeOrders.remove( order )
                 return True
@@ -913,7 +914,7 @@ class account_c:
         id = customID
         params = {}
         
-        if( cls.exchange.id == 'krakenfutures' or cls.exchange.id == 'kucoinfutures' ):
+        if( cls.exchange.id == 'krakenfutures' or cls.exchange.id == 'kucoinfutures' or cls.exchange.id == 'coinex' ):
             # uuuggggghhhh. why do you do this to me
             try:
                 response = cls.exchange.fetch_open_orders( symbol, params = {'settleCoin':cls.SETTLE_COIN} )
@@ -922,11 +923,10 @@ class account_c:
                 return
             else:
                 for o in response:
-                    if( ( o['info'].get('cliOrdId' != None) and o['info']['cliOrdId'] == customID )
+                    if( ( o['info'].get('cliOrdId') != None and o['info']['cliOrdId'] == customID )
+                       or ( o['info'].get('client_id') != None and o['info']['client_id'] == customID )
                         or o['clientOrderId'] == customID ):
                         id = o['id']
-        elif( cls.exchange.id == 'coinex' ):
-            params['order_id'] = customID
         elif( cls.exchange.id == 'bybit' ):
             id = None
             params['orderLinkId'] = customID
@@ -1017,6 +1017,8 @@ class account_c:
             if( order.type == 'limit' ):
                 if( cls.exchange.id == 'krakenfutures' ):
                     params['cliOrdId'] = order.customID
+                elif( cls.exchange.id == 'coinex' ):
+                    params['client_id'] = order.customID
                 else:
                     params['clientOrderId'] = order.customID
 
@@ -1099,7 +1101,8 @@ class account_c:
                         
                     else:
                         # [bitget/bitget] bitget {"code":"45110","msg":"less than the minimum amount 5 USDT","requestTime":1689481837614,"data":null}
-                        cls.print( ' * ERROR Cancelling: Unhandled Exception raised:', e )
+                        # The deviation between your delegated price and the index price is greater than 20%, you can appropriately adjust your delegation price and try again
+                        cls.print( ' * ERROR Cancelling:', e )
                         cls.ordersQueue.remove( order )
                         break
                 continue # back to the orders loop
@@ -1249,7 +1252,7 @@ def parseAlert( data, account: account_c ):
                     return
                 priceLimit = stringToValue(v[2])
             if( account.exchange.id == 'coinex' and not customID.isdigit() ):
-                account.print( " Error: Coinex only accepts numeric customID' ")
+                account.print( " Error: Coinex only accepts numeric customID")
                 return
 
         elif ( token[:6].lower()  == "cancel" ):
