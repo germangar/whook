@@ -238,6 +238,28 @@ class account_c:
                 "enableRateLimit": True
                 })
             self.exchange.set_sandbox_mode( True )
+        elif( exchange.lower() == 'krakenfutures' ):
+            self.exchange = ccxt.krakenfutures({
+                "apiKey": apiKey,
+                "secret": secret,
+                'password': password,
+                "options": {'defaultType': 'swap', 'defaultMarginMode':MARGIN_MODE, 'adjustForTimeDifference' : True},
+                #"timeout": 60000,
+                "enableRateLimit": True
+                })
+            # 'options': { 'settlementCurrencies': { 'flex': ['USDT', 'BTC', 'USD', 'GBP', 'EUR', 'USDC'],
+        elif( exchange.lower() == 'krakendemo' ):
+            self.exchange = ccxt.krakenfutures({
+                "apiKey": apiKey,
+                "secret": secret,
+                'password': password,
+                "options": {'defaultType': 'swap', 'defaultMarginMode':MARGIN_MODE, 'adjustForTimeDifference' : True},
+                #"timeout": 60000,
+                "enableRateLimit": True
+                })
+            self.exchange.set_sandbox_mode( True )
+            self.SETTLE_COIN = 'USD'
+            # 'options': { 'settlementCurrencies': { 'flex': ['USDT', 'BTC', 'USD', 'GBP', 'EUR', 'USDC'],
         else:
             raise ValueError('Unsupported exchange')
 
@@ -482,6 +504,10 @@ class account_c:
                         # bybit {"retCode":110043,"retMsg":"Set leverage not modified","result":{},"retExtInfo":{},"time":1694988242174}
                         # bybit {"retCode":140043,"retMsg":"leverage not modified","result":{},"retExtInfo":{},"time":1690530386264}
                         pass
+                    elif( 'MAX_LEVERAGE_OUT_OF_BOUNDS' in a ):
+                        cls.print( " * Error: Maximum leverage exceeded [", leverage, "]" )
+                        return
+                        # {"status":"INTERNAL_SERVER_ERROR","result":"error","errors":[{"code":98,"message":"MAX_LEVERAGE_OUT_OF_BOUNDS"}],"serverTime":"2023-09-24T00:57:08.908Z"}
                     else:
                         print( " * Error: updateSymbolLeverage->set_leverage: Unhandled Exception", a )
             else:
@@ -489,6 +515,11 @@ class account_c:
                 code = 0
                 if( cls.exchange.id == 'bybit' ): # they didn't receive enough love as children
                     code = int(response.get('retCode'))
+                elif( cls.exchange.id == 'krakenfutures' ):
+                    #{'result': 'success', 'serverTime': '2023-09-22T21:25:47.729Z'}
+                    # Error: updateSymbolLeverage->set_leverage: {'result': 'success', 'serverTime': '2023-09-22T21:30:17.767Z'}
+                    if( 'success' not in response ):
+                        code = -1 if response.get('result') != 'success' else 0
                 elif( cls.exchange.id != 'binance' ):
                     code = int(response.get('code'))
                 # 'code': '0' <- coinex
@@ -505,6 +536,8 @@ class account_c:
 
     def fetchBalance(cls):
         params = { "settle":cls.SETTLE_COIN }
+        if( cls.exchange.id == 'krakenfutures' ):
+            params['type'] = 'flex'
 
         response = cls.exchange.fetch_balance( params )
 
@@ -526,6 +559,9 @@ class account_c:
             balance['used'] = float( data.get('margin') )
             balance['total'] = balance['free'] + balance['used'] + float( data.get('profit_unreal') )
             return balance
+        if( cls.exchange.id == 'krakenfutures' ):
+            data = response['info']['accounts']['flex']
+            return { 'free':float(data.get('availableMargin')), 'used':float(data.get('initialMarginWithOrders')), 'total': float(data.get('balanceValue')) }
 
         return response.get(cls.SETTLE_COIN)
     
@@ -714,7 +750,7 @@ class account_c:
 
             #some exchanges have the key set to None. Fix it when possible
             if( thisPosition.get('marginMode') == None ) :
-                if( cls.exchange.id == 'kucoinfutures' ):
+                if( cls.exchange.id == 'kucoinfutures' or cls.exchange.id == 'krakenfutures' ):
                     thisPosition['marginMode'] = MARGIN_MODE
                 else:
                     print( 'WARNING refreshPositions: Could not get marginMode for', symbol )
@@ -810,7 +846,7 @@ class account_c:
                 continue
 
             # Phemex doesn't support fetch_order (by id) in swap mode, but it supports fetch_open_orders and fetch_closed_orders
-            if( cls.exchange.id == 'phemex' or cls.exchange.id == 'bybit' ):
+            if( cls.exchange.id == 'phemex' or cls.exchange.id == 'bybit' or cls.exchange.id == 'krakenfutures' ):
                 if( order.type == 'limit' ):
                     response = cls.fetchOpenOrderById( order.symbol, order.id )
                 else:
@@ -841,6 +877,7 @@ class account_c:
             if verbose : print( status, '\nremaining:', remaining, 'price:', price )
 
             if( order.type == 'limit' ):
+                if( cls.exchange.id == 'krakenfutures' ) : response['clientOrderId'] = response['info']['cliOrdId'] #HACK!!
                 cls.print( " * Linmit order placed:", order.symbol, order.side, order.quantity, str(order.leverage)+"x", "at price", price, 'id', response.get('clientOrderId') )
                 cls.activeOrders.remove( order )
                 return True
@@ -877,6 +914,17 @@ class account_c:
         params = {}
         if( cls.exchange.id == 'coinex' ):
             params['order_id'] = customID
+        if( cls.exchange.id == 'krakenfutures' ):
+            # uuuggggghhhh. why do you do this to me
+            try:
+                response = cls.exchange.fetch_open_orders( symbol, params = {'settleCoin':cls.SETTLE_COIN} )
+            except Exception as e:
+                cls.print( 'Unhandlex exception in cancelLimitOrder:', e )
+                return
+            else:
+                for o in response:
+                    if( o['info']['cliOrdId'] == customID ):
+                        id = o['id']
         elif( cls.exchange.id == 'bybit' ):
             id = None
             params['orderLinkId'] = customID
@@ -959,9 +1007,16 @@ class account_c:
 
             if( cls.exchange.id == 'bingx' ):
                 params['positionSide'] = 'LONG' if order.side == 'buy' else 'SHORT'
+            
+            if( cls.exchange.id == 'krakenfutures' ):
+                params['leverage'] = max( order.leverage, 1 )
+                params['marginMode'] = MARGIN_MODE
 
             if( order.type == 'limit' ):
-                params['clientOrderId'] = order.customID
+                if( cls.exchange.id == 'krakenfutures' ):
+                    params['cliOrdId'] = order.customID
+                else:
+                    params['clientOrderId'] = order.customID
 
             # make sure it's precision adjusted properly
             order.quantity = roundToTick( order.quantity, cls.findPrecisionForSymbol(order.symbol) )
@@ -986,10 +1041,11 @@ class account_c:
                     # phemex {"code":11001,"msg":"TE_NO_ENOUGH_AVAILABLE_BALANCE","data":null}
                     # bybit {"retCode":140007,"retMsg":"remark:order[1643476 23006bb4-630a-4917-af0d-5412aaa1c950] fix price failed for CannotAffordOrderCost.","result":{},"retExtInfo":{},"time":1690540657794}
                     # binance "code":-2019,"msg":"Margin is insufficient."
+                    # krakenfutures: createOrder failed due to insufficientAvailableFunds
                     elif ( 'Balance insufficient' in a or 'balance not enough' in a 
                             or '"code":"40762"' in a or '"code":"40754" ' in a or '"code":101204' in a
                             or '"code":11082' in a or '"code":11001' in a
-                            or '"retCode":140007' in a 
+                            or '"retCode":140007' in a or 'insufficientAvailableFunds' in a
                             or 'risk limit exceeded.' in a or 'Margin is insufficient' in a ):
 
                         precision = cls.findPrecisionForSymbol( order.symbol )
@@ -1023,6 +1079,11 @@ class account_c:
                             cls.print( ' * Exception raised: Balance insufficient: Cancelling')
                             cls.ordersQueue.remove( order )
                             break
+
+                    elif 'invalidSize' in a:
+                        cls.print( ' * Error. Order size invalid:', order.quantity, 'x'+str(order.leverage) )
+                        cls.ordersQueue.remove( order )
+                        break
 
                     # bybit {"retCode":20094,"retMsg":"OrderLinkedID is duplicate","result":{},"retExtInfo":{},"time":1694985713343}
                     # binance {"code":-4015,"msg":"Client order id is not valid."}
