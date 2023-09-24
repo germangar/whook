@@ -247,6 +247,7 @@ class account_c:
                 #"timeout": 60000,
                 "enableRateLimit": True
                 })
+            self.SETTLE_COIN = 'USD'
             # 'options': { 'settlementCurrencies': { 'flex': ['USDT', 'BTC', 'USD', 'GBP', 'EUR', 'USDC'],
         elif( exchange.lower() == 'krakendemo' ):
             self.exchange = ccxt.krakenfutures({
