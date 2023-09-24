@@ -1,0 +1,51 @@
+[
+	{
+		"EXCHANGE":"kucoinfutures",
+ 		"ACCOUNT_ID":"kucoin",
+ 		"API_KEY":"643039fa8b18fa0001a3ad01",
+ 		"SECRET_KEY":"90be0672-292d-43b5-86cf-0ede91708288",
+ 		"PASSWORD":"mariac00"
+	},
+	{	"EXCHANGE":"bitget", 
+		"ACCOUNT_ID":"bitget", 
+		"API_KEY":"bg_cbea1bf0f6bc9550f724137d430260d0", 
+		"SECRET_KEY":"70f894207df4217811d800c29ac8149679f87a7784537e5388a7482c18ad65b9", 
+		"PASSWORD":"mariac00"
+	},
+	{	"EXCHANGE":"coinex", 
+		"ACCOUNT_ID":"coinex", 
+		"API_KEY":"8FD97092FE904B5BAED689B414BCD69D", 
+		"SECRET_KEY":"D76A50C75C844CF61490C16A974E0302D3C4884BB945DE09", 
+		"PASSWORD":""
+	},
+	{	"EXCHANGE":"coinex", 
+		"ACCOUNT_ID":"coinexs1", 
+		"API_KEY":"CFA92EAA0AEC479D8CBF7B8C64FC962F", 
+		"SECRET_KEY":"8194EB854E255DF4AA59BC3917F6EA6750EF93E160E68BEA", 
+		"PASSWORD":""
+	},
+	{	"EXCHANGE":"phemexdemo", 
+		"ACCOUNT_ID":"phemexdemo", 
+		"API_KEY":"626fa71d-0eea-40c9-a83d-70df87bc286f", 
+		"SECRET_KEY":"BZSjuGCdKWqLt0hHnfqsYkGj5ZoKKrLEEjr4jcFwtepkZTVkZTlkMC0wNDRlLTRkODctYjVmMy04ODAzM2IyNmZmOWQ", 
+		"PASSWORD":""
+	},
+	{	"EXCHANGE":"bybitdemo", 
+		"ACCOUNT_ID":"bybitdemo", 
+		"API_KEY":"mN9B5kA3DH9v7NxFmY", 
+		"SECRET_KEY":"U9OtJARnVBlN6pnvQDCcui3JyR5UhF7d1O1l", 
+		"PASSWORD":""
+	},
+	{	"EXCHANGE":"binancedemo", 
+		"ACCOUNT_ID":"binancedemo", 
+		"API_KEY":"7b421ccfe40ad575a9b4a4f8d01d66eb2c82a686009252030a81a0510a39ffc0", 
+		"SECRET_KEY":"aadc4518ebbcd0d84edd2aef3af0dd46b10d18ed55330d1d10558fa2f7ff6abe", 
+		"PASSWORD":""
+	},
+	{	"EXCHANGE":"krakendemo", 
+		"ACCOUNT_ID":"krakendemo", 
+		"API_KEY":"HM5GQEIAYBefmRoJxGST1UfjxWhDol+rRbvN/MgH0ozWHJuByYaMshNN", 
+		"SECRET_KEY":"Khetht1HH7myezH+yZI94jEJay4DFtOTCX1mWB32s0o7bQAJuUZhupqrPec8jrQu8uYZBwZLJVuU77wAzdAg/G3r", 
+		"PASSWORD":""
+	}
+]

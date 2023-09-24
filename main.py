@@ -224,7 +224,7 @@ class account_c:
                 "apiKey": apiKey,
                 "secret": secret,
                 'password': password,
-                "options": {'defaultType': 'swap', 'defaultMarginMode':MARGIN_MODE, 'adjustForTimeDifference' : True},
+                "options": {'defaultType': 'swap', 'adjustForTimeDifference' : True},
                 #"timeout": 60000,
                 "enableRateLimit": True
                 })
@@ -233,7 +233,7 @@ class account_c:
                 "apiKey": apiKey,
                 "secret": secret,
                 'password': password,
-                "options": {'defaultType': 'swap', 'defaultMarginMode':MARGIN_MODE, 'adjustForTimeDifference' : True},
+                "options": {'defaultType': 'swap', 'adjustForTimeDifference' : True},
                 #"timeout": 60000,
                 "enableRateLimit": True
                 })
