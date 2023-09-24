@@ -132,6 +132,7 @@ class account_c:
         self.positionslist = []
         self.ordersQueue = []
         self.activeOrders = []
+        self.SETTLE_COIN = 'USDT'
 
         if( exchange == None ):
             raise ValueError('Exchange not defined')
@@ -232,7 +233,7 @@ class account_c:
                 "apiKey": apiKey,
                 "secret": secret,
                 'password': password,
-                "options": {'defaultType': 'swap', 'adjustForTimeDifference' : True},
+                "options": {'defaultType': 'swap', 'defaultMarginMode':MARGIN_MODE, 'adjustForTimeDifference' : True},
                 #"timeout": 60000,
                 "enableRateLimit": True
                 })
@@ -256,11 +257,8 @@ class account_c:
         markets = self.exchange.load_markets()
         marketKeys = markets.keys()
         for key in marketKeys:
-            if( not key.endswith(':USDT') ):  # skip not USDT pairs. All the code is based on USDT
-                continue
-
             thisMarket = markets[key]
-            if( thisMarket.get('settle') != 'USDT' ): # double check
+            if( thisMarket.get('settle') != self.SETTLE_COIN ): # double check
                 continue
 
             if( thisMarket.get('contractSize') == None ):
@@ -506,7 +504,9 @@ class account_c:
 
 
     def fetchBalance(cls):
-        response = cls.exchange.fetch_balance( { "settle":'USDT' } )
+        params = { "settle":cls.SETTLE_COIN }
+
+        response = cls.exchange.fetch_balance( params )
 
         if( cls.exchange.id == "bitget" ):
             # Bitget response message is all over the place!!
@@ -520,29 +520,18 @@ class account_c:
         if( cls.exchange.id == "coinex" ):
             # Coinex response isn't much better. We also reconstruct it
             data = response['info'].get('data')
-            data = data.get('USDT')
+            data = data.get(cls.SETTLE_COIN)
             balance = {}
             balance['free'] = float( data.get('available') )
             balance['used'] = float( data.get('margin') )
             balance['total'] = balance['free'] + balance['used'] + float( data.get('profit_unreal') )
             return balance
-        
-        balance = response.get('USDT')
-        return balance
+
+        return response.get(cls.SETTLE_COIN)
     
 
     def fetchAvailableBalance(cls)->float:
-        # Bitget response message is WRONG?
-        # if( cls.exchange.id == "bitget" ):
-        #     response = cls.fetchBalance()
-        #     return response.get( 'free' )
-        
-        params = { "type":"swap" }
-        if( cls.exchange.id == "phemex" ):
-            params["code"] = "USDT"
-
-        available = cls.exchange.fetch_free_balance( params )
-        return available.get('USDT')
+        return float( cls.fetchBalance().get( 'free' ) )
     
 
     def fetchBuyPrice(cls, symbol)->float:
@@ -578,13 +567,13 @@ class account_c:
 
         # first let's check if the pair string contains
         # a backslash. If it does it's probably already a symbol
-        if '/' not in paircmd and paircmd.endswith('USDT'):
+        if '/' not in paircmd and paircmd.endswith(cls.SETTLE_COIN):
             paircmd = paircmd[:-4]
-            paircmd += '/USDT:USDT'
+            paircmd += '/' + cls.SETTLE_COIN + ':' + cls.SETTLE_COIN
 
         # but it also may not include the ':USDT' ending
-        if '/' in paircmd and not paircmd.endswith(':USDT'):
-            paircmd += ':USDT'
+        if '/' in paircmd and not paircmd.endswith(':'+ cls.SETTLE_COIN ):
+            paircmd += ':' + cls.SETTLE_COIN
 
         # try the more direct approach
         m = cls.markets.get(paircmd)
@@ -656,7 +645,7 @@ class account_c:
     ### https://docs.ccxt.com/#/?id=position-structure ###
         failed = False
         try:
-            positions = cls.exchange.fetch_positions( params = {'settle':'USDT'} ) # the 'settle' param is only required by phemex
+            positions = cls.exchange.fetch_positions( params = {'settle':cls.SETTLE_COIN} ) # the 'settle' param is only required by phemex
 
         except Exception as e:
             for a in e.args:
@@ -786,7 +775,7 @@ class account_c:
 
     def fetchClosedOrderById(cls, symbol, id ):
         try:
-            response = cls.exchange.fetch_closed_orders( symbol, params = {'settleCoin':'USDT'} )
+            response = cls.exchange.fetch_closed_orders( symbol, params = {'settleCoin':cls.SETTLE_COIN} )
         except Exception as e:
             #Exception: ccxt.base.errors.ExchangeError: phemex {"code":39999,"msg":"Please try again.","data":null}
             return None
@@ -800,7 +789,7 @@ class account_c:
 
     def fetchOpenOrderById(cls, symbol, id ):
         try:
-            response = cls.exchange.fetch_open_orders( symbol, params = {'settleCoin':'USDT'} )
+            response = cls.exchange.fetch_open_orders( symbol, params = {'settleCoin':cls.SETTLE_COIN} )
         except Exception as e:
             #Exception: ccxt.base.errors.ExchangeError: phemex {"code":39999,"msg":"Please try again.","data":null}
             return None
@@ -894,6 +883,7 @@ class account_c:
         else:
             params['clientOrderId'] = customID
 
+
         try:
             response = cls.exchange.cancel_order( id, symbol, params )
 
@@ -914,7 +904,7 @@ class account_c:
                     print( 'cancelLimitOrder: Unhandled exception:', e )
 
         else:
-            cls.print( " * Linmit order [", response.get('clientOrderId'), "] cancelled." )
+            cls.print( " * Linmit order [", customID, "] cancelled." )
         return True
 
 
