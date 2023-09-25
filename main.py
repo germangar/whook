@@ -333,7 +333,7 @@ class account_c:
             self.markets[key] = thisMarket
             
         if( verbose ):
-            pprint( self.markets['BTC/USDT:USDT'] )
+            pprint( self.markets['BTC/' + self.SETTLE_COIN + ':' + self.SETTLE_COIN] )
             
         self.balance = self.fetchBalance()
         self.print( self.balance )
