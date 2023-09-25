@@ -370,16 +370,18 @@ class account_c:
         # Make sure the exchange is in oneway mode
 
         if( cls.exchange.has.get('setPositionMode') != True and cls.markets[ symbol ]['local']['positionMode'] != 'oneway' ):
-            print( " * Error: updateSymbolPositionMode: Exchange", cls.exchange.id, "doesn't have setPositionMode nor is set to oneway" )
+            print( " * E: updateSymbolPositionMode: Exchange", cls.exchange.id, "doesn't have setPositionMode nor is set to oneway" )
             return
         
         if( cls.markets[ symbol ]['local']['positionMode'] != 'oneway' and cls.exchange.has.get('setPositionMode') == True ):
             if( cls.getPositionBySymbol(symbol) != None ):
-                cls.print( ' * WARNING: Cannot change position mode while a position is open' )
+                cls.print( ' * W: Cannot change position mode while a position is open' )
                 return
         
             try:
-                response = cls.exchange.set_position_mode( False, symbol ) 
+                response = cls.exchange.set_position_mode( False, symbol )
+            except ccxt.NoChange as e:
+                cls.markets[ symbol ]['local']['positionMode'] = 'oneway'
             except Exception as e:
                 for a in e.args:
                     if( '"retCode":140025' in a or '"code":-4059' in a
@@ -390,7 +392,7 @@ class account_c:
                         # binance {"code":-4059,"msg":"No need to change position side."}
                         cls.markets[ symbol ]['local']['positionMode'] = 'oneway'
                     else:
-                        print( " * Error: updateSymbolLeverage->set_position_mode: Unhandled Exception", a )
+                        print( " * E: updateSymbolLeverage->set_position_mode:", a )
             else:
                 # was everything correct, tho?
                 code = 0
@@ -407,7 +409,7 @@ class account_c:
                     code = 0
 
                 if( code != 0 ):
-                    print( " * Error: updateSymbolLeverage->set_position_mode:", response )
+                    print( " * E: updateSymbolLeverage->set_position_mode:", response )
                     return
                 
                 cls.markets[ symbol ]['local']['positionMode'] = 'oneway'
@@ -437,6 +439,10 @@ class account_c:
             try:
                 response = cls.exchange.set_margin_mode( MARGIN_MODE, symbol, params )
 
+            except ccxt.NoChange as e:
+                cls.markets[ symbol ]['local']['marginMode'] = MARGIN_MODE
+            except ccxt.MarginModeAlreadySet as e:
+                cls.markets[ symbol ]['local']['marginMode'] = MARGIN_MODE
             except Exception as e:
                 for a in e.args:
                     if( '"retCode":140026' in a or "No need to change margin type" in a
@@ -447,9 +453,9 @@ class account_c:
                         # bybit {"retCode":110026,"retMsg":"Cross/isolated margin mode is not modified","result":{},"retExtInfo":{},"time":1695526888984}
                         # binance {'code': -4046, 'msg': 'No need to change margin type.'}
                         # updateSymbolLeverage->set_margin_mode: {'code': -4046, 'msg': 'No need to change margin type.'}
-                        pass
+                        cls.markets[ symbol ]['local']['marginMode'] = MARGIN_MODE
                     else:
-                        print( " * Error: updateSymbolLeverage->set_margin_mode: Unhandled Exception", a )
+                        print( " * E: updateSymbolLeverage->set_margin_mode:", a )
             else:
 
                 # was everything correct, tho?
@@ -467,7 +473,7 @@ class account_c:
                     code = 0
 
                 if( code != 0 ):
-                    print( " * Error: updateSymbolLeverage->set_margin_mode:", response )
+                    print( " * E: updateSymbolLeverage->set_margin_mode:", response )
                 else:
                     cls.markets[ symbol ]['local']['marginMode'] = MARGIN_MODE
 
@@ -499,6 +505,8 @@ class account_c:
 
             try:
                 response = cls.exchange.set_leverage( leverage, symbol, params )
+            except ccxt.NoChange as e:
+                cls.markets[ symbol ]['local']['leverage'] = leverage
             except Exception as e:
                 for a in e.args:
                     if( '"retCode":140043' in a or '"retCode":110043' in a ):
@@ -507,11 +515,11 @@ class account_c:
                         # bybit {"retCode":140043,"retMsg":"leverage not modified","result":{},"retExtInfo":{},"time":1690530386264}
                         pass
                     elif( 'MAX_LEVERAGE_OUT_OF_BOUNDS' in a ):
-                        cls.print( " * Error: Maximum leverage exceeded [", leverage, "]" )
+                        cls.print( " * E: Maximum leverage exceeded [", leverage, "]" )
                         return
                         # {"status":"INTERNAL_SERVER_ERROR","result":"error","errors":[{"code":98,"message":"MAX_LEVERAGE_OUT_OF_BOUNDS"}],"serverTime":"2023-09-24T00:57:08.908Z"}
                     else:
-                        print( " * Error: updateSymbolLeverage->set_leverage: Unhandled Exception", a )
+                        print( " * E: updateSymbolLeverage->set_leverage:", a )
             else:
                 # was everything correct, tho?
                 code = 0
@@ -530,7 +538,7 @@ class account_c:
                 # 'retCode': '0' <- bybit
                 # binance doesn't send any code #{'symbol': 'BTCUSDT', 'leverage': '7', 'maxNotionalValue': '40000000'}
                 if( code != 0 ):
-                    print( " * Error: updateSymbolLeverage->set_leverage:", response )
+                    print( " * E: updateSymbolLeverage->set_leverage:", response )
                 else:
                     cls.markets[ symbol ]['local']['leverage'] = leverage
 
@@ -628,44 +636,30 @@ class account_c:
     
 
     def findContractSizeForSymbol(cls, symbol)->float:
-        m = cls.markets.get(symbol)
-        if( m == None ):
-            cls.print( ' * ERROR: findContractSizeForSymbol called with unknown symbol:', symbol )
-            return 1
-        return m.get('contractSize')
+        return cls.markets[symbol].get('contractSize')
     
 
     def findPrecisionForSymbol(cls, symbol)->float:
-        m = cls.markets.get(symbol)
-        if( m == None ):
-            cls.print( ' * ERROR: findPrecisionForSymbol called with unknown symbol:', symbol )
-            return 1
+        thisMarket = cls.markets.get(symbol)
+
         if( cls.exchange.id == 'binance' ):
-            filters = m['info']['filters']
+            filters = thisMarket['info']['filters']
             for filter in filters:
                 if( filter.get('filterType') == 'LOT_SIZE' ):
                     precision = str(filter.get('stepSize'))
         else :
-            precision = m['precision'].get('amount')
+            precision = thisMarket['precision'].get('amount')
         return precision
     
 
     def findMinimumAmountForSymbol(cls, symbol)->float:
-        m = cls.markets.get(symbol)
-        if( m != None ):
-            return m['limits']['amount'].get('min')
-        return cls.findPrecisionForSymbol( symbol )
+        return cls.markets[symbol]['limits']['amount'].get('min')
     
 
     def findMaxLeverageForSymbol(cls, symbol)->float:
-        #'leverage': {'min': 1.0, 'max': 50.0}}
-        m = cls.markets.get(symbol)
-        if( m == None ):
-            cls.print( ' * ERROR: findMaxLeverageForSymbol called with unknown symbol:', symbol )
-            return 0
-        maxLeverage = m['limits']['leverage'].get('max')
+        maxLeverage = cls.markets[symbol]['limits']['leverage'].get('max')
         if( maxLeverage == None ):
-            maxLeverage = 1000
+            maxLeverage = 100
         return maxLeverage
 
 
@@ -698,17 +692,17 @@ class account_c:
                 or cls.exchange.id + ' GET' in a ):
                     failed = True
                 else:
-                    print( timeNow(), cls.exchange.id, '* Refreshpositions:Unknown Exception raised:', a )
+                    print( timeNow(), cls.exchange.id, '* E: Refreshpositions:', a )
                     failed = True
 
         if( failed ):
             cls.refreshPositionsFailed += 1
             if( cls.refreshPositionsFailed == 10 ):
-                print( timeNow(), cls.exchange.id, '* WARNING: Refreshpositions has failed 10 times in a row' )
+                print( timeNow(), cls.exchange.id, '* W: Refreshpositions has failed 10 times in a row' )
             return
         
         if (cls.refreshPositionsFailed >= 10 ):
-            print( timeNow(), cls.exchange.id, '* Refreshpositions has returned to activity' )
+            print( timeNow(), cls.exchange.id, '* W: Refreshpositions has returned to activity' )
 
         cls.refreshPositionsFailed = 0
                     
@@ -753,7 +747,7 @@ class account_c:
                 if( cls.exchange.has.get('setMarginMode') != True ):
                     thisPosition['marginMode'] = MARGIN_MODE_NONE
                 else:
-                    print( 'WARNING refreshPositions: Could not get marginMode for', symbol )
+                    print( ' * W: refreshPositions: Could not get marginMode for', symbol )
 
             cls.markets[ symbol ]['local'][ 'marginMode' ] = thisPosition.get('marginMode')
 
@@ -791,7 +785,7 @@ class account_c:
             if( leverage != -1 ):
                 cls.markets[ symbol ]['local'][ 'leverage' ] = leverage
             elif( cls.exchange.id != "kucoinfutures" ): # we know kucoin is helpless
-                print( " * WARNING: refreshPositions: Couldn't find leverage for", cls.exchange.id )
+                print( " * W: refreshPositions: Couldn't find leverage for", cls.exchange.id )
 
             cls.positionslist.append(position_c( symbol, thisPosition, cls.markets[ symbol ] ))
 
@@ -860,15 +854,15 @@ class account_c:
                     if( 'order not exists' in e.args[0] ):
                         continue
 
-                    cls.print( " * removeFirstCompletedOrder: fetch_order unhandled exception raised:", e )
+                    cls.print( " * E: removeFirstCompletedOrder:", e )
                     continue
                 
             
             if( response == None ): # FIXME: Check if this is really happening by printing it.
-                print( 'removeFirstCompletedOrder: fetch_order returned None' )
+                print( ' * E: removeFirstCompletedOrder: fetch_order returned None' )
                 continue
             if( len(response) == 0 ):
-                print( 'removeFirstCompletedOrder: fetch_order returned empty' )
+                print( ' * E: removeFirstCompletedOrder: fetch_order returned empty' )
                 continue
                         
             status = response.get('status')
@@ -902,10 +896,10 @@ class account_c:
             try:
                 response = cls.exchange.cancel_all_orders(symbol)
             except Exception as e:
-                print( 'Exception:', e )
+                print( ' * E: cancelLimitOrder:', e )
                 # I've tried cancelling when there were no orders but it reported no error. Maybe I missed something.
             else:
-                cls.print( 'All', symbol, 'orders have been cancelled' )
+                cls.print( ' * All', symbol, 'orders have been cancelled' )
                 # binance {'code': '200', 'msg': 'The operation of cancel all open order is done.'}
                 # phemex {'code': '0', 'msg': '', 'data': '1'}
                 # ( a list of orders ) bybit [{'info': {'orderId': '35ef0faf-27e5-44f0-a136-132350da72f0', 'orderLinkId': 'id004'}, 'id': '35ef0faf-27e5-44f0-a136-132350da72f0', 'clientOrderId': 'id004', 'timestamp': None, 'datetime': None, 'lastTradeTimestamp': None, 'lastUpdateTimestamp': None, 'symbol': 'BTC/USDT:USDT', 'type': None, 'timeInForce': None, 'postOnly': None, 'reduceOnly': None, 'side': None, 'price': None, 'stopPrice': None, 'triggerPrice': None, 'takeProfitPrice': None, 'stopLossPrice': None, 'amount': None, 'cost': None, 'average': None, 'filled': None, 'remaining': None, 'status': None, 'fee': None, 'trades': [], 'fees': []}, {'info': {'orderId': 'f1d6a649-0a71-4970-bd78-8eaa2a14f8f5', 'orderLinkId': 'id002'}, 'id': 'f1d6a649-0a71-4970-bd78-8eaa2a14f8f5', 'clientOrderId': 'id002', 'timestamp': None, 'datetime': None, 'lastTradeTimestamp': None, 'lastUpdateTimestamp': None, 'symbol': 'BTC/USDT:USDT', 'type': None, 'timeInForce': None, 'postOnly': None, 'reduceOnly': None, 'side': None, 'price': None, 'stopPrice': None, 'triggerPrice': None, 'takeProfitPrice': None, 'stopLossPrice': None, 'amount': None, 'cost': None, 'average': None, 'filled': None, 'remaining': None, 'status': None, 'fee': None, 'trades': [], 'fees': []}]
@@ -950,9 +944,9 @@ class account_c:
                    or '"code":"40020' in a or '"code":-2011' in a
                    or '"code":"40768"' in a
                    ):
-                    cls.print( 'Limit order [', customID, '] not found' )
+                    cls.print( ' * E: Limit order [', customID, '] not found' )
                 else:
-                    print( 'cancelLimitOrder: Unhandled exception:', e )
+                    print( ' * E: cancelLimitOrder:', e )
 
         else:
             cls.print( " * Linmit order [", customID, "] cancelled." )
@@ -1173,7 +1167,7 @@ def generatePositionsString()->str:
 def parseAlert( data, account: account_c ):
 
     if( account == None ):
-        print( timeNow(), " * ERROR: parseAlert called without an account" )
+        print( timeNow(), " * E: parseAlert called without an account" )
         return
     
     account.print( ' ' )
@@ -1234,55 +1228,55 @@ def parseAlert( data, account: account_c ):
         elif ( token[:5].lower()  == "limit" ):
             v = token.split(':')
             if( len(v) != 3 ):
-                account.print( " Error: Limit command must be formatted as 'limit:customID:price' ")
+                account.print( " * E: Limit command must be formatted as 'limit:customID:price' ")
                 return
             else:
                 isLimit = True
                 customID = v[1]
                 if( len(customID) < 2 or len(customID) > 30 ):
-                    account.print( " Error: customID must be longer than 2 characters and shorter than 30' ")
+                    account.print( " E: customID must be longer than 2 characters and shorter than 30' ")
                     return
                 priceLimit = stringToValue(v[2])
             if( account.exchange.id == 'coinex' and not customID.isdigit() ):
-                account.print( " Error: Coinex only accepts numeric customID")
+                account.print( " * E: Coinex only accepts numeric customID")
                 return
 
         elif ( token[:6].lower()  == "cancel" ):
             v = token.split(':')
             if( len(v) != 2 ):
-                account.print( " Error: Cancel command must be formatted as 'cancel:customID' ")
+                account.print( " * E: Cancel command must be formatted as 'cancel:customID' ")
                 return
             command = 'cancel'
             customID = v[1]
             if( len(customID) < 2 or len(customID) > 30 ):
-                account.print( " Error: customID must be longer than 2 characters and shorter than 30' ")
+                account.print( " * E: customID must be longer than 2 characters and shorter than 30' ")
                 return
             if( account.exchange.id == 'coinex' and not customID.isdigit() ):
-                account.print( " Error: Coinex only accepts numeric customID' ")
+                account.print( " * E: Coinex only accepts numeric customID' ")
                 return
     
 
     # validate the commands
     if( symbol == "Invalid"):
-        account.print( "ERROR: Couldn't find symbol" )
+        account.print( " * E: Couldn't find symbol" )
         return
     if( command == "Invalid" ):
-        account.print( "ERROR: Invalid Order: Missing command" )
+        account.print( " * E: Invalid Order: Missing command" )
         return
     if( quantity == None ):
-        account.print( "ERROR: Invalid quantity value" )
+        account.print( " * E: Invalid quantity value" )
         return
     if( isLimit and command != 'buy' and command != 'sell' ):
-        account.print( "ERROR: Limit orders can only be used with buy/sell commands" )
+        account.print( " * E: Limit orders can only be used with buy/sell commands" )
         return
     if( quantity <= 0 and command == 'buy' ):
-        account.print( "ERROR: Invalid Order: Buy must have a positive amount" )
+        account.print( " * E: Invalid Order: Buy must have a positive amount" )
         return
     if( quantity <= 0 and command == 'sell' ):
         if( quantity < 0 ):
             quantity = abs(quantity) #be flexible with sell having a negative amount
         else:
-            account.print( "ERROR: Invalid Order: Sell must have an amount" )
+            account.print( " * E: Invalid Order: Sell must have an amount" )
             return
     
 
@@ -1295,7 +1289,7 @@ def parseAlert( data, account: account_c ):
         # I'm still unsure if I should create a queue to retry alerts received while the server was down. By now
         # it will fail to place this order. It's very unlikely to happen, but it has happened.
         # ccxt.base.errors.ExchangeError: Service is not available during funding fee settlement. Please try again later.
-        account.print( " ERROR: Order cancelled. Couldn't reach the server:\n", e )
+        account.print( " * E: Order cancelled. Couldn't reach the server:\n", e )
         return
     
     # No point in putting cancel orders in the queue. Just do it and leave.
@@ -1329,9 +1323,9 @@ def parseAlert( data, account: account_c ):
             coin_name = account.markets[symbol]['base']
 
         quantity = account.contractsFromUSDT( symbol, quantity, price, leverage )
-        if verbose : print( "CONVERTING (x"+str(leverage)+")", oldQuantity, coin_name, '==>', quantity, "contracts" )
+        if verbose : print( "   CONVERTING (x"+str(leverage)+")", oldQuantity, coin_name, '==>', quantity, "contracts" )
         if( abs(quantity) < minOrder ):
-            account.print( timeNow(), " * ERROR * Order too small:", quantity, "Minimum required:", minOrder )
+            account.print( timeNow(), " * E: Order too small:", quantity, "Minimum required:", minOrder )
             return
 
     # check for a existing position
@@ -1424,7 +1418,7 @@ def parseAlert( data, account: account_c ):
             # fall through
 
         if( quantity < minOrder ):
-            account.print( timeNow(), " * ERROR * Order too small:", quantity, "Minimum required:", minOrder )
+            account.print( timeNow(), " * E: Order too small:", quantity, "Minimum required:", minOrder )
             return
 
         order = order_c( symbol, command, quantity, leverage, reverse = reverse )
@@ -1436,7 +1430,7 @@ def parseAlert( data, account: account_c ):
         account.ordersQueue.append( order )
         return
 
-    account.print( " * WARNING: Something went wrong. No order was placed")
+    account.print( " * W: Something went wrong. No order was placed")
 
 
 
@@ -1460,7 +1454,7 @@ def Alert( data ):
                     account = a
                     break
         if( account == None ):
-            print( timeNow(), ' * ERROR * Account ID not found. ALERT:', line )
+            print( timeNow(), ' * E: Account ID not found. ALERT:', line )
             continue
 
         parseAlert( line.replace('\n', ''), account )
