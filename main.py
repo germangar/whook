@@ -8,6 +8,7 @@ import json
 import logging
 from datetime import datetime
 from decimal import Decimal, ROUND_CEILING, ROUND_FLOOR, ROUND_HALF_EVEN
+from pprint import pprint
 
 
 verbose = False
@@ -49,6 +50,10 @@ def floor( number ):
 
 def ceil( number ):
     return int(-(-number // 1))
+
+def truncate(number: float, digits: int) -> float:
+    pow10 = 10 ** digits
+    return number * pow10 // 1 / pow10
 
 def roundUpTick( value: float, tick: str ):
     if type(tick) is not str: tick = str(tick)
@@ -327,6 +332,8 @@ class account_c:
             # Store the market into the local markets dictionary
             self.markets[key] = thisMarket
             
+        if( verbose ):
+            pprint( self.markets['BTC/USDT:USDT'] )
             
         self.balance = self.fetchBalance()
         self.print( self.balance )
@@ -583,12 +590,16 @@ class account_c:
     def fetchBuyPrice(cls, symbol)->float:
         orderbook = cls.exchange.fetch_order_book(symbol)
         ask = orderbook['asks'][0][0] if len (orderbook['asks']) > 0 else None
+        if( ask == None ):
+            raise ValueError( "Couldn't fetch ask price" )
         return ask
 
 
     def fetchSellPrice(cls, symbol)->float:
         orderbook = cls.exchange.fetch_order_book(symbol)
         bid = orderbook['bids'][0][0] if len (orderbook['bids']) > 0 else None
+        if( bid == None ):
+            raise ValueError( "Couldn't fetch bid price" )
         return bid
 
 
@@ -596,6 +607,10 @@ class account_c:
         orderbook = cls.exchange.fetch_order_book(symbol)
         bid = orderbook['bids'][0][0] if len (orderbook['bids']) > 0 else None
         ask = orderbook['asks'][0][0] if len (orderbook['asks']) > 0 else None
+        if( bid == None and ask == None ):
+            raise ValueError( "Couldn't fetch orderbook" )
+        if( bid == None ): bid = ask
+        if( ask == None ): ask = bid
         return ( bid + ask ) * 0.5
 
 
@@ -640,15 +655,10 @@ class account_c:
     
 
     def findPrecisionForSymbol(cls, symbol)->float:
-        thisMarket = cls.markets.get(symbol)
-
         if( cls.exchange.id == 'binance' ):
-            filters = thisMarket['info']['filters']
-            for filter in filters:
-                if( filter.get('filterType') == 'LOT_SIZE' ):
-                    precision = str(filter.get('stepSize'))
+            precision = 1.0 / (10.0 ** cls.markets[symbol]['precision'].get('amount'))
         else :
-            precision = thisMarket['precision'].get('amount')
+            precision = cls.markets[symbol]['precision'].get('amount')
         return precision
     
 
@@ -1316,7 +1326,16 @@ def parseAlert( data, account: account_c ):
     if( (isUSDT or isBaseCurrenty) and quantity != 0.0 ) :
         # We don't know for sure yet if it's a buy or a sell, so we average
         oldQuantity = quantity
-        price = account.fetchAveragePrice(symbol)
+        try:
+            price = account.fetchAveragePrice(symbol)
+            
+        except ccxt.ExchangeError as e:
+            account.print( " * E: parseAlert->fetchAveragePrice:", e )
+            return
+        except ValueError as e:
+            account.print( " * E: Cancelling:", e )
+            return
+            
         coin_name = account.markets[symbol]['quote']
         if( isBaseCurrenty ) :
             quantity *= price
