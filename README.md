@@ -17,13 +17,14 @@ Currently supported exchanges:
 - **Kucoin** futures
 - **Bitget** futures
 - **Coinex** futures
-- **Phemex** futures ( also [Phemex testnet](https://testnet.phemex.com) )
+- **OKX** futures ( also its demo mode )
 - **Bybit** futures ( also [Bybit testnet](https://testnet.bybit.com) )
 - **Binance** futures ( also [Binance futures testnet](https://testnet.binancefuture.com) )
+- **Phemex** futures ( also [Phemex testnet](https://testnet.phemex.com) )
 - **Kraken** futures ( also [Kraken futures testnet](https://demo-futures.kraken.com) )
   
 Broken support:
-- Bingx: There is some problem with the conversion from USDT to contracts. Sending orders in contracts should work fine. (updt: this may or may not be fixed)
+- Bingx: (updt: this may or may not be fixed) There is some problem with the conversion from USDT to contracts. Sending orders in contracts should work fine.
 
 
 ### ALERT SYNTAX ###
@@ -109,8 +110,8 @@ When you first launch the script it will create an accounts.json file in the scr
 
 [<br>
 &emsp;	{<br>
-&emsp;&emsp;		"EXCHANGE":"kucoinfutures", <br>
 &emsp;&emsp;		"ACCOUNT_ID":"your_account_name", <br>
+&emsp;&emsp;		"EXCHANGE":"kucoinfutures", <br>
 &emsp;&emsp;		"API_KEY":"your_api_key", <br>
 &emsp;&emsp;		"SECRET_KEY":"your_secret_key", <br>
 &emsp;&emsp;		"PASSWORD":"your_API_password"<br>
@@ -125,15 +126,17 @@ The EXCHANGE field is self explanatory. Valid exchange names are:<br>
 - "**kucoinfutures**"<br>
 - "**bitget**"<br>
 - "**coinex**"<br>
-- "**phemex**"<br>
-- "**phemexdemo**" (for testnet)<br>
+- "**okx**"<br>
+- "**okxdemo**"(for testnet)<br>
 - "**bybit**"<br>
 - "**bybitdemo**"(for testnet)<br>
 - "**binance**"<br>
 - "**binancedemo**"(for testnet)<br>
 - "**krakenfutures**"<br>
 - "**krakendemo**"(for testnet)<br>
-- "**bingx**" (not fully functional)<br>
+- "**phemex**"<br>
+- "**phemexdemo**" (for testnet)<br>
+- "**bingx**<br>
 
 
 ### HOW TO HOST IN AWS ### 
