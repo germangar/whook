@@ -267,6 +267,25 @@ class account_c:
             self.exchange.set_sandbox_mode( True )
             self.SETTLE_COIN = 'USD'
             # 'options': { 'settlementCurrencies': { 'flex': ['USDT', 'BTC', 'USD', 'GBP', 'EUR', 'USDC'],
+        elif( exchange.lower() == 'okx' ):
+            self.exchange = ccxt.okx ({
+                "apiKey": apiKey,
+                "secret": secret,
+                'password': password,
+                "options": {'defaultType': 'swap', 'adjustForTimeDifference' : True},
+                #"timeout": 60000,
+                "enableRateLimit": True
+                })
+        elif( exchange.lower() == 'okxdemo' ):
+            self.exchange = ccxt.okx ({
+                "apiKey": apiKey,
+                "secret": secret,
+                'password': password,
+                "options": {'defaultType': 'swap', 'adjustForTimeDifference' : True},
+                #"timeout": 60000,
+                "enableRateLimit": True
+                })
+            self.exchange.set_sandbox_mode( True )
         else:
             raise ValueError('Unsupported exchange')
 
@@ -442,6 +461,8 @@ class account_c:
             # coinex and bybit expect the leverage as part of the marginMode call
             if( cls.exchange.id == 'coinex' or cls.exchange.id == 'bybit' ):
                 params['leverage'] = leverage
+            elif( cls.exchange.id == 'okx' ):
+                params['lever'] = leverage
 
             try:
                 response = cls.exchange.set_margin_mode( MARGIN_MODE, symbol, params )
@@ -509,6 +530,9 @@ class account_c:
             params = {}
             if( cls.exchange.id == 'coinex' ): # coinex always updates leverage and marginMode at the same time
                 params['marginMode'] = cls.markets[ symbol ]['local']['marginMode'] # use current marginMode to avoid triggering an error
+            elif( cls.exchange.id == 'okx' ):
+                params['marginMode'] = cls.markets[ symbol ]['local']['marginMode']
+                params['posSide'] = 'net'
 
             try:
                 response = cls.exchange.set_leverage( leverage, symbol, params )
@@ -1018,6 +1042,11 @@ class account_c:
             if( cls.exchange.id == 'krakenfutures' ):
                 params['leverage'] = max( order.leverage, 1 )
                 params['marginMode'] = MARGIN_MODE
+
+            if( cls.exchange.id == 'okx' ):
+                params['marginMode'] = 'isolated'
+                #params['posSide'] = "net"
+                params['leverage'] = order.leverage
 
             if( order.type == 'limit' ):
                 if( cls.exchange.id == 'krakenfutures' ):
