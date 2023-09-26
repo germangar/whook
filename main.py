@@ -411,11 +411,12 @@ class account_c:
             except Exception as e:
                 for a in e.args:
                     if( '"retCode":140025' in a or '"code":-4059' in a
-                        or 'retCode":110025' in a ):
+                        or 'retCode":110025' in a or '"code":"59000"' in a ):
                         # this is not an error, but just an acknowledge
                         # bybit {"retCode":140025,"retMsg":"position mode not modified","result":{},"retExtInfo":{},"time":1690530385019}
                         # bybit {"retCode":110025,"retMsg":"Position mode is not modified","result":{},"retExtInfo":{},"time":1694988241696}
                         # binance {"code":-4059,"msg":"No need to change position side."}
+                        # okx {"code":"59000","data":[],"msg":"Setting failed. Cancel any open orders, close positions, and stop trading bots first."}
                         cls.markets[ symbol ]['local']['positionMode'] = 'oneway'
                     else:
                         print( " * E: updateSymbolLeverage->set_position_mode:", a )
@@ -1119,10 +1120,15 @@ class account_c:
                     cls.print( ' * E: Order size invalid:', order.quantity, 'x'+str(order.leverage) )
                     cls.ordersQueue.remove( order )
                     break
+                elif '"retCode":20094' in a or '"code":-4015' in a or 'ID already exists' in a:
+                        cls.print( ' * E: Cancelling Linmit order: ID [', order.customID, '] was used before' )
+                        cls.ordersQueue.remove( order )
+                        break
                 else:
                     # [bitget/bitget] bitget {"code":"45110","msg":"less than the minimum amount 5 USDT","requestTime":1689481837614,"data":null}
                     # The deviation between your delegated price and the index price is greater than 20%, you can appropriately adjust your delegation price and try again
                     cls.print( ' * E: Cancelling:', a )
+                    cls.print( type(e))
                     cls.ordersQueue.remove( order )
                     break
             except Exception as e:
@@ -1131,20 +1137,21 @@ class account_c:
                         #set a bigger delay and try again
                         order.delay += 0.5
                         break
-                    elif 'invalidSize' in a:
-                        cls.print( ' * Error. Order size invalid:', order.quantity, 'x'+str(order.leverage) )
-                        cls.ordersQueue.remove( order )
-                        break
+                    # elif 'invalidSize' in a:
+                    #     cls.print( ' * Error. Order size invalid:', order.quantity, 'x'+str(order.leverage) )
+                    #     cls.ordersQueue.remove( order )
+                    #     break
                     # bybit {"retCode":20094,"retMsg":"OrderLinkedID is duplicate","result":{},"retExtInfo":{},"time":1694985713343}
                     # binance {"code":-4015,"msg":"Client order id is not valid."}
-                    elif '"retCode":20094' in a or '"code":-4015' in a:
-                        cls.print( ' * Error Cancelling Linmit order: ID [', order.customID, '] was used before' )
-                        cls.ordersQueue.remove( order )
-                        break
+                    # elif '"retCode":20094' in a or '"code":-4015' in a:
+                    #     cls.print( ' * Error Cancelling Linmit order: ID [', order.customID, '] was used before' )
+                    #     cls.ordersQueue.remove( order )
+                    #     break
                     else:
                         # [bitget/bitget] bitget {"code":"45110","msg":"less than the minimum amount 5 USDT","requestTime":1689481837614,"data":null}
                         # The deviation between your delegated price and the index price is greater than 20%, you can appropriately adjust your delegation price and try again
                         cls.print( ' * ERROR Cancelling:', e )
+                        cls.print( type(e))
                         cls.ordersQueue.remove( order )
                         break
                 continue # back to the orders loop
