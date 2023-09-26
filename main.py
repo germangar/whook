@@ -130,7 +130,7 @@ class order_c:
         return (cls.timestamp + cls.delay > time.monotonic() )
 
 class account_c:
-    def __init__(self, exchange = None, name = 'default', apiKey = None, secret = None, password = None )->None:
+    def __init__(self, exchange = None, name = 'default', apiKey = None, secret = None, password = None, marginMode = None, settleCoin = None )->None:
         
         self.accountName = name
         self.canFlipPosition = False
@@ -138,7 +138,8 @@ class account_c:
         self.positionslist = []
         self.ordersQueue = []
         self.activeOrders = []
-        self.SETTLE_COIN = 'USDT'
+        self.marginMode = 'cross' if ( marginMode != None and marginMode.lower() == 'cross') else MARGIN_MODE
+        self.SETTLE_COIN = 'USDT' if( settleCoin == None ) else settleCoin
 
         if( exchange == None ):
             raise ValueError('Exchange not defined')
@@ -254,6 +255,7 @@ class account_c:
                 "enableRateLimit": True
                 })
             self.SETTLE_COIN = 'USD'
+            if( settleCoin != None ) : self.SETTLE_COIN = settleCoin
             # 'options': { 'settlementCurrencies': { 'flex': ['USDT', 'BTC', 'USD', 'GBP', 'EUR', 'USDC'],
         elif( exchange.lower() == 'krakendemo' ):
             self.exchange = ccxt.krakenfutures({
@@ -266,6 +268,7 @@ class account_c:
                 })
             self.exchange.set_sandbox_mode( True )
             self.SETTLE_COIN = 'USD'
+            if( settleCoin != None ) : self.SETTLE_COIN = settleCoin
             # 'options': { 'settlementCurrencies': { 'flex': ['USDT', 'BTC', 'USD', 'GBP', 'EUR', 'USDC'],
         elif( exchange.lower() == 'okx' ):
             self.exchange = ccxt.okx ({
@@ -1579,9 +1582,13 @@ for ac in accounts_data:
         password = ""
         continue
 
+    marginMode = ac.get('MARGIN_MODE')
+
+    settleCoin = ac.get('SETTLE_COIN')
+
     print( timeNow(), " * Initializing account: [", account_id, "] in [", exchange , ']')
     try:
-        account = account_c( exchange, account_id, api_key, secret_key, password )
+        account = account_c( exchange, account_id, api_key, secret_key, password, marginMode, settleCoin )
     except Exception as e:
         print( 'Account creation failed:', e )
         print('------------------------------')
