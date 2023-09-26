@@ -442,7 +442,7 @@ class account_c:
 
     
     def updateSymbolLeverage( cls, symbol, leverage ):
-        # also sets marginMode to isolated
+        # also sets marginMode
 
         if( leverage < 1 ): # leverage 0 indicates we are closing a position
             return
@@ -525,7 +525,6 @@ class account_c:
 
             # from phemex API documentation: The sign of leverageEr indicates margin mode,
             # i.e. leverage <= 0 means cross-margin-mode, leverage > 0 means isolated-margin-mode.
-            # we only want isolated so we ignore it
 
             params = {}
             if( cls.exchange.id == 'coinex' ): # coinex always updates leverage and marginMode at the same time
@@ -1045,7 +1044,7 @@ class account_c:
                 params['marginMode'] = MARGIN_MODE
 
             if( cls.exchange.id == 'okx' ):
-                params['marginMode'] = 'isolated'
+                params['marginMode'] = MARGIN_MODE
                 #params['posSide'] = "net"
                 params['leverage'] = order.leverage
 
