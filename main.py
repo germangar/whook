@@ -973,10 +973,11 @@ class account_c:
             # coinex: order not exists
             # binance {"code":-2011,"msg":"Unknown order sent."}
             # bitget {"code":"40768","msg":"Order does not exist","requestTime":1695595735402,"data":null}
+            # okx {"code":"1","data":[{"clOrdId":"001","ordId":"","sCode":"51400","sMsg":"Order cancellation failed as the order has been filled, canceled or does not exist"}],"inTime":"1695702628745527","msg":"All operations failed","outTime":"1695702628746932"}
                 if( 'OM_ORDER_NOT_FOUND' in a or 'order not exists' in a
                    or 'The order cannot be canceled' in a # Kucoin always so helpful
                    or '"code":"40020' in a or '"code":-2011' in a
-                   or '"code":"40768"' in a
+                   or '"code":"40768"' in a or 'does not exist' in a
                    ):
                     cls.print( ' * E: Limit order [', customID, '] not found' )
                 else:
@@ -1107,7 +1108,24 @@ class account_c:
                     cls.ordersQueue.remove( order )
 
                 continue # back to the orders loop
-
+            except ccxt.InvalidOrder as e:
+                # ERROR Cancelling: okx {"code":"1","data":[{"clOrdId":"001","ordId":"","sCode":"51006","sMsg":"Order price is not within the price limit (Maximum buy price: 26,899.6; minimum sell price: 25,844.6)","tag":""}],"inTime":"1695698840518495","msg":"","outTime":"1695698840518723"}
+                a = e.args[0]
+                if 'Order price is not within' in a:
+                    d = json.loads(a.lstrip(cls.exchange.id + ' '))
+                    cls.print( ' * E:', d['data'][0].get('sMsg') )
+                    cls.ordersQueue.remove( order )
+                    break
+                elif 'invalidSize' in a:
+                    cls.print( ' * E: Order size invalid:', order.quantity, 'x'+str(order.leverage) )
+                    cls.ordersQueue.remove( order )
+                    break
+                else:
+                    # [bitget/bitget] bitget {"code":"45110","msg":"less than the minimum amount 5 USDT","requestTime":1689481837614,"data":null}
+                    # The deviation between your delegated price and the index price is greater than 20%, you can appropriately adjust your delegation price and try again
+                    cls.print( ' * E: Cancelling:', a )
+                    cls.ordersQueue.remove( order )
+                    break
             except Exception as e:
                 for a in e.args:
                     if 'Too Many Requests' in a or 'too many request' in a or 'service too busy' in a: 
