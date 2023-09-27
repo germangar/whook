@@ -353,12 +353,12 @@ class account_c:
 
             # Store the market into the local markets dictionary
             self.markets[key] = thisMarket
-            
+
+
+        print(f'\033[F\033[{12}G OK')
         if( verbose ):
             pprint( self.markets['BTC/' + self.SETTLE_COIN + ':' + self.SETTLE_COIN] )
             
-        self.balance = self.fetchBalance()
-        self.print( self.balance )
         self.refreshPositions(True)
 
 
@@ -422,7 +422,7 @@ class account_c:
                         # okx {"code":"59000","data":[],"msg":"Setting failed. Cancel any open orders, close positions, and stop trading bots first."}
                         cls.markets[ symbol ]['local']['positionMode'] = 'oneway'
                     else:
-                        print( " * E: updateSymbolLeverage->set_position_mode:", a )
+                        print( " * E: updateSymbolLeverage->set_position_mode:", a, type(e) )
             else:
                 # was everything correct, tho?
                 code = 0
@@ -487,7 +487,7 @@ class account_c:
                         # updateSymbolLeverage->set_margin_mode: {'code': -4046, 'msg': 'No need to change margin type.'}
                         cls.markets[ symbol ]['local']['marginMode'] = MARGIN_MODE
                     else:
-                        print( " * E: updateSymbolLeverage->set_margin_mode:", a )
+                        print( " * E: updateSymbolLeverage->set_margin_mode:", a, type(e) )
             else:
 
                 # was everything correct, tho?
@@ -553,7 +553,7 @@ class account_c:
                         return
                         # {"status":"INTERNAL_SERVER_ERROR","result":"error","errors":[{"code":98,"message":"MAX_LEVERAGE_OUT_OF_BOUNDS"}],"serverTime":"2023-09-24T00:57:08.908Z"}
                     else:
-                        print( " * E: updateSymbolLeverage->set_leverage:", a )
+                        print( " * E: updateSymbolLeverage->set_leverage:", a, type(e) )
             else:
                 # was everything correct, tho?
                 code = 0
@@ -729,7 +729,7 @@ class account_c:
                 or cls.exchange.id + ' GET' in a ):
                     failed = True
                 else:
-                    print( timeNow(), cls.exchange.id, '* E: Refreshpositions:', a )
+                    print( timeNow(), cls.exchange.id, '* E: Refreshpositions:', a, type(e) )
                     failed = True
 
         if( failed ):
@@ -755,8 +755,10 @@ class account_c:
         numPositions = len(positions)
 
         if v:
+            tab = '  '
+            balance = cls.fetchBalance()
             if( numPositions > 0 ) : print('------------------------------')
-            print('Refreshing positions '+cls.accountName+':', numPositions, "positions found" )
+            print( tab + str(numPositions), "positions found." )
 
         cls.positionslist.clear()
         for thisPosition in positions:
@@ -828,7 +830,9 @@ class account_c:
 
         if v:
             for pos in cls.positionslist:
-                print( pos.generatePrintString() )
+                print( tab + pos.generatePrintString() )
+            
+            #print( tab + "Balance: "+"{:.2f}[$]".format(balance['total']), "Free: "+"{:.2f}[$]".format(balance['free']) )
 
             print('------------------------------')
 
@@ -891,7 +895,7 @@ class account_c:
                     if( 'order not exists' in e.args[0] ):
                         continue
 
-                    cls.print( " * E: removeFirstCompletedOrder:", e )
+                    cls.print( " * E: removeFirstCompletedOrder:", e, type(e) )
                     continue
                 
             
@@ -933,7 +937,7 @@ class account_c:
             try:
                 response = cls.exchange.cancel_all_orders(symbol)
             except Exception as e:
-                print( ' * E: cancelLimitOrder:', e )
+                print( ' * E: cancelLimitOrder:', e, type(e) )
                 # I've tried cancelling when there were no orders but it reported no error. Maybe I missed something.
             else:
                 cls.print( ' * All', symbol, 'orders have been cancelled' )
@@ -950,7 +954,7 @@ class account_c:
             try:
                 response = cls.exchange.fetch_open_orders( symbol, params = {'settleCoin':cls.SETTLE_COIN} )
             except Exception as e:
-                cls.print( 'Unhandlex exception in cancelLimitOrder:', e )
+                cls.print( 'Unhandled exception in cancelLimitOrder:', e, type(e) )
                 return
             else:
                 for o in response:
@@ -984,7 +988,7 @@ class account_c:
                    ):
                     cls.print( ' * E: Limit order [', customID, '] not found' )
                 else:
-                    print( ' * E: cancelLimitOrder:', e )
+                    print( ' * E: cancelLimitOrder:', e, type(e) )
 
         else:
             cls.print( " * Linmit order [", customID, "] cancelled." )
@@ -1130,7 +1134,7 @@ class account_c:
                 else:
                     # [bitget/bitget] bitget {"code":"45110","msg":"less than the minimum amount 5 USDT","requestTime":1689481837614,"data":null}
                     # The deviation between your delegated price and the index price is greater than 20%, you can appropriately adjust your delegation price and try again
-                    cls.print( ' * E: Cancelling:', a )
+                    cls.print( ' * E: Cancelling:', a, type(e) )
                     cls.print( type(e))
                     cls.ordersQueue.remove( order )
                     break
@@ -1153,8 +1157,7 @@ class account_c:
                     else:
                         # [bitget/bitget] bitget {"code":"45110","msg":"less than the minimum amount 5 USDT","requestTime":1689481837614,"data":null}
                         # The deviation between your delegated price and the index price is greater than 20%, you can appropriately adjust your delegation price and try again
-                        cls.print( ' * ERROR Cancelling:', e )
-                        cls.print( type(e))
+                        cls.print( ' * ERROR Cancelling:', e, type(e) )
                         cls.ordersQueue.remove( order )
                         break
                 continue # back to the orders loop
@@ -1355,7 +1358,7 @@ def parseAlert( data, account: account_c ):
         # I'm still unsure if I should create a queue to retry alerts received while the server was down. By now
         # it will fail to place this order. It's very unlikely to happen, but it has happened.
         # ccxt.base.errors.ExchangeError: Service is not available during funding fee settlement. Please try again later.
-        account.print( " * E: Order cancelled. Couldn't reach the server:\n", e )
+        account.print( " * E: Order cancelled. Couldn't reach the server:\n", e, type(e) )
         return
     
     # No point in putting cancel orders in the queue. Just do it and leave.
@@ -1389,7 +1392,7 @@ def parseAlert( data, account: account_c ):
             account.print( " * E: parseAlert->fetchAveragePrice:", e )
             return
         except ValueError as e:
-            account.print( " * E: Cancelling:", e )
+            account.print( " * E: Cancelling:", e, type(e) )
             return
             
         coin_name = account.markets[symbol]['quote']
@@ -1586,11 +1589,11 @@ for ac in accounts_data:
 
     settleCoin = ac.get('SETTLE_COIN')
 
-    print( timeNow(), " * Initializing account: [", account_id, "] in [", exchange , ']')
+    print( timeNow(), " [    ] Initializing account: [", account_id, "] in [", exchange , ']')
     try:
         account = account_c( exchange, account_id, api_key, secret_key, password, marginMode, settleCoin )
     except Exception as e:
-        print( 'Account creation failed:', e )
+        print( 'Account creation failed:', e, type(e) )
         print('------------------------------')
     else:
         accounts.append( account )
