@@ -355,7 +355,6 @@ class account_c:
             self.markets[key] = thisMarket
 
 
-        print(f'\033[F\033[{12}G OK')
         if( verbose ):
             pprint( self.markets['BTC/' + self.SETTLE_COIN + ':' + self.SETTLE_COIN] )
             
@@ -1587,7 +1586,7 @@ for ac in accounts_data:
 
     settleCoin = ac.get('SETTLE_COIN')
 
-    print( timeNow(), " [    ] Initializing account: [", account_id, "] in [", exchange , ']')
+    print( timeNow(), " Initializing account: [", account_id, "] in [", exchange , ']')
     try:
         account = account_c( exchange, account_id, api_key, secret_key, password, marginMode, settleCoin )
     except Exception as e:
