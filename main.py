@@ -912,7 +912,6 @@ class account_c:
             if verbose : print( status, '\nremaining:', remaining, 'price:', price )
 
             if( order.type == 'limit' ):
-                if( cls.exchange.id == 'krakenfutures' ) : response['clientOrderId'] = response['info']['cliOrdId'] #HACK!!
                 if( cls.exchange.id == 'coinex' ) : response['clientOrderId'] = response['info']['client_id'] #HACK!!
                 cls.print( " * Linmit order placed:", order.symbol, order.side, order.quantity, str(order.leverage)+"x", "at price", price, 'id', response.get('clientOrderId') )
                 cls.activeOrders.remove( order )
@@ -972,20 +971,19 @@ class account_c:
         try:
             response = cls.exchange.cancel_order( id, symbol, params )
 
+        except ccxt.OrderNotFound as e:
+            # phemex, okx, kraken, binancedemo 
+            cls.print( ' * E: Limit order [', customID, '] not found' )
+        except ccxt.BadRequest as e:
+            # 'ccxt.base.errors.BadRequest'> kucoinfutures The order cannot be canceled
+            cls.print( ' * E: Limit order [', customID, '] not found' )
+        except ccxt.InvalidOrder as e:
+            # 'ccxt.base.errors.InvalidOrder'> bybit {"retCode":110001,"retMsg":"Order does not exist","result":{}
+            cls.print( ' * E: Limit order [', customID, '] not found' )
         except Exception as e:
             for a in e.args:
-            # todo: need to check errors in all exchanges
-            # phemex {"code":10002,"msg":"OM_ORDER_NOT_FOUND","data":null}
-            # bitget {"code":"40020","msg":"Parameter orderId or clientOid error","requestTime":1694984090051,"data":null}
-            # coinex: order not exists
-            # binance {"code":-2011,"msg":"Unknown order sent."}
-            # bitget {"code":"40768","msg":"Order does not exist","requestTime":1695595735402,"data":null}
-            # okx {"code":"1","data":[{"clOrdId":"001","ordId":"","sCode":"51400","sMsg":"Order cancellation failed as the order has been filled, canceled or does not exist"}],"inTime":"1695702628745527","msg":"All operations failed","outTime":"1695702628746932"}
-                if( 'OM_ORDER_NOT_FOUND' in a or 'order not exists' in a
-                   or 'The order cannot be canceled' in a # Kucoin always so helpful
-                   or '"code":"40020' in a or '"code":-2011' in a
-                   or '"code":"40768"' in a or 'does not exist' in a
-                   ):
+            # coinex: order not exists (and that's all it says)
+                if( 'order not exists' in a or '"code":"40768"' in a ):
                     cls.print( ' * E: Limit order [', customID, '] not found' )
                 else:
                     print( ' * E: cancelLimitOrder:', e, type(e) )
