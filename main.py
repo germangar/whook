@@ -45,16 +45,6 @@ def dateString():
 def timeNow():
     return time.strftime("%H:%M:%S")
 
-def floor( number ):
-    return number // 1
-
-def ceil( number ):
-    return int(-(-number // 1))
-
-def truncate(number: float, digits: int) -> float:
-    pow10 = 10 ** digits
-    return number * pow10 // 1 / pow10
-
 def roundUpTick( value: float, tick: str ):
     if type(tick) is not str: tick = str(tick)
     if type(value) is not Decimal: value = Decimal( value )
@@ -1179,14 +1169,6 @@ def stringToValue( arg )->float:
     else:
         value = float(arg)
     return value
-
-# def is_json( j ):
-#     try:
-#         json.loads( j )
-#     except ValueError as e:
-#         return False
-#     return True
-
 
 def updateOrdersQueue():
     for account in accounts:
