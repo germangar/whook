@@ -1068,96 +1068,86 @@ class account_c:
             try:
                 response = cls.exchange.create_order( order.symbol, order.type, order.side, order.quantity, order.price, params )
                 #print( response )
-            
-            except ccxt.InsufficientFunds as e:
-                # KUCOIN: kucoinfutures Balance insufficient. The order would cost 304.7268292695.
-                # BITGET: bitget {"code":"40762","msg":"The order size is greater than the max open size","requestTime":1689179675919,"data":null}
-                # BITGET: {"code":"40754","msg":"balance not enough","requestTime":1689363604542,"data":null}
-                # bingx {"code":101204,"msg":"Insufficient margin","data":{}}
-                # phemex {"code":11082,"msg":"TE_CANNOT_COVER_ESTIMATE_ORDER_LOSS","data":null}
-                # phemex {"code":11001,"msg":"TE_NO_ENOUGH_AVAILABLE_BALANCE","data":null}
-                # bybit {"retCode":140007,"retMsg":"remark:order[1643476 23006bb4-630a-4917-af0d-5412aaa1c950] fix price failed for CannotAffordOrderCost.","result":{},"retExtInfo":{},"time":1690540657794}
-                # bybit {"retCode":110007,"retMsg":"Insufficient available balance","result":{},"retExtInfo":{},"
-                # binance "code":-2019,"msg":"Margin is insufficient."
-                # krakenfutures: createOrder failed due to insufficientAvailableFunds
-                # binance {"code":-2027,"msg":"Exceeded the maximum allowable position at current leverage."}
-                precision = cls.findPrecisionForSymbol( order.symbol )
-                # try first reducing it to our estimation of current balance
-                if( not order.reduced ):
-                    oldQuantity = order.quantity
-                    price = cls.fetchSellPrice(order.symbol) if( type == 'sell' ) else cls.fetchBuyPrice(order.symbol)
-                    available = cls.fetchAvailableBalance() * 0.985
-                    order.quantity = cls.contractsFromUSDT( order.symbol, available, price, order.leverage )
-                    order.reduced = True
-                    if( order.quantity < cls.findMinimumAmountForSymbol(order.symbol) ):
-                        cls.print( ' * E: Balance insufficient: Minimum contracts required:', cls.findMinimumAmountForSymbol(order.symbol), ' Cancelling')
-                        cls.ordersQueue.remove( order )
-                    else:
-                        cls.print( ' * E: Balance insufficient: Was', oldQuantity, 'Reducing to', order.quantity, "contracts")
-                        
-                elif( order.quantity > precision ):
-                    if( order.quantity < 20 and precision >= 1 ):
-                        cls.print( ' * E: Balance insufficient: Reducing by one contract')
-                        order.quantity -= precision
-                    else:
-                        order.quantity = roundDownTick( order.quantity * 0.95, precision )
+
+            except Exception as e:
+                a = e.args[0]
+                
+                if( isinstance(e, ccxt.InsufficientFunds) or '"code":"40762"' in a ):
+                    # KUCOIN: kucoinfutures Balance insufficient. The order would cost 304.7268292695.
+                    # BITGET: {"code":"40754","msg":"balance not enough","requestTime":1689363604542,"data":null}
+                    # bitget {"code":"40762","msg":"The order size is greater than the max open size","requestTime":1695925262092,"data":null} <class 'ccxt.base.errors.ExchangeError'>
+                    # bingx {"code":101204,"msg":"Insufficient margin","data":{}}
+                    # phemex {"code":11082,"msg":"TE_CANNOT_COVER_ESTIMATE_ORDER_LOSS","data":null}
+                    # phemex {"code":11001,"msg":"TE_NO_ENOUGH_AVAILABLE_BALANCE","data":null}
+                    # bybit {"retCode":140007,"retMsg":"remark:order[1643476 23006bb4-630a-4917-af0d-5412aaa1c950] fix price failed for CannotAffordOrderCost.","result":{},"retExtInfo":{},"time":1690540657794}
+                    # bybit {"retCode":110007,"retMsg":"Insufficient available balance","result":{},"retExtInfo":{},"
+                    # binance "code":-2019,"msg":"Margin is insufficient."
+                    # krakenfutures: createOrder failed due to insufficientAvailableFunds
+                    # binance {"code":-2027,"msg":"Exceeded the maximum allowable position at current leverage."}
+                    precision = cls.findPrecisionForSymbol( order.symbol )
+                    # try first reducing it to our estimation of current balance
+                    if( not order.reduced ):
+                        oldQuantity = order.quantity
+                        price = cls.fetchSellPrice(order.symbol) if( type == 'sell' ) else cls.fetchBuyPrice(order.symbol)
+                        available = cls.fetchAvailableBalance() * 0.985
+                        order.quantity = cls.contractsFromUSDT( order.symbol, available, price, order.leverage )
+                        order.reduced = True
                         if( order.quantity < cls.findMinimumAmountForSymbol(order.symbol) ):
-                            cls.print( ' * E: Balance insufficient: Cancelling' )
+                            cls.print( ' * E: Balance insufficient: Minimum contracts required:', cls.findMinimumAmountForSymbol(order.symbol), ' Cancelling')
                             cls.ordersQueue.remove( order )
                         else:
-                            cls.print( ' * E: Balance insufficient: Reducing by 5%')
+                            cls.print( ' * E: Balance insufficient: Was', oldQuantity, 'Reducing to', order.quantity, "contracts")
+                            
+                    elif( order.quantity > precision ):
+                        if( order.quantity < 20 and precision >= 1 ):
+                            cls.print( ' * E: Balance insufficient: Reducing by one contract')
+                            order.quantity -= precision
+                        else:
+                            order.quantity = roundDownTick( order.quantity * 0.95, precision )
+                            if( order.quantity < cls.findMinimumAmountForSymbol(order.symbol) ):
+                                cls.print( ' * E: Balance insufficient: Cancelling' )
+                                cls.ordersQueue.remove( order )
+                            else:
+                                cls.print( ' * E: Balance insufficient: Reducing by 5%')
 
-                else: # cancel the order
-                    cls.print( ' * E: Balance insufficient: Cancelling')
-                    cls.ordersQueue.remove( order )
+                    else: # cancel the order
+                        cls.print( ' * E: Balance insufficient: Cancelling')
+                        cls.ordersQueue.remove( order )
 
-                continue # back to the orders loop
-            except ccxt.InvalidOrder as e:
-                # ERROR Cancelling: okx {"code":"1","data":[{"clOrdId":"001","ordId":"","sCode":"51006","sMsg":"Order price is not within the price limit (Maximum buy price: 26,899.6; minimum sell price: 25,844.6)","tag":""}],"inTime":"1695698840518495","msg":"","outTime":"1695698840518723"}
-                a = e.args[0]
-                if 'Order price is not within' in a:
-                    d = json.loads(a.lstrip(cls.exchange.id + ' '))
-                    cls.print( ' * E:', d['data'][0].get('sMsg') )
-                    cls.ordersQueue.remove( order )
-                    break
-                elif 'invalidSize' in a:
-                    cls.print( ' * E: Order size invalid:', order.quantity, 'x'+str(order.leverage) )
-                    cls.ordersQueue.remove( order )
-                    break
-                elif '"retCode":20094' in a or '"code":-4015' in a or 'ID already exists' in a:
+                    continue # back to the orders loop
+
+
+                if( isinstance(e, ccxt.InvalidOrder) ):
+                    # ERROR Cancelling: okx {"code":"1","data":[{"clOrdId":"001","ordId":"","sCode":"51006","sMsg":"Order price is not within the price limit (Maximum buy price: 26,899.6; minimum sell price: 25,844.6)","tag":""}],"inTime":"1695698840518495","msg":"","outTime":"1695698840518723"}
+                    if 'Order price is not within' in a:
+                        d = json.loads(a.lstrip(cls.exchange.id + ' '))
+                        cls.print( ' * E:', d['data'][0].get('sMsg') )
+                        cls.ordersQueue.remove( order )
+                    elif 'invalidSize' in a:
+                        cls.print( ' * E: Order size invalid:', order.quantity, 'x'+str(order.leverage) )
+                        cls.ordersQueue.remove( order )
+                    elif '"retCode":20094' in a or '"code":-4015' in a or 'ID already exists' in a:
                         cls.print( ' * E: Cancelling Linmit order: ID [', order.customID, '] was used before' )
                         cls.ordersQueue.remove( order )
-                        break
-                else:
-                    # [bitget/bitget] bitget {"code":"45110","msg":"less than the minimum amount 5 USDT","requestTime":1689481837614,"data":null}
-                    # The deviation between your delegated price and the index price is greater than 20%, you can appropriately adjust your delegation price and try again
-                    cls.print( ' * E: Cancelling:', a, type(e) )
-                    cls.print( type(e))
-                    cls.ordersQueue.remove( order )
-                    break
-            except Exception as e:
-                for a in e.args:
-                    if 'Too Many Requests' in a or 'too many request' in a or 'service too busy' in a: 
-                        #set a bigger delay and try again
-                        order.delay += 0.5
-                        break
-                    # elif 'invalidSize' in a:
-                    #     cls.print( ' * Error. Order size invalid:', order.quantity, 'x'+str(order.leverage) )
-                    #     cls.ordersQueue.remove( order )
-                    #     break
-                    # bybit {"retCode":20094,"retMsg":"OrderLinkedID is duplicate","result":{},"retExtInfo":{},"time":1694985713343}
-                    # binance {"code":-4015,"msg":"Client order id is not valid."}
-                    # elif '"retCode":20094' in a or '"code":-4015' in a:
-                    #     cls.print( ' * Error Cancelling Linmit order: ID [', order.customID, '] was used before' )
-                    #     cls.ordersQueue.remove( order )
-                    #     break
                     else:
-                        # [bitget/bitget] bitget {"code":"45110","msg":"less than the minimum amount 5 USDT","requestTime":1689481837614,"data":null}
-                        # The deviation between your delegated price and the index price is greater than 20%, you can appropriately adjust your delegation price and try again
-                        cls.print( ' * ERROR Cancelling:', e, type(e) )
+                        cls.print( ' * E: Invalid Order. Cancelling', e )
                         cls.ordersQueue.remove( order )
-                        break
+                    
+                    continue # back to the orders loop
+
+                if 'Too Many Requests' in a or 'too many request' in a or 'service too busy' in a: 
+                    #set a bigger delay and try again
+                    order.delay += 0.5
+                    print( type(e) )
+                    continue
+                        
+
+                # [bitget/bitget] bitget {"code":"45110","msg":"less than the minimum amount 5 USDT","requestTime":1689481837614,"data":null}
+                # The deviation between your delegated price and the index price is greater than 20%, you can appropriately adjust your delegation price and try again     
+                cls.print( ' * E: Cancelling:', a, type(e) )
+                cls.ordersQueue.remove( order )
                 continue # back to the orders loop
+
 
             if( response.get('id') == None ):
                 cls.print( " * Order denied:", response['info'], "Cancelling" )
