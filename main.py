@@ -970,22 +970,16 @@ class account_c:
         try:
             response = cls.exchange.cancel_order( id, symbol, params )
 
-        except ccxt.OrderNotFound as e:
-            # phemex, okx, kraken, binancedemo 
-            cls.print( ' * E: Limit order [', customID, '] not found' )
-        except ccxt.BadRequest as e:
-            # 'ccxt.base.errors.BadRequest'> kucoinfutures The order cannot be canceled
-            cls.print( ' * E: Limit order [', customID, '] not found' )
-        except ccxt.InvalidOrder as e:
-            # 'ccxt.base.errors.InvalidOrder'> bybit {"retCode":110001,"retMsg":"Order does not exist","result":{}
-            cls.print( ' * E: Limit order [', customID, '] not found' )
         except Exception as e:
-            for a in e.args:
-            # coinex: order not exists (and that's all it says)
-                if( 'order not exists' in a or '"code":"40768"' in a ):
-                    cls.print( ' * E: Limit order [', customID, '] not found' )
-                else:
-                    print( ' * E: cancelLimitOrder:', e, type(e) )
+            a = e.args[0]
+            if( isinstance(e, ccxt.OrderNotFound) or isinstance(e, ccxt.BadRequest)
+                or 'order not exists' in a ):
+                # ccxt.OrderNotFound: phemex, okx, kraken, binancedemo, bybit
+                # ccxt.BadRequest:kucoinfutures The order cannot be canceled
+                # coinex: order not exists (and that's all it says)
+                cls.print( ' * E: Limit order [', customID, '] not found' )
+            else:
+                print( ' * E: cancelLimitOrder:', e, type(e) )
 
         else:
             cls.print( " * Linmit order [", customID, "] cancelled." )
