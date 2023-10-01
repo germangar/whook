@@ -61,6 +61,7 @@ Examples:<br>
 Notice: This is a short position. For a long position use a positive value. Same goes when the value is in USDT<br>
 The value of a contract differs from exchange to exchange. You have to check it in the exchange under contract information<br>
 Example of a position alert from a strategy in Tradingview: **myKucoinA {{ticker}} pos {{strategy.position_size}} x3**
+This alert is all you should really need for running 90% of the strategies in TV
 
 - **Sell command using base currency:**<br>
 [account_id] [symbol] [command] [value in USDT] [leverage] - **myKucoinA ETH/USDT sell 0.25 x3**<br>
