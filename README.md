@@ -142,7 +142,7 @@ The EXCHANGE field is self explanatory. Valid exchange names are:<br>
 - "**phemexdemo**" (for testnet)<br>
 - "**bingx**<br>
 
-There are also two optional keys: 'MARGIN_MODE' (isolated or cross) and 'SETTLE_COIN' for cases where you want to trade non-USDT pairs (or non-USD in the case of Kraken).
+There are also one optional key: 'SETTLE_COIN' for cases where you want to trade non-USDT pairs (or non-USD in the case of Kraken). Different settle coins can't be combined, tho. Whook will only use one at once.
 
 
 ### HOW TO HOST IN AWS ### 
