@@ -24,3 +24,6 @@ krakendemo.log
 Insomnia.Core-2023.2.2-portable.exe
 okxdemo.log
 fetch_all.py
+stuff/charts.py
+stuff/charts1.py
+stuff/ohlcv.csv
