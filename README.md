@@ -9,7 +9,7 @@ Whook only makes market orders and limit orders. Take profit and stop loss are n
 Whook only uses one-side mode. Hedge mode is not supported.<br>
 It's also always using isolated marging. However you should be able to change this relatively easy if you want to.
 
-You don't need to be a programmer to use Whook. All you need is to download the main.py file and follow the instructions below.
+You don't need to be a programmer nor know how to clone a repository to use Whook. All you need is to download the **main.py** file and follow the instructions below.
 
 ##### Disclaimer: This project is for my personal use. I'm not taking feature requests.
 
@@ -60,7 +60,8 @@ Examples:<br>
 [symbol] [command] [value in contracts] [leverage] [account_id] - **ETH/USDT position -500@ x3 myKucoinA**<br>
 Notice: This is a short position. For a long position use a positive value. Same goes when the value is in USDT<br>
 The value of a contract differs from exchange to exchange. You have to check it in the exchange under contract information<br>
-Example of a position alert from a strategy in Tradingview: myKucoinA {{ticker}} pos {{strategy.position_size}} x3
+Example of a position alert from a strategy in Tradingview: **myKucoinA {{ticker}} pos {{strategy.position_size}} x3**
+This alert is all you should really need for running 90% of the strategies in TV
 
 - **Sell command using base currency:**<br>
 [account_id] [symbol] [command] [value in USDT] [leverage] - **myKucoinA ETH/USDT sell 0.25 x3**<br>
@@ -101,7 +102,10 @@ With these you can already run the script, but it won't have access online. For 
 
 Example of an address: https://e579-139-47-50-49.ngrok-free.app/whook<br>
 
-- You can launch the script by double clicking main.py (as long as you enabled the PATH options at installing python).<br>
+- You can launch the script by double clicking main.py (as long as you enabled the PATH options at installing python). If for some reason Windows failed to associate .py files with python.exe you can create a .bat file inside the same direction as main.py with this inside<br>
+@echo off
+python.exe main.py
+pause
 
 
 ### CONFIGURATION - API KEYS ###
@@ -138,7 +142,7 @@ The EXCHANGE field is self explanatory. Valid exchange names are:<br>
 - "**phemexdemo**" (for testnet)<br>
 - "**bingx**<br>
 
-There are also two optional keys: 'MARGIN_MODE' (isolated or cross) and 'SETTLE_COIN' for cases where you want to trade non-USDT pairs (or non-USD in the case of Kraken).
+There are also one optional key: 'SETTLE_COIN' for cases where you want to trade non-USDT pairs (or non-USD in the case of Kraken). Different settle coins can't be combined, tho. Whook will only use one at once.
 
 
 ### HOW TO HOST IN AWS ### 
@@ -154,7 +158,6 @@ I'm not a linux user so I struggled to open the ports in the Linux virtual machi
 
 ### KNOWN BUGS ### 
 - Kraken: Whook is unable to set the margin mode. It will use whatever is set in the exchange for that symbol.
-- Kraken doesn't print the positions right. It's always showing isolated mode while it may not be it.
 - Kraken can't check leverage boundaries. If a order exceeds the maximum leverage the console may spam until the order times out.
 - BingX contracSize and precision seem to be either wrong or work in a different scale than the rest of exchanges. The USDT to contracts conversion is returning wrong values. BingX support is uncomplete and I don't think I'll complete it unless someone offers me access to a subaccount with a few USDT inside so I can test it.
 - Things will most likely go south if you have a position with a leverage and you order the same position with a different leverage. Some exchanges may take the leverage change as you trying to change the leverage of the current position but not changing the amount of contracts. The order will go through, but the resulting position will depend on the exchange. I'll try to handle it but it's not a big priority for me.
