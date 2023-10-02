@@ -642,10 +642,13 @@ class account_c:
         # Once it's converted to ccxt symbol format there is no
         # need to use this method again.
 
+        if( paircmd.endswith('.P' ) ):
+            paircmd = paircmd[:-2]
+
         # first let's check if the pair string contains
         # a backslash. If it does it's probably already a symbol
         if '/' not in paircmd and paircmd.endswith(cls.SETTLE_COIN):
-            paircmd = paircmd[:-4]
+            paircmd = paircmd[:-len(cls.SETTLE_COIN)]
             paircmd += '/' + cls.SETTLE_COIN + ':' + cls.SETTLE_COIN
 
         # but it also may not include the ':USDT' ending
