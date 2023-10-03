@@ -1390,7 +1390,7 @@ def parseAlert( data, account: account_c ):
     
     # position orders are absolute. Convert them to buy/sell order
     if( command == 'position' ):
-        if( pos == None ):
+        if( pos == None or pos.getKey('contracts') == None ):
             # it's just a straight up buy or sell
             if( quantity < 0 ):
                 command = 'sell'
@@ -1411,7 +1411,7 @@ def parseAlert( data, account: account_c ):
             quantity = abs(quantity)
         else:
             # we need to account for the old position
-            positionContracts = float(pos.getKey('contracts'))
+            positionContracts = pos.getKey('contracts')
             positionSide = pos.getKey( 'side' )
             if( positionSide == 'short' ):
                 positionContracts = -positionContracts
