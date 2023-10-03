@@ -1411,7 +1411,7 @@ def parseAlert( data, account: account_c ):
             quantity = abs(quantity)
         else:
             # we need to account for the old position
-            positionContracts = pos.getKey('contracts')
+            positionContracts = float(pos.getKey('contracts'))
             positionSide = pos.getKey( 'side' )
             if( positionSide == 'short' ):
                 positionContracts = -positionContracts
