@@ -138,7 +138,7 @@ The EXCHANGE field is self explanatory. Valid exchange names are:<br>
 - "**phemex**"<br>
 - "**phemexdemo**" (for testnet)<br>
 
-There is also one optional key: 'SETTLE_COIN' for cases where you want to trade non-USDT pairs (or non-USD in the case of Kraken). Different settle coins can't be combined, tho. Whook will only use one at once. If you want to trade in several settle coins you can't defined different accounts for each settle coin.
+There is also one optional key: 'SETTLE_COIN' for cases where you want to trade non-USDT pairs (or non-USD in the case of Kraken). Different settle coins can't be combined, tho. Whook will only use one at once per account. If you want to trade in several settle coins you can create an account for each settle coin.
 
 
 ### HOW TO HOST IN AWS ### 
