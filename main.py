@@ -962,6 +962,9 @@ class account_c:
         elif( cls.exchange.id == 'bybit' ):
             id = None
             params['orderLinkId'] = customID
+        elif( cls.exchange.id == 'bingx' ):
+            id = None
+            params['clientOrderID'] = customID
         else:
             params['clientOrderId'] = customID
 
@@ -1050,6 +1053,8 @@ class account_c:
                     params['cliOrdId'] = order.customID
                 elif( cls.exchange.id == 'coinex' ):
                     params['client_id'] = order.customID
+                elif( cls.exchange.id == 'bingx' ):
+                    params['clientOrderID'] = order.customID
                 else:
                     params['clientOrderId'] = order.customID
 
@@ -1128,10 +1133,11 @@ class account_c:
                     
                     continue # back to the orders loop
 
-                if 'Too Many Requests' in a or 'too many request' in a or 'service too busy' in a: 
+                # bingx {"code":101500,"msg":"The current system is busy, please try again later","data":{}} <class 'ccxt.base.errors.ExchangeError'>
+                if 'Too Many Requests' in a or 'too many request' in a or 'service too busy' in a or 'system is busy' in a: 
                     #set a bigger delay and try again
                     order.delay += 0.5
-                    print( type(e) )
+                    #print( type(e) )
                     continue
                         
 
