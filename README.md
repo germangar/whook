@@ -2,7 +2,7 @@
 
 WHOOK is a web hook for handling Tradingview Alerts to crypto exchanges in perpetual USDT futures.
 
-Whook prioritizes realiability over speed. If you're looking for high frequency trading Whook is not for you.
+Whook prioritizes reliability over speed. If you're looking for high frequency trading Whook is not for you.
 Whook will do everything it can to fullfill orders, including resending rejected orders until they time out (currently 40 seconds), reducing the quantity of the order when the balance is not enough and dividing the order in two at reversing positions when there's not enough balance for doing it at once.
 
 Whook only makes market orders and limit orders. Take profit and stop loss are not supported.<br>
@@ -17,12 +17,12 @@ Currently supported exchanges:
 - **Kucoin** futures
 - **Bitget** futures
 - **Coinex** futures
+- **Bingx**
 - **OKX** futures ( also its demo mode )
 - **Bybit** futures ( also [Bybit testnet](https://testnet.bybit.com) )
 - **Binance** futures ( also [Binance futures testnet](https://testnet.binancefuture.com) )
 - **Phemex** futures ( also [Phemex testnet](https://testnet.phemex.com) )
 - **Kraken** futures ( also [Kraken futures testnet](https://demo-futures.kraken.com) )
-- **Bingx**
 
 
 ### ALERT SYNTAX ###
@@ -87,16 +87,14 @@ It's possible to add comments inside the alert message. The comment must be in a
 
 ### HOW TO INSTALL AND RUN ###
 
-For a local install:
-
 ##### Windows:
 
-- Download and install python. During the installation make sure to *enable the system PATH option* and at the end of the installation *allow it to unlimit windows PATH length*: https://www.python.org/downloads/<br>
+- Download and install [python](https://www.python.org/downloads/). During the installation make sure to *enable the system PATH option* and at the end of the installation *allow it to unlimit windows PATH length* <br>
 - Open the windows cmd prompt (type cmd in the windows search at the taskbar). Install the required python modules by typing "pip install ccxt" and "pip install flask" in the cmd prompt.<br>
 
 With these you can already run the script, but it won't have access online. For giving it access to the internet I recommend to use:<br>
 
-- ngrok. Create a free ngrok account. Download the last version of ngrok and unzip it. In the ngrok website they provide an auth key, copy it. Launch the software and paste the auth code into the ngrok console (with the authcode ngrok will be able to stay open forever). Then type in the ngrok console: "ngrok http 80". This will create an internet address for your webhook. You have to add /whook at the end of it to comunicate with the Whook server.<br>
+- [ngrok](https://ngrok.com/download). Create a free ngrok account. Download the last version of ngrok and unzip it. In the ngrok website they provide an auth key, copy it. Launch the software and paste the auth code into the ngrok console (with the authcode ngrok will be able to stay open forever). Then type in the ngrok console: "ngrok http 80". This will create an internet address for your webhook. You have to add /whook at the end of it to comunicate with the Whook server.<br>
 
 Example of an address: https://e579-139-47-50-49.ngrok-free.app/whook<br>
 
@@ -128,6 +126,7 @@ The EXCHANGE field is self explanatory. Valid exchange names are:<br>
 - "**kucoinfutures**"<br>
 - "**bitget**"<br>
 - "**coinex**"<br>
+- "**bingx**<br>
 - "**okx**"<br>
 - "**okxdemo**"(for testnet)<br>
 - "**bybit**"<br>
@@ -138,9 +137,8 @@ The EXCHANGE field is self explanatory. Valid exchange names are:<br>
 - "**krakendemo**"(for testnet)<br>
 - "**phemex**"<br>
 - "**phemexdemo**" (for testnet)<br>
-- "**bingx**<br>
 
-There are also one optional key: 'SETTLE_COIN' for cases where you want to trade non-USDT pairs (or non-USD in the case of Kraken). Different settle coins can't be combined, tho. Whook will only use one at once.
+There are also one optional key: 'SETTLE_COIN' for cases where you want to trade non-USDT pairs (or non-USD in the case of Kraken). Different settle coins can't be combined, tho. Whook will only use one at once. If you want to trade in several settle coins you can't defined different accounts for each settle coin.
 
 
 ### HOW TO HOST IN AWS ### 
