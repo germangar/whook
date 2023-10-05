@@ -94,14 +94,15 @@ class position_c:
         string += ' * ' + cls.thisMarket['local']['marginMode'] + ':' + levStr
         string += ' * ' + cls.getKey('side')
         string += ' * ' + str( cls.getKey('contracts') )
-        string += ' * ' + "{:.4f}[$]".format(collateral)
+        if( initialMargin != 0 ) : string += ' * ' + "{:.4f}[$]".format(initialMargin)
+        elif( collateral != 0) : string += ' * ' + "{:.4f}[$]".format(collateral)
         string += ' * ' + "{:.2f}[$]".format(unrealizedPnl)
         string += ' * ' + "{:.2f}".format(p) + '%'
         return string
             
 
 class order_c:
-    def __init__(self, symbol = "", side = "", quantity = 0.0, leverage = 1, delay = 0, reverse = False) -> None:
+    def __init__(self, symbol = "", side = "", quantity = 0.0, leverage = 1, delay = 0, reverse = False, reduceOnly = False) -> None:
         self.symbol = symbol
         self.type = 'market'
         self.side = side
@@ -110,6 +111,7 @@ class order_c:
         self.price = None
         self.customID = None
         self.reduced = False
+        self.reduceOnly = True if leverage == 0 else reduceOnly
         self.id = ""
         self.delay = delay
         self.reverse = reverse
@@ -674,7 +676,7 @@ class account_c:
     
 
     def findPrecisionForSymbol(cls, symbol)->float:
-        if( cls.exchange.id == 'binance' ):
+        if( cls.exchange.id == 'binance' or cls.exchange.id == 'bingx' ):
             precision = 1.0 / (10.0 ** cls.markets[symbol]['precision'].get('amount'))
         else :
             precision = cls.markets[symbol]['precision'].get('amount')
@@ -760,6 +762,10 @@ class account_c:
             # HACK!! coinex doesn't have 'contracts'. The value comes in 'contractSize' and in info:{'amount'}
             if( cls.exchange.id == 'coinex' ):
                 thisPosition['contracts'] = float( thisPosition['info']['amount'] )
+
+            # HACK!! bingx doesn't have 'contracts'. The value comes in 'contractSize' and in info:{'amount'}
+            if( cls.exchange.id == 'bingx' ):
+                thisPosition['contracts'] = float( thisPosition['info']['positionAmt'] )
 
             # HACK!! bybit response doesn't contain a 'hedge' key, but it contains the information in the 'info' block
             if( cls.exchange.id == 'bybit' ):
@@ -1016,8 +1022,9 @@ class account_c:
             # set up exchange specific parameters
             params = {}
 
-            if( order.leverage == 0 ): # leverage 0 indicates we are closing a position
-                params['reduce'] = True
+            if( order.reduceOnly ):
+                params['reduce'] = True # FIXME Do we need this parameter?
+                params['reduceOnly'] = True
 
             if( cls.exchange.id == 'kucoinfutures' ): # Kucoin doesn't use setLeverage nor setMarginMode
                 params['leverage'] = max( order.leverage, 1 )
@@ -1029,7 +1036,10 @@ class account_c:
                     params['reverse'] = True
 
             if( cls.exchange.id == 'bingx' ):
-                params['positionSide'] = 'LONG' if order.side == 'buy' else 'SHORT'
+                if( order.reduceOnly ):
+                    params['positionSide'] = 'SHORT' if order.side == 'buy' else 'LONG'
+                else:
+                    params['positionSide'] = 'LONG' if order.side == 'buy' else 'SHORT'
             
             if( cls.exchange.id == 'krakenfutures' ):
                 params['leverage'] = max( order.leverage, 1 )
@@ -1054,12 +1064,12 @@ class account_c:
             # send the actual order
             try:
                 response = cls.exchange.create_order( order.symbol, order.type, order.side, order.quantity, order.price, params )
-                #print( response )
+                #pprint( response )
 
             except Exception as e:
                 a = e.args[0]
                 
-                if( isinstance(e, ccxt.InsufficientFunds) or '"code":"40762"' in a ):
+                if( isinstance(e, ccxt.InsufficientFunds) or '"code":"40762"' in a or 'code":101204' in a ):
                     # KUCOIN: kucoinfutures Balance insufficient. The order would cost 304.7268292695.
                     # BITGET: {"code":"40754","msg":"balance not enough","requestTime":1689363604542,"data":null}
                     # bitget {"code":"40762","msg":"The order size is greater than the max open size","requestTime":1695925262092,"data":null} <class 'ccxt.base.errors.ExchangeError'>
@@ -1434,12 +1444,28 @@ def parseAlert( data, account: account_c ):
             positionContracts = pos.getKey('contracts')
             positionSide = pos.getKey( 'side' )
             
+            # reversing the position
             if not isLimit and (( positionSide == 'long' and command == 'sell' ) or ( positionSide == 'short' and command == 'buy' )):
                 reverse = True
+
                 # do we need to divide these in 2 orders?
+
+                #FIXME!! This isn't right
                 if( account.exchange.id == 'bitget' and canDoContracts < account.findMinimumAmountForSymbol(symbol) ): #convert it to a reversal
                     print( "Quantity =", quantity, "PositionContracts=", positionContracts )
                     quantity = positionContracts
+
+                # bingx must make one order for close and a second one for the new position
+                if( account.exchange.id == 'bingx' ):
+                    if( quantity > positionContracts ):
+                        account.ordersQueue.append( order_c( symbol, command, positionContracts, 0 ) )
+                        quantity -= positionContracts
+                        account.ordersQueue.append( order_c( symbol, command, quantity, leverage ) )
+                        return
+                    
+                    account.ordersQueue.append( order_c( symbol, command, quantity, leverage, reduceOnly=True ) )
+                    return
+
 
                 if( quantity >= canDoContracts + positionContracts and not account.canFlipPosition ):
                     # we have to make sure each of the orders has the minimum order contracts
