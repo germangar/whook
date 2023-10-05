@@ -159,4 +159,5 @@ I'm not a linux user so I struggled to open the ports in the Linux virtual machi
 - Things will most likely go south if you have a position with a leverage and you order the same position with a different leverage. Some exchanges may take the leverage change as you trying to change the leverage of the current position but not changing the amount of contracts. The order will go through, but the resulting position will depend on the exchange. I'll try to handle it but it's not a big priority for me.
 
 ### TO DO LIST ### 
+- Add the option of closing positions by percentage.<br>
 - Create some form of past trades storage better than the logs. Usable for trading performance analytics.
