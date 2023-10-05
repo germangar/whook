@@ -907,7 +907,7 @@ class account_c:
             status = response.get('status')
             remaining = float( response.get('remaining') )
             price = response.get('price')
-            if verbose : print( status, '\nremaining:', remaining, 'price:', price )
+            if verbose : pprint( response )
 
             if( order.type == 'limit' ):
                 if( cls.exchange.id == 'coinex' ) : response['clientOrderId'] = response['info']['client_id'] #HACK!!
@@ -1035,12 +1035,7 @@ class account_c:
                 if( order.reverse ):
                     params['reverse'] = True
 
-            if( cls.exchange.id == 'bingx' ):
-                if( order.reduceOnly ):
-                    params['positionSide'] = 'SHORT' if order.side == 'buy' else 'LONG'
-                else:
-                    params['positionSide'] = 'LONG' if order.side == 'buy' else 'SHORT'
-            
+
             if( cls.exchange.id == 'krakenfutures' ):
                 params['leverage'] = max( order.leverage, 1 )
                 params['marginMode'] = MARGIN_MODE
