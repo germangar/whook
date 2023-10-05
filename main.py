@@ -164,7 +164,7 @@ class account_c:
                 'password': password,
                 "options": {'defaultType': 'swap', 'defaultMarginMode':MARGIN_MODE, 'adjustForTimeDifference' : True},
                 #"timeout": 60000,
-                "enableRateLimit": True
+                "enableRateLimit": False
                 })
         elif( exchange.lower() == 'coinex' ):
             self.exchange = ccxt.coinex({
