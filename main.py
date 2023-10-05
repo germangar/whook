@@ -144,7 +144,7 @@ class account_c:
                 'apiKey': apiKey,
                 'secret': secret,
                 'password': password,
-                #'enableRateLimit': True
+                'enableRateLimit': False,
                 "options": {'defaultType': 'swap', 'defaultMarginMode':MARGIN_MODE, 'adjustForTimeDifference' : True},
                 } )
         elif( exchange.lower() == 'bitget' ):
@@ -154,7 +154,7 @@ class account_c:
                 'password': password,
                 "options": {'defaultType': 'swap', 'defaultMarginMode':MARGIN_MODE, 'adjustForTimeDifference' : True},
                 #"timeout": 60000,
-                "enableRateLimit": True
+                "enableRateLimit": False
                 })
             self.canFlipPosition = True
         elif( exchange.lower() == 'bingx' ):
@@ -173,7 +173,7 @@ class account_c:
                 'password': password,
                 "options": {'defaultType': 'swap', 'defaultMarginMode':MARGIN_MODE, 'adjustForTimeDifference' : True},
                 #"timeout": 60000,
-                "enableRateLimit": True
+                "enableRateLimit": False
                 })
             self.canFlipPosition = False
         elif( exchange.lower() == 'phemex' ):
@@ -183,7 +183,7 @@ class account_c:
                 'password': password,
                 "options": {'defaultType': 'swap', 'defaultMarginMode':MARGIN_MODE, 'adjustForTimeDifference' : True},
                 #"timeout": 60000,
-                "enableRateLimit": True
+                "enableRateLimit": False
                 })
             ###HACK!! phemex does NOT have setMarginMode when the type is SWAP
             self.exchange.has['setMarginMode'] = False
@@ -194,7 +194,7 @@ class account_c:
                 'password': password,
                 "options": {'defaultType': 'swap', 'defaultMarginMode':MARGIN_MODE, 'adjustForTimeDifference' : True},
                 #"timeout": 60000,
-                "enableRateLimit": True
+                "enableRateLimit": False
                 })
             self.exchange.set_sandbox_mode( True )
             ###HACK!! phemex does NOT have setMarginMode when the type is SWAP
@@ -225,7 +225,7 @@ class account_c:
                 'password': password,
                 "options": {'defaultType': 'swap', 'adjustForTimeDifference' : True},
                 #"timeout": 60000,
-                "enableRateLimit": True
+                "enableRateLimit": False
                 })
         elif( exchange.lower() == 'binancedemo' ):
             self.exchange = ccxt.binance({
@@ -234,7 +234,7 @@ class account_c:
                 'password': password,
                 "options": {'defaultType': 'swap', 'adjustForTimeDifference' : True},
                 #"timeout": 60000,
-                "enableRateLimit": True
+                "enableRateLimit": False
                 })
             self.exchange.set_sandbox_mode( True )
         elif( exchange.lower() == 'krakenfutures' ):
@@ -1064,7 +1064,7 @@ class account_c:
             except Exception as e:
                 a = e.args[0]
                 
-                if( isinstance(e, ccxt.InsufficientFunds) or '"code":"40762"' in a or 'code":101204' in a ):
+                if( isinstance(e, ccxt.InsufficientFunds) or '"code":"40762"' in a or 'code":101204' in a or '"code":-4131' in a ):
                     # KUCOIN: kucoinfutures Balance insufficient. The order would cost 304.7268292695.
                     # BITGET: {"code":"40754","msg":"balance not enough","requestTime":1689363604542,"data":null}
                     # bitget {"code":"40762","msg":"The order size is greater than the max open size","requestTime":1695925262092,"data":null} <class 'ccxt.base.errors.ExchangeError'>
@@ -1076,6 +1076,7 @@ class account_c:
                     # binance "code":-2019,"msg":"Margin is insufficient."
                     # krakenfutures: createOrder failed due to insufficientAvailableFunds
                     # binance {"code":-2027,"msg":"Exceeded the maximum allowable position at current leverage."}
+                    # binance {"code":-4131,"msg":"The counterparty's best price does not meet the PERCENT_PRICE filter limit."} <class 'ccxt.base.errors.ExchangeError'>
                     precision = cls.findPrecisionForSymbol( order.symbol )
                     # try first reducing it to our estimation of current balance
                     if( not order.reduced ):
