@@ -2,7 +2,7 @@
 
 WHOOK is a web hook for handling Tradingview Alerts to crypto exchanges in perpetual USDT futures.
 
-Whook prioritizes realiability over speed. If you're looking for high frequency trading Whook is not for you.
+Whook prioritizes reliability over speed. If you're looking for high frequency trading Whook is not for you.
 Whook will do everything it can to fullfill orders, including resending rejected orders until they time out (currently 40 seconds), reducing the quantity of the order when the balance is not enough and dividing the order in two at reversing positions when there's not enough balance for doing it at once.
 
 Whook only makes market orders and limit orders. Take profit and stop loss are not supported.<br>
@@ -17,14 +17,12 @@ Currently supported exchanges:
 - **Kucoin** futures
 - **Bitget** futures
 - **Coinex** futures
+- **Bingx**
 - **OKX** futures ( also its demo mode )
 - **Bybit** futures ( also [Bybit testnet](https://testnet.bybit.com) )
 - **Binance** futures ( also [Binance futures testnet](https://testnet.binancefuture.com) )
 - **Phemex** futures ( also [Phemex testnet](https://testnet.phemex.com) )
 - **Kraken** futures ( also [Kraken futures testnet](https://demo-futures.kraken.com) )
-  
-Broken support:
-- Bingx: (updt: this may or may not be fixed) There is some problem with the conversion from USDT to contracts. Sending orders in contracts should work fine.
 
 
 ### ALERT SYNTAX ###
@@ -89,23 +87,21 @@ It's possible to add comments inside the alert message. The comment must be in a
 
 ### HOW TO INSTALL AND RUN ###
 
-For a local install:
-
 ##### Windows:
 
-- Download and install python. During the installation make sure to *enable the system PATH option* and at the end of the installation *allow it to unlimit windows PATH length*: https://www.python.org/downloads/<br>
+- Download and install [python](https://www.python.org/downloads/). During the installation make sure to *enable the system PATH option* and at the end of the installation *allow it to unlimit windows PATH length* <br>
 - Open the windows cmd prompt (type cmd in the windows search at the taskbar). Install the required python modules by typing "pip install ccxt" and "pip install flask" in the cmd prompt.<br>
 
 With these you can already run the script, but it won't have access online. For giving it access to the internet I recommend to use:<br>
 
-- ngrok. Create a free ngrok account. Download the last version of ngrok and unzip it. In the ngrok website they provide an auth key, copy it. Launch the software and paste the auth code into the ngrok console (with the authcode ngrok will be able to stay open forever). Then type in the ngrok console: "ngrok http 80". This will create an internet address for your webhook. You have to add /whook at the end of it to comunicate with the Whook server.<br>
+- [ngrok](https://ngrok.com/download). Create a free ngrok account. Download the last version of ngrok and unzip it. In the ngrok website they provide an auth key, copy it. Launch the software and paste the auth code into the ngrok console (with the authcode ngrok will be able to stay open forever). Then type in the ngrok console: "ngrok http 80". This will create an internet address for your webhook. You have to add /whook at the end of it to comunicate with the Whook server.<br>
 
 Example of an address: https://e579-139-47-50-49.ngrok-free.app/whook<br>
 
-- You can launch the script by double clicking main.py (as long as you enabled the PATH options at installing python). If for some reason Windows failed to associate .py files with python.exe you can create a .bat file inside the same direction as main.py with this inside<br>
-@echo off
-python.exe main.py
-pause
+- You can launch the script by double clicking main.py (as long as you enabled the PATH options at installing python). If for some reason Windows failed to associate .py files with python.exe you can create a .bat file inside the same directory as main.py with this inside<br>
+@echo off<br>
+python.exe main.py<br>
+pause<br>
 
 
 ### CONFIGURATION - API KEYS ###
@@ -130,6 +126,7 @@ The EXCHANGE field is self explanatory. Valid exchange names are:<br>
 - "**kucoinfutures**"<br>
 - "**bitget**"<br>
 - "**coinex**"<br>
+- "**bingx**<br>
 - "**okx**"<br>
 - "**okxdemo**"(for testnet)<br>
 - "**bybit**"<br>
@@ -140,9 +137,8 @@ The EXCHANGE field is self explanatory. Valid exchange names are:<br>
 - "**krakendemo**"(for testnet)<br>
 - "**phemex**"<br>
 - "**phemexdemo**" (for testnet)<br>
-- "**bingx**<br>
 
-There are also one optional key: 'SETTLE_COIN' for cases where you want to trade non-USDT pairs (or non-USD in the case of Kraken). Different settle coins can't be combined, tho. Whook will only use one at once.
+There is also one optional key: 'SETTLE_COIN' for cases where you want to trade non-USDT pairs (or non-USD in the case of Kraken). Different settle coins can't be combined, tho. Whook will only use one at once per account. If you want to trade in several settle coins you can create an account for each settle coin.
 
 
 ### HOW TO HOST IN AWS ### 
@@ -159,8 +155,11 @@ I'm not a linux user so I struggled to open the ports in the Linux virtual machi
 ### KNOWN BUGS ### 
 - Kraken: Whook is unable to set the margin mode. It will use whatever is set in the exchange for that symbol.
 - Kraken can't check leverage boundaries. If a order exceeds the maximum leverage the console may spam until the order times out.
-- BingX contracSize and precision seem to be either wrong or work in a different scale than the rest of exchanges. The USDT to contracts conversion is returning wrong values. BingX support is uncomplete and I don't think I'll complete it unless someone offers me access to a subaccount with a few USDT inside so I can test it.
+- BingX: Limit orders aren't setting the custom ID. They can only be cancelled using cancel:all
 - Things will most likely go south if you have a position with a leverage and you order the same position with a different leverage. Some exchanges may take the leverage change as you trying to change the leverage of the current position but not changing the amount of contracts. The order will go through, but the resulting position will depend on the exchange. I'll try to handle it but it's not a big priority for me.
 
 ### TO DO LIST ### 
+- Add the option of closing positions by percentage.<br>
+- Create a queue for Alerts too. Position alerts shouldn't be processed until the previous orders of the same symbol are fullfilled.
+- 'pricelock' a made up mode to attempt to place market orders as limit orders.
 - Create some form of past trades storage better than the logs. Usable for trading performance analytics.
