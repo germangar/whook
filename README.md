@@ -98,10 +98,10 @@ With these you can already run the script, but it won't have access online. For 
 
 Example of an address: https://e579-139-47-50-49.ngrok-free.app/whook<br>
 
-- You can launch the script by double clicking main.py (as long as you enabled the PATH options at installing python). If for some reason Windows failed to associate .py files with python.exe you can create a .bat file inside the same direction as main.py with this inside<br>
-@echo off
-python.exe main.py
-pause
+- You can launch the script by double clicking main.py (as long as you enabled the PATH options at installing python). If for some reason Windows failed to associate .py files with python.exe you can create a .bat file inside the same directory as main.py with this inside<br>
+@echo off<br>
+python.exe main.py<br>
+pause<br>
 
 
 ### CONFIGURATION - API KEYS ###
@@ -138,7 +138,7 @@ The EXCHANGE field is self explanatory. Valid exchange names are:<br>
 - "**phemex**"<br>
 - "**phemexdemo**" (for testnet)<br>
 
-There are also one optional key: 'SETTLE_COIN' for cases where you want to trade non-USDT pairs (or non-USD in the case of Kraken). Different settle coins can't be combined, tho. Whook will only use one at once. If you want to trade in several settle coins you can't defined different accounts for each settle coin.
+There is also one optional key: 'SETTLE_COIN' for cases where you want to trade non-USDT pairs (or non-USD in the case of Kraken). Different settle coins can't be combined, tho. Whook will only use one at once. If you want to trade in several settle coins you can't defined different accounts for each settle coin.
 
 
 ### HOW TO HOST IN AWS ### 
