@@ -42,10 +42,12 @@ Currently supported exchanges:
 
 * Quantities:<br>
 **[value]** - quantity in base currency. Just the number without any extra character. Base currency is the coin you're trading.<br>
-**[value]$** - quantity in USDT. No command associated. Just the number and the dollar sign.<br>
+**[value]$** - quantity in USDT. No command associated. Just the number and the dollar sign[1].<br>
 **[value]@** - quantity in contracts. No command associated. Just the number and the 'at' sign.<br>
 **[value]%** - quantity as percentage of total USDT balance. Use a negative value for shorts when using the position command.<br>
 All quantity types are interchangeable. All can be used with buy/sell/position commands.
+
+  ([1] I say USDT because it's the default settle coin, but it really refers to whichever settle coin the trading pair is based on)
 
 * Leverage:<br>
 **[value]x or x[value]** - The x identifies this value as the leverage.<br>
