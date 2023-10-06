@@ -750,7 +750,6 @@ class account_c:
 
         if v:
             tab = '  '
-            balance = cls.fetchBalance()
             if( numPositions > 0 ) : print('------------------------------')
             print( tab + str(numPositions), "positions found." )
 
@@ -1133,6 +1132,15 @@ class account_c:
                     
                     continue # back to the orders loop
 
+                #HACK!! this is the shadiest hack ever, but bingx is returning a 'server busy' response
+                # when we try to place a limit order with a clientOrderID that has been already used.
+                # Basically, he's ghosting us!! We may have found it super offensive.
+                if( cls.exchange.id == 'bingx' and order.type == 'limit' and '"code":101500' in a ):
+                    cls.print( ' * E: Cancelling Linmit order: ID [', order.customID, '] was used before' )
+                    cls.ordersQueue.remove( order )
+                    continue
+                    
+
                 # bingx {"code":101500,"msg":"The current system is busy, please try again later","data":{}} <class 'ccxt.base.errors.ExchangeError'>
                 if 'Too Many Requests' in a or 'too many request' in a or 'service too busy' in a or 'system is busy' in a: 
                     #set a bigger delay and try again
@@ -1164,7 +1172,8 @@ class account_c:
             if( (remaining == None or remaining == 0) and response.get('status') == 'closed' ):
                 cls.print( " * Order succesful:", order.symbol, order.side, order.quantity, str(order.leverage)+"x", "at price", response.get('price'), 'id', order.id )
                 cls.ordersQueue.remove( order )
-                cls.refreshPositions(True)
+                if (len(cls.ordersQueue) + len(cls.activeOrders) ) == 0:
+                    cls.refreshPositions(True)
                 continue
 
             if verbose : print( timeNow(), " * Activating Order", order.symbol, order.side, order.quantity, str(order.leverage)+'x', 'id', order.id )
