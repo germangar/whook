@@ -130,6 +130,7 @@ class account_c:
         self.positionslist = []
         self.ordersQueue = []
         self.activeOrders = []
+        self.latchedAlerts = []
         self.marginMode = 'cross' if ( marginMode != None and marginMode.lower() == 'cross') else MARGIN_MODE
         self.SETTLE_COIN = 'USDT' if( settleCoin == None ) else settleCoin
 
@@ -989,15 +990,9 @@ class account_c:
 
     def updateOrdersQueue(cls):
 
-        numOrders = len(cls.ordersQueue) + len(cls.activeOrders)
-
         # see if any active order was completed and delete it
         while cls.removeFirstCompletedOrder():
             continue
-
-        # if we just cleared the orders queue refresh the positions info
-        if( numOrders > 0 and (len(cls.ordersQueue) + len(cls.activeOrders)) == 0 ):
-            cls.refreshPositions(True)
 
         if( len(cls.ordersQueue) == 0 ):
             return
@@ -1144,10 +1139,10 @@ class account_c:
                 # bingx {"code":101500,"msg":"The current system is busy, please try again later","data":{}} <class 'ccxt.base.errors.ExchangeError'>
                 if 'Too Many Requests' in a or 'too many request' in a or 'service too busy' in a or 'system is busy' in a: 
                     #set a bigger delay and try again
-                    order.delay += 0.5
-                    #print( type(e) )
+                    order.delay += 1.0
+                    print( type(e) )
                     continue
-                        
+
 
                 # [bitget/bitget] bitget {"code":"45110","msg":"less than the minimum amount 5 USDT","requestTime":1689481837614,"data":null}
                 # The deviation between your delegated price and the index price is greater than 20%, you can appropriately adjust your delegation price and try again     
@@ -1172,8 +1167,6 @@ class account_c:
             if( (remaining == None or remaining == 0) and response.get('status') == 'closed' ):
                 cls.print( " * Order succesful:", order.symbol, order.side, order.quantity, str(order.leverage)+"x", "at price", response.get('price'), 'id', order.id )
                 cls.ordersQueue.remove( order )
-                if (len(cls.ordersQueue) + len(cls.activeOrders) ) == 0:
-                    cls.refreshPositions(True)
                 continue
 
             if verbose : print( timeNow(), " * Activating Order", order.symbol, order.side, order.quantity, str(order.leverage)+'x', 'id', order.id )
@@ -1194,9 +1187,37 @@ def stringToValue( arg )->float:
         value = float(arg)
     return value
 
+
 def updateOrdersQueue():
     for account in accounts:
+        numOrders = len(account.ordersQueue) + len(account.activeOrders)
         account.updateOrdersQueue()
+
+        # see if we have any alert pending to be proccessed
+        if( len(account.latchedAlerts) ):
+            positionsRefreshed = False
+            for alert in account.latchedAlerts:
+                busy = False
+                for order in account.activeOrders:
+                    if( order.symbol == alert['symbol'] ):
+                        busy = True
+                        break
+                for order in account.ordersQueue:
+                    if( order.symbol == alert['symbol'] ):
+                        busy = True
+                        break
+                
+                if( not busy ):
+                    if( not positionsRefreshed ):
+                        account.refreshPositions(False)
+                        positionsRefreshed = True
+
+                    proccessAlert( alert, account )
+                    account.latchedAlerts.remove( alert )
+
+        # if we just cleared the orders queue refresh the positions info
+        if( numOrders > 0 and (len(account.ordersQueue) + len(account.activeOrders)) == 0 ):
+            account.refreshPositions(True)
 
 
 def refreshPositions():
@@ -1220,133 +1241,93 @@ def generatePositionsString()->str:
     return msg
 
 
-def parseAlert( data, account: account_c ):
+def proccessAlert( alert:dict, account: account_c ):
 
     if( account == None ):
-        print( timeNow(), " * E: parseAlert called without an account" )
-        return
+        SystemError( 'FATAL ERROR: proccessAlert called without account' )
     
     account.print( ' ' )
-    account.print( " ALERT:", data )
+    account.print( " ALERT:", alert['alert'] )
     account.print('----------------------------')
 
-    symbol = "Invalid"
-    quantity = 0
-    leverage = 0
-    command = "Invalid"
-    isLimit = False
-    priceLimit = 0
-    isUSDT = False
-    isBaseCurrenty = False
-    isPercentage = False
-    reverse = False
-
-
-    # Informal plain text syntax
-    tokens = data.split()
-    for token in tokens:
-        if( account.findSymbolFromPairName(token) != None ): # GMXUSDTM, GMX/USDT:USDT and GMX/USDT are all acceptable formats
-            symbol = account.findSymbolFromPairName(token) 
-        elif ( token == account.accountName ):
-            pass
-        elif ( token[-1:]  == "$" ): # value in USDT
-            isUSDT = True
-            arg = token[:-1]
-            quantity = stringToValue( arg )
-        elif ( token[-1:]  == "@" ): # value in contracts
-            arg = token[:-1]
-            quantity = stringToValue( arg )
-        elif ( token[-1:]  == "%" ): # value in percentage of balance
-            arg = token[:-1]
-            quantity = stringToValue( arg )
-            isPercentage = True
-        elif ( token[:1]  == "-" ): # this is a minus symbol! What a bitch (value in base currency)
-            isBaseCurrenty = True
-            quantity = stringToValue( token )
-        elif ( stringToValue( token ) != None ):
-            isBaseCurrenty = True
-            arg = token
-            quantity = stringToValue(arg)
-        elif ( token[:1].lower()  == "x" ):
-            arg = token[1:]
-            leverage = int(stringToValue(arg))
-        elif ( token[-1:].lower()  == "x" ):
-            arg = token[:-1]
-            leverage = int(stringToValue(arg))
-        elif token.lower()  == 'long' or token.lower() == "buy":
-            command = 'buy'
-        elif token.lower()  == 'short' or token.lower() == "sell":
-            command = 'sell'
-        elif token.lower()  == 'close':
-            command = 'close'
-        elif token.lower()  == 'position' or token.lower()  == 'pos':
-            command = 'position'
-        elif ( token[:5].lower()  == "limit" ):
-            v = token.split(':')
-            if( len(v) != 3 ):
-                account.print( " * E: Limit command must be formatted as 'limit:customID:price' ")
-                return
-            else:
-                isLimit = True
-                customID = v[1]
-                if( len(customID) < 2 or len(customID) > 30 ):
-                    account.print( " E: customID must be longer than 2 characters and shorter than 30' ")
-                    return
-                priceLimit = stringToValue(v[2])
-            if( account.exchange.id == 'coinex' and not customID.isdigit() ):
-                account.print( " * E: Coinex only accepts numeric customID")
-                return
-
-        elif ( token[:6].lower()  == "cancel" ):
-            v = token.split(':')
-            if( len(v) != 2 ):
-                account.print( " * E: Cancel command must be formatted as 'cancel:customID' ")
-                return
-            command = 'cancel'
-            customID = v[1]
-            if( len(customID) < 2 or len(customID) > 30 ):
-                account.print( " * E: customID must be longer than 2 characters and shorter than 30' ")
-                return
-            if( account.exchange.id == 'coinex' and not customID.isdigit() ):
-                account.print( " * E: Coinex only accepts numeric customID' ")
-                return
-    
-
-    # validate the commands
-    if( symbol == "Invalid"):
-        account.print( " * E: Couldn't find symbol" )
-        return
-    if( command == "Invalid" ):
-        account.print( " * E: Invalid Order: Missing command" )
-        return
-    if( quantity == None ):
-        account.print( " * E: Invalid quantity value" )
-        return
-    if( isLimit and command != 'buy' and command != 'sell' ):
-        account.print( " * E: Limit orders can only be used with buy/sell commands" )
-        return
-    if( quantity <= 0 and command == 'buy' ):
-        account.print( " * E: Invalid Order: Buy must have a positive amount" )
-        return
-    if( quantity <= 0 and command == 'sell' ):
-        if( quantity < 0 ):
-            quantity = abs(quantity) #be flexible with sell having a negative amount
-        else:
-            account.print( " * E: Invalid Order: Sell must have an amount" )
-            return
-    
-
-    #time to put the order on the queue
-    
+    # This is our first communication with the server, and (afaik) it will only fail when the server is not available.
+    # so we use it as a server availability check as well as for finding the available balance
     try:
         available = account.fetchAvailableBalance() * 0.985
     except Exception as e:
-        # This is our first communication with the server, and (afaik) it will only fail when the server is not available.
-        # I'm still unsure if I should create a queue to retry alerts received while the server was down. By now
-        # it will fail to place this order. It's very unlikely to happen, but it has happened.
         # ccxt.base.errors.ExchangeError: Service is not available during funding fee settlement. Please try again later.
         account.print( " * E: Order cancelled. Couldn't reach the server:\n", e, type(e) )
         return
+
+    isLimit = False
+    priceLimit = 0
+    customID = None
+    reverse = False
+
+    if( alert['command'] == None ):
+        account.print( " * E: Invalid Order: Missing command" )
+        return
+    
+    if( alert['command'] == 'buy' or alert['command'] == 'sell' or alert['command'] == 'position' ):
+        if( alert['quantity'] == None ):
+            account.print( " * E: Invalid quantity value" )
+            return
+        if( alert['quantity'] < 0 and alert['command'] == 'buy' ):
+            account.print( " * E: Invalid Order: Buy must have a positive amount" )
+            return
+        if( alert['quantity'] == 0 and alert['command'] != 'position' ):
+            account.print( " * E: Invalid Order amount:", alert['quantity'] )
+            return
+    
+    if( alert['limitToken'] and alert['command'] != 'buy' and alert['command'] != 'sell' ):
+        account.print( " * E: Limit orders can only be used with buy/sell commands" )
+        return
+    
+    if ( alert['command']  == "cancel" ):
+        v = alert['cancelToken'].split(':')
+        if( len(v) != 2 ):
+            account.print( " * E: Cancel command must be formatted as 'cancel:customID' ")
+            return
+        customID = v[1]
+        if( len(customID) < 2 or len(customID) > 30 ):
+            account.print( " * E: customID must be longer than 2 characters and shorter than 30' ")
+            return
+        if( account.exchange.id == 'coinex' and not customID.isdigit() ):
+            account.print( " * E: Coinex only accepts numeric customID' ")
+            return
+        
+    if ( alert['limitToken'] != None ):
+        v = alert['limitToken'].split(':')
+        if( len(v) != 3 ):
+            account.print( " * E: Limit command must be formatted as 'limit:customID:price' ")
+            return
+        else:
+            isLimit = True
+            customID = v[1]
+            if( len(customID) < 2 or len(customID) > 30 ):
+                account.print( " E: customID must be longer than 2 characters and shorter than 30' ")
+                return
+            priceLimit = stringToValue(v[2])
+        if( account.exchange.id == 'coinex' and not customID.isdigit() ):
+            account.print( " * E: Coinex only accepts numeric customID")
+            return
+    
+    if( alert['command'] == 'sell' and alert['quantity'] < 0 ): # be flexible with sell having a negative amount
+        alert['quantity'] = abs(alert['quantity'])
+
+    #
+    # TEMP: convert to the old vars. I'll change it later (maybe)
+    #
+    symbol = alert['symbol']
+    command = alert['command']
+    quantity = alert['quantity']
+    leverage = alert['leverage']
+    isUSDT = alert['isUSDT']
+    isBaseCurrenty = alert['isBaseCurrency']
+    isPercentage = alert['isPercentage']
+
+
+    #time to put the order on the queue
     
     # No point in putting cancel orders in the queue. Just do it and leave.
     if( command == 'cancel' ):
@@ -1514,6 +1495,82 @@ def parseAlert( data, account: account_c ):
     account.print( " * W: Something went wrong. No order was placed")
 
 
+def parseAlert( data, account: account_c ):
+
+    if( account == None ):
+        print( timeNow(), " * E: parseAlert called without an account" )
+        return
+    
+    alert = {
+        'symbol': None,
+        'command': None,
+        'quantity': None,
+        'leverage': None,
+        'isUSDT': False,
+        'isBaseCurrency': False,
+        'isPercentage': False,
+        'limitToken': None,
+        'cancelToken': None,
+        'alert': data
+    }
+
+    # Informal plain text syntax
+    tokens = data.split()
+    for token in tokens:
+        if( account.findSymbolFromPairName(token) != None ): # GMXUSDTM, GMX/USDT:USDT and GMX/USDT are all acceptable formats
+            alert['symbol'] = account.findSymbolFromPairName(token) 
+        elif ( token == account.accountName ):
+            pass
+        elif ( token[-1:]  == "$" ): # value in USDT
+            alert['isUSDT'] = True
+            arg = token[:-1]
+            alert['quantity'] = stringToValue( arg )
+        elif ( token[-1:]  == "@" ): # value in contracts
+            arg = token[:-1]
+            alert['quantity'] = stringToValue( arg )
+        elif ( token[-1:]  == "%" ): # value in percentage of balance
+            arg = token[:-1]
+            alert['quantity'] = stringToValue( arg )
+            alert['isPercentage'] = True
+        elif ( token[:1]  == "-" ): # this is a minus symbol! What a bitch (value in base currency)
+            alert['isBaseCurrenty'] = True
+            alert['quantity'] = stringToValue( token )
+        elif ( stringToValue( token ) != None ):
+            alert['isBaseCurrenty'] = True
+            arg = token
+            alert['quantity'] = stringToValue(arg)
+        elif ( token[:1].lower()  == "x" ):
+            arg = token[1:]
+            alert['leverage'] = int(stringToValue(arg))
+        elif ( token[-1:].lower()  == "x" ):
+            arg = token[:-1]
+            alert['leverage'] = int(stringToValue(arg))
+        elif token.lower()  == 'long' or token.lower() == "buy":
+            alert['command'] = 'buy'
+        elif token.lower()  == 'short' or token.lower() == "sell":
+            alert['command'] = 'sell'
+        elif token.lower()  == 'close':
+            alert['command'] = 'close'
+        elif token.lower()  == 'position' or token.lower()  == 'pos':
+            alert['command'] = 'position'
+        elif ( token[:5].lower()  == "limit" ):
+            alert['limitToken'] = token # we validate it at processing
+        elif ( token[:6].lower()  == "cancel" ):
+            alert['cancelToken'] = token # we validate it at processing
+            alert['command'] = 'cancel'
+    
+    # as long as we have a valid symbol and an account we store it for processing
+    if( alert['symbol'] == None ):
+        account.print( ' ' )
+        account.print( " ALERT:", data )
+        account.print('----------------------------')
+        account.print( " * E: Couldn't find symbol" )
+        return None
+    
+    if verbose : print( alert )
+    return alert
+
+
 
 def Alert( data ):
 
@@ -1534,11 +1591,31 @@ def Alert( data ):
                 if( token == a.accountName ):
                     account = a
                     break
-        if( account == None ):
+        if( account == None ): 
             print( timeNow(), ' * E: Account ID not found. ALERT:', line )
             continue
 
-        parseAlert( line.replace('\n', ''), account )
+        alert = parseAlert( line.replace('\n', ''), account )
+        if( alert == None ) : 
+            continue
+
+        # check if the alert can be proccessed inmediately
+        busy = False
+        for o in account.activeOrders:
+            if( o.symbol == alert['symbol'] ):
+                busy = True
+                break
+        for o in account.ordersQueue:
+            if( o.symbol == alert['symbol'] ):
+                busy = True
+                break
+        
+        if( not busy ):
+            proccessAlert( alert, account )
+            continue
+        
+        # delay the alert proccessing
+        account.latchedAlerts.append( alert )
 
 
 
