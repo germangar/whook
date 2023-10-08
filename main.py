@@ -1533,10 +1533,10 @@ def parseAlert( data, account: account_c ):
             alert['quantity'] = stringToValue( arg )
             alert['isPercentage'] = True
         elif ( token[:1]  == "-" ): # this is a minus symbol! What a bitch (value in base currency)
-            alert['isBaseCurrenty'] = True
+            alert['isBaseCurrency'] = True
             alert['quantity'] = stringToValue( token )
         elif ( stringToValue( token ) != None ):
-            alert['isBaseCurrenty'] = True
+            alert['isBaseCurrency'] = True
             arg = token
             alert['quantity'] = stringToValue(arg)
         elif ( token[:1].lower()  == "x" ):
