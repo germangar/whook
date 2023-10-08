@@ -1505,7 +1505,7 @@ def parseAlert( data, account: account_c ):
         'symbol': None,
         'command': None,
         'quantity': None,
-        'leverage': None,
+        'leverage': 0,
         'isUSDT': False,
         'isBaseCurrency': False,
         'isPercentage': False,
