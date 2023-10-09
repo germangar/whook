@@ -1021,7 +1021,8 @@ class account_c:
 
             if( order.reduceOnly ):
                 params['reduce'] = True # FIXME Do we need this parameter?
-                params['reduceOnly'] = True
+                if( cls.exchange.id != 'coinex' ): # coinex interprets reduceOnly as being in hedge mode. Skip the problem by now
+                    params['reduceOnly'] = True
 
             if( cls.exchange.id == 'kucoinfutures' ): # Kucoin doesn't use setLeverage nor setMarginMode
                 params['leverage'] = max( order.leverage, 1 )
