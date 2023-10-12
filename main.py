@@ -760,10 +760,11 @@ class account_c:
             symbol = thisPosition.get('symbol')
 
             # HACK!! coinex doesn't have 'contracts'. The value comes in 'contractSize' and in info:{'amount'}
+            # reminder: Version 4.1.11 of ccxt fixes this. I'll keep it by now, but should remove it later.
             if( cls.exchange.id == 'coinex' ):
                 thisPosition['contracts'] = float( thisPosition['info']['amount'] )
 
-            # HACK!! bingx doesn't have 'contracts'. The value comes in 'contractSize' and in info:{'amount'}
+            # HACK!! bingx doesn't have 'contracts'. The value comes in 'contractSize' and in info:{'positionAmt'}
             # reminder: Version 4.1.10 of ccxt fixes this. I'll keep it by now, but should remove it later.
             if( cls.exchange.id == 'bingx' ):
                 thisPosition['contracts'] = float( thisPosition['info']['positionAmt'] )
