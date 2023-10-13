@@ -1635,7 +1635,7 @@ try:
         accounts_file.close()
 except FileNotFoundError:
     with open('accounts.json', 'x') as f:
-        f.write( '[\n\t{\n\t\t"ACCOUNT_ID":"your_account_name", \n\t\t"EXCHANGE":"kucoinfutures", \n\t\t"API_KEY":"your_api_key", \n\t\t"SECRET_KEY":"your_secret_key", \n\t\t"PASSWORD":"your_API_password"\n\t}\n]' )
+        f.write( '[\n\t{\n\t\t"ACCOUNT_ID":"your_account_name", \n\t\t"EXCHANGE":"exchange_name", \n\t\t"API_KEY":"your_api_key", \n\t\t"SECRET_KEY":"your_secret_key", \n\t\t"PASSWORD":"your_API_password"\n\t}\n]' )
         f.close()
     print( "File 'accounts.json' not found. Template created. Please fill your API Keys into the file and try again")
     print( "Exiting." )
