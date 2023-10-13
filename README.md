@@ -111,7 +111,7 @@ When you first launch the script it will create an accounts.json file in the scr
 [<br>
 &emsp;	{<br>
 &emsp;&emsp;		"ACCOUNT_ID":"your_account_name", <br>
-&emsp;&emsp;		"EXCHANGE":"kucoinfutures", <br>
+&emsp;&emsp;		"EXCHANGE":"exchange_name", <br>
 &emsp;&emsp;		"API_KEY":"your_api_key", <br>
 &emsp;&emsp;		"SECRET_KEY":"your_secret_key", <br>
 &emsp;&emsp;		"PASSWORD":"your_API_password"<br>
