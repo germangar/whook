@@ -160,6 +160,5 @@ I'm not a linux user so I struggled to open the ports in the Linux virtual machi
 
 ### TO DO LIST ### 
 - Add the option of closing positions by percentage.<br>
-- Create a queue for Alerts too. Position alerts shouldn't be processed until the previous orders of the same symbol are fullfilled.
 - 'pricelock' a made up mode to attempt to place market orders as limit orders.
 - Create some form of past trades storage better than the logs. Usable for trading performance analytics.
