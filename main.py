@@ -1132,7 +1132,7 @@ class account_c:
 
                 #HACK!! this is the shadiest hack ever, but bingx is returning a 'server busy' response
                 # when we try to place a limit order with a clientOrderID that has been already used.
-                # Basically, he's ghosting us!! We may have found it super offensive.
+                # Basically, he's ghosting us!! It may have found it super offensive.
                 if( cls.exchange.id == 'bingx' and order.type == 'limit' and '"code":101500' in a ):
                     cls.print( ' * E: Cancelling Linmit order: ID [', order.customID, '] was used before' )
                     cls.ordersQueue.remove( order )
@@ -1441,14 +1441,18 @@ def proccessAlert( alert:dict, account: account_c ):
             
             # reversing the position
             if not isLimit and (( positionSide == 'long' and command == 'sell' ) or ( positionSide == 'short' and command == 'buy' )):
-                reverse = True
 
                 # do we need to divide these in 2 orders?
 
-                #FIXME!! This isn't right
-                if( account.exchange.id == 'bitget' and canDoContracts < account.findMinimumAmountForSymbol(symbol) ): #convert it to a reversal
-                    print( "Quantity =", quantity, "PositionContracts=", positionContracts )
-                    quantity = positionContracts
+                # on bitget try to use the position reverse feature
+                if( account.exchange.id == 'bitget' ):
+                    if( quantity >= positionContracts * 2 and leverage == account.markets[symbol]['local']['leverage'] ):
+                        account.ordersQueue.append( order_c( symbol, command, positionContracts, leverage, reverse=True ) )
+                        quantity -= positionContracts * 2
+                        if( quantity > minOrder ):
+                            account.ordersQueue.append( order_c( symbol, command, quantity, leverage ) )
+                        return
+                        # fall throught with the rest of contracts
 
                 # bingx must make one order for close and a second one for the new position
                 if( account.exchange.id == 'bingx' ):
