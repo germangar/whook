@@ -1342,7 +1342,17 @@ class account_c:
                         
                         cls.ordersQueue.append( order_c( symbol, command, quantity, leverage, reduceOnly=True ) )
                         return
-
+                    
+                    # FIXME: Bybit takes the fees on top of the order which makes it fail with insuficcient
+                    # balance when we try to order all the balance at once, which creates complications
+                    # when reducing a reveral order. This is a temporary way to make it work, but 
+                    # we should really calculate the fees
+                    if( cls.exchange.id == 'bybit' and quantity > positionContracts ):
+                        cls.ordersQueue.append( order_c( symbol, command, positionContracts, 0 ) )
+                        quantity -= positionContracts
+                        if( quantity > minOrder ):
+                            cls.ordersQueue.append( order_c( symbol, command, quantity, leverage ) )
+                        return
 
                     if( quantity >= canDoContracts + positionContracts and not cls.canFlipPosition ):
                         # we have to make sure each of the orders has the minimum order contracts
