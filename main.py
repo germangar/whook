@@ -1176,6 +1176,210 @@ class account_c:
             cls.activeOrders.append( order )
             cls.ordersQueue.remove( order )
 
+    
+    def proccessAlert( cls, alert:dict ):
+
+        cls.print( ' ' )
+        cls.print( " ALERT:", alert['alert'] )
+        cls.print('----------------------------')
+
+        # This is our first communication with the server, and (afaik) it will only fail when the server is not available.
+        # so we use it as a server availability check as well as for finding the available balance
+        try:
+            available = cls.fetchAvailableBalance() * 0.985
+        except Exception as e:
+            # ccxt.base.errors.ExchangeError: Service is not available during funding fee settlement. Please try again later.
+            cls.print( " * E: Order cancelled. Couldn't reach the server:\n", e, type(e) )
+            return
+
+        #
+        # TEMP: convert to the old vars. I'll change it later (maybe)
+        #
+        symbol = alert['symbol']
+        command = alert['command']
+        quantity = alert['quantity']
+        leverage = alert['leverage']
+        isUSDT = alert['isUSDT']
+        isBaseCurrenty = alert['isBaseCurrency']
+        isPercentage = alert['isPercentage']
+        priceLimit = alert['priceLimit']
+        customID = alert['customID']
+        reverse = False
+        isLimit = True if priceLimit > 0.0 else False
+
+
+        #time to put the order on the queue
+        
+        # No point in putting cancel orders in the queue. Just do it and leave.
+        if( command == 'cancel' ):
+            cls.cancelLimitOrder( symbol, customID )
+            return
+        
+        # bybit is too slow at updating positions after an order is made, so make sure they're updated
+        if( cls.exchange.id == 'bybit' and (command == 'position' or command == 'close') ):
+            cls.refreshPositions( False )
+
+        minOrder = cls.findMinimumAmountForSymbol(symbol)
+        leverage = cls.verifyLeverageRange( symbol, leverage )
+
+        # quantity is a percentage of the USDT balance
+        if( isPercentage ):
+            quantity = min( max( quantity, -100.0 ), 100.0 )
+            balance = cls.fetchBalance()
+            if verbose : print( 'PERCENTAGE: ' + str(quantity) + '% =', str( balance['total'] * quantity * 0.01) + '$' )
+            quantity = balance['total'] * quantity * 0.01
+            isUSDT = True
+        
+        # convert quantity to concracts if needed
+        if( (isUSDT or isBaseCurrenty) and quantity != 0.0 ) :
+            # We don't know for sure yet if it's a buy or a sell, so we average
+            oldQuantity = quantity
+            try:
+                price = cls.fetchAveragePrice(symbol)
+                
+            except ccxt.ExchangeError as e:
+                cls.print( " * E: parseAlert->fetchAveragePrice:", e )
+                return
+            except ValueError as e:
+                cls.print( " * E: Cancelling:", e, type(e) )
+                return
+                
+            coin_name = cls.markets[symbol]['quote']
+            if( isBaseCurrenty ) :
+                quantity *= price
+                coin_name = cls.markets[symbol]['base']
+
+            quantity = cls.contractsFromUSDT( symbol, quantity, price, leverage )
+            if verbose : print( "   CONVERTING (x"+str(leverage)+")", oldQuantity, coin_name, '==>', quantity, "contracts" )
+            if( abs(quantity) < minOrder ):
+                cls.print( timeNow(), " * E: Order too small:", quantity, "Minimum required:", minOrder )
+                return
+
+        # check for a existing position
+        pos = cls.getPositionBySymbol( symbol )
+
+        if( command == 'close' or (command == 'position' and quantity == 0) ):
+            if pos == None:
+                cls.print( timeNow(), " * 'Close", symbol, "' No position found" )
+                return
+            positionContracts = pos.getKey('contracts')
+            positionSide = pos.getKey( 'side' )
+            if( positionSide == 'long' ):
+                cls.ordersQueue.append( order_c( symbol, 'sell', positionContracts, 0 ) )
+            else: 
+                cls.ordersQueue.append( order_c( symbol, 'buy', positionContracts, 0 ) )
+
+            return
+        
+        # position orders are absolute. Convert them to buy/sell order
+        if( command == 'position' ):
+            if( pos == None or pos.getKey('contracts') == None ):
+                # it's just a straight up buy or sell
+                if( quantity < 0 ):
+                    command = 'sell'
+                else:
+                    command = 'buy'
+                quantity = abs(quantity)
+            elif( cls.markets[symbol]['local']['marginMode'] != MARGIN_MODE and cls.exchange.has['setMarginMode'] ):
+                # to change marginMode we need to close the old position first
+                if( pos.getKey('side') == 'long' ):
+                    cls.ordersQueue.append( order_c( symbol, 'sell', pos.getKey('contracts'), 0 ) )
+                else: 
+                    cls.ordersQueue.append( order_c( symbol, 'buy', pos.getKey('contracts'), 0 ) )
+                # Then create the order for the new position
+                if( quantity < 0 ):
+                    command = 'sell'
+                else:
+                    command = 'buy'
+                quantity = abs(quantity)
+            else:
+                # we need to account for the old position
+                positionContracts = pos.getKey('contracts')
+                positionSide = pos.getKey( 'side' )
+                if( positionSide == 'short' ):
+                    positionContracts = -positionContracts
+
+                command = 'sell' if positionContracts > quantity else 'buy'
+                quantity = abs( quantity - positionContracts )
+                if( quantity < minOrder ):
+                    cls.print( " * Order completed: Request matched current position")
+                    return
+            # fall through
+
+
+        if( command == 'buy' or command == 'sell'):
+
+            # fetch available balance and price
+            price = cls.fetchSellPrice(symbol) if( command == 'sell' ) else cls.fetchBuyPrice(symbol)
+            canDoContracts = cls.contractsFromUSDT( symbol, available, price, leverage )
+
+            if( pos != None ):
+                positionContracts = pos.getKey('contracts')
+                positionSide = pos.getKey( 'side' )
+                
+                # reversing the position
+                if not isLimit and (( positionSide == 'long' and command == 'sell' ) or ( positionSide == 'short' and command == 'buy' )):
+
+                    # do we need to divide these in 2 orders?
+
+                    # on bitget try to use the position reverse feature
+                    if( cls.exchange.id == 'bitget' ):
+                        if( quantity >= positionContracts * 2 and leverage == cls.markets[symbol]['local']['leverage'] ):
+                            cls.ordersQueue.append( order_c( symbol, command, positionContracts, leverage, reverse=True ) )
+                            quantity -= positionContracts * 2
+                            if( quantity > minOrder ):
+                                cls.ordersQueue.append( order_c( symbol, command, quantity, leverage ) )
+                            return
+                            # fall throught with the rest of contracts
+
+                    # bingx must make one order for close and a second one for the new position
+                    if( cls.exchange.id == 'bingx' ):
+                        if( quantity > positionContracts ):
+                            cls.ordersQueue.append( order_c( symbol, command, positionContracts, 0 ) )
+                            quantity -= positionContracts
+                            cls.ordersQueue.append( order_c( symbol, command, quantity, leverage ) )
+                            return
+                        
+                        cls.ordersQueue.append( order_c( symbol, command, quantity, leverage, reduceOnly=True ) )
+                        return
+
+
+                    if( quantity >= canDoContracts + positionContracts and not cls.canFlipPosition ):
+                        # we have to make sure each of the orders has the minimum order contracts
+                        order1 = canDoContracts + positionContracts
+                        order2 = quantity - (canDoContracts + positionContracts)
+                        if( order2 < minOrder ):
+                            diff = minOrder - order2
+                            if( order1 > minOrder + diff ):
+                                order1 -= diff
+
+                        # first order is the contracts in the position and the contracs we can afford with the liquidity
+                        cls.ordersQueue.append( order_c( symbol, command, order1, leverage ) )
+
+                        # second order is whatever we can afford with the former position contracts + the change
+                        quantity -= order1
+                        if( quantity >= minOrder ): #we are done (should never happen)
+                            cls.ordersQueue.append( order_c( symbol, command, quantity, leverage, 1.0 ) )
+
+                        return
+                # fall through
+
+            if( quantity < minOrder ):
+                cls.print( timeNow(), " * E: Order too small:", quantity, "Minimum required:", minOrder )
+                return
+
+            order = order_c( symbol, command, quantity, leverage, reverse = reverse )
+            if( isLimit ):
+                order.type = 'limit'
+                order.customID = customID
+                order.price = priceLimit
+
+            cls.ordersQueue.append( order )
+            return
+
+        cls.print( " * W: Something went wrong. No order was placed")
+
+
 accounts = []
 
 
@@ -1215,7 +1419,7 @@ def updateOrdersQueue():
                         account.refreshPositions(False)
                         positionsRefreshed = True
 
-                    proccessAlert( alert, account )
+                    account.proccessAlert( alert )
                     account.latchedAlerts.remove( alert )
 
         # if we just cleared the orders queue refresh the positions info
@@ -1243,270 +1447,10 @@ def generatePositionsString()->str:
 
     return msg
 
-
-def proccessAlert( alert:dict, account: account_c ):
-
-    if( account == None ):
-        SystemError( 'FATAL ERROR: proccessAlert called without account' )
-    
-    account.print( ' ' )
-    account.print( " ALERT:", alert['alert'] )
-    account.print('----------------------------')
-
-    # This is our first communication with the server, and (afaik) it will only fail when the server is not available.
-    # so we use it as a server availability check as well as for finding the available balance
-    try:
-        available = account.fetchAvailableBalance() * 0.985
-    except Exception as e:
-        # ccxt.base.errors.ExchangeError: Service is not available during funding fee settlement. Please try again later.
-        account.print( " * E: Order cancelled. Couldn't reach the server:\n", e, type(e) )
-        return
-
-    isLimit = False
-    priceLimit = 0
-    customID = None
-    reverse = False
-
-    if( alert['command'] == None ):
-        account.print( " * E: Invalid Order: Missing command" )
-        return
-    
-    if( alert['command'] == 'buy' or alert['command'] == 'sell' or alert['command'] == 'position' ):
-        if( alert['quantity'] == None ):
-            account.print( " * E: Invalid quantity value" )
-            return
-        if( alert['quantity'] < 0 and alert['command'] == 'buy' ):
-            account.print( " * E: Invalid Order: Buy must have a positive amount" )
-            return
-        if( alert['quantity'] == 0 and alert['command'] != 'position' ):
-            account.print( " * E: Invalid Order amount:", alert['quantity'] )
-            return
-    
-    if( alert['limitToken'] and alert['command'] != 'buy' and alert['command'] != 'sell' ):
-        account.print( " * E: Limit orders can only be used with buy/sell commands" )
-        return
-    
-    if ( alert['command']  == "cancel" ):
-        v = alert['cancelToken'].split(':')
-        if( len(v) != 2 ):
-            account.print( " * E: Cancel command must be formatted as 'cancel:customID' ")
-            return
-        customID = v[1]
-        if( len(customID) < 2 or len(customID) > 30 ):
-            account.print( " * E: customID must be longer than 2 characters and shorter than 30' ")
-            return
-        if( account.exchange.id == 'coinex' and not customID.isdigit() ):
-            account.print( " * E: Coinex only accepts numeric customID' ")
-            return
-        
-    if ( alert['limitToken'] != None ):
-        v = alert['limitToken'].split(':')
-        if( len(v) != 3 ):
-            account.print( " * E: Limit command must be formatted as 'limit:customID:price' ")
-            return
-        else:
-            isLimit = True
-            customID = v[1]
-            if( len(customID) < 2 or len(customID) > 30 ):
-                account.print( " E: customID must be longer than 2 characters and shorter than 30' ")
-                return
-            priceLimit = stringToValue(v[2])
-        if( account.exchange.id == 'coinex' and not customID.isdigit() ):
-            account.print( " * E: Coinex only accepts numeric customID")
-            return
-    
-    if( alert['command'] == 'sell' and alert['quantity'] < 0 ): # be flexible with sell having a negative amount
-        alert['quantity'] = abs(alert['quantity'])
-
-    #
-    # TEMP: convert to the old vars. I'll change it later (maybe)
-    #
-    symbol = alert['symbol']
-    command = alert['command']
-    quantity = alert['quantity']
-    leverage = alert['leverage']
-    isUSDT = alert['isUSDT']
-    isBaseCurrenty = alert['isBaseCurrency']
-    isPercentage = alert['isPercentage']
-
-
-    #time to put the order on the queue
-    
-    # No point in putting cancel orders in the queue. Just do it and leave.
-    if( command == 'cancel' ):
-        account.cancelLimitOrder( symbol, customID )
-        return
-    
-    # bybit is too slow at updating positions after an order is made, so make sure they're updated
-    if( account.exchange.id == 'bybit' and (command == 'position' or command == 'close') ):
-        account.refreshPositions( False )
-
-    minOrder = account.findMinimumAmountForSymbol(symbol)
-    leverage = account.verifyLeverageRange( symbol, leverage )
-
-    # quantity is a percentage of the USDT balance
-    if( isPercentage ):
-        quantity = min( max( quantity, -100.0 ), 100.0 )
-        balance = account.fetchBalance()
-        if verbose : print( 'PERCENTAGE: ' + str(quantity) + '% =', str( balance['total'] * quantity * 0.01) + '$' )
-        quantity = balance['total'] * quantity * 0.01
-        isUSDT = True
-    
-    # convert quantity to concracts if needed
-    if( (isUSDT or isBaseCurrenty) and quantity != 0.0 ) :
-        # We don't know for sure yet if it's a buy or a sell, so we average
-        oldQuantity = quantity
-        try:
-            price = account.fetchAveragePrice(symbol)
-            
-        except ccxt.ExchangeError as e:
-            account.print( " * E: parseAlert->fetchAveragePrice:", e )
-            return
-        except ValueError as e:
-            account.print( " * E: Cancelling:", e, type(e) )
-            return
-            
-        coin_name = account.markets[symbol]['quote']
-        if( isBaseCurrenty ) :
-            quantity *= price
-            coin_name = account.markets[symbol]['base']
-
-        quantity = account.contractsFromUSDT( symbol, quantity, price, leverage )
-        if verbose : print( "   CONVERTING (x"+str(leverage)+")", oldQuantity, coin_name, '==>', quantity, "contracts" )
-        if( abs(quantity) < minOrder ):
-            account.print( timeNow(), " * E: Order too small:", quantity, "Minimum required:", minOrder )
-            return
-
-    # check for a existing position
-    pos = account.getPositionBySymbol( symbol )
-
-    if( command == 'close' or (command == 'position' and quantity == 0) ):
-        if pos == None:
-            account.print( timeNow(), " * 'Close", symbol, "' No position found" )
-            return
-        positionContracts = pos.getKey('contracts')
-        positionSide = pos.getKey( 'side' )
-        if( positionSide == 'long' ):
-            account.ordersQueue.append( order_c( symbol, 'sell', positionContracts, 0 ) )
-        else: 
-            account.ordersQueue.append( order_c( symbol, 'buy', positionContracts, 0 ) )
-
-        return
-    
-    # position orders are absolute. Convert them to buy/sell order
-    if( command == 'position' ):
-        if( pos == None or pos.getKey('contracts') == None ):
-            # it's just a straight up buy or sell
-            if( quantity < 0 ):
-                command = 'sell'
-            else:
-                command = 'buy'
-            quantity = abs(quantity)
-        elif( account.markets[symbol]['local']['marginMode'] != MARGIN_MODE and account.exchange.has['setMarginMode'] ):
-            # to change marginMode we need to close the old position first
-            if( pos.getKey('side') == 'long' ):
-                account.ordersQueue.append( order_c( symbol, 'sell', pos.getKey('contracts'), 0 ) )
-            else: 
-                account.ordersQueue.append( order_c( symbol, 'buy', pos.getKey('contracts'), 0 ) )
-             # Then create the order for the new position
-            if( quantity < 0 ):
-                command = 'sell'
-            else:
-                command = 'buy'
-            quantity = abs(quantity)
-        else:
-            # we need to account for the old position
-            positionContracts = pos.getKey('contracts')
-            positionSide = pos.getKey( 'side' )
-            if( positionSide == 'short' ):
-                positionContracts = -positionContracts
-
-            command = 'sell' if positionContracts > quantity else 'buy'
-            quantity = abs( quantity - positionContracts )
-            if( quantity < minOrder ):
-                account.print( " * Order completed: Request matched current position")
-                return
-        # fall through
-
-
-    if( command == 'buy' or command == 'sell'):
-
-        # fetch available balance and price
-        price = account.fetchSellPrice(symbol) if( command == 'sell' ) else account.fetchBuyPrice(symbol)
-        canDoContracts = account.contractsFromUSDT( symbol, available, price, leverage )
-
-        if( pos != None ):
-            positionContracts = pos.getKey('contracts')
-            positionSide = pos.getKey( 'side' )
-            
-            # reversing the position
-            if not isLimit and (( positionSide == 'long' and command == 'sell' ) or ( positionSide == 'short' and command == 'buy' )):
-
-                # do we need to divide these in 2 orders?
-
-                # on bitget try to use the position reverse feature
-                if( account.exchange.id == 'bitget' ):
-                    if( quantity >= positionContracts * 2 and leverage == account.markets[symbol]['local']['leverage'] ):
-                        account.ordersQueue.append( order_c( symbol, command, positionContracts, leverage, reverse=True ) )
-                        quantity -= positionContracts * 2
-                        if( quantity > minOrder ):
-                            account.ordersQueue.append( order_c( symbol, command, quantity, leverage ) )
-                        return
-                        # fall throught with the rest of contracts
-
-                # bingx must make one order for close and a second one for the new position
-                if( account.exchange.id == 'bingx' ):
-                    if( quantity > positionContracts ):
-                        account.ordersQueue.append( order_c( symbol, command, positionContracts, 0 ) )
-                        quantity -= positionContracts
-                        account.ordersQueue.append( order_c( symbol, command, quantity, leverage ) )
-                        return
-                    
-                    account.ordersQueue.append( order_c( symbol, command, quantity, leverage, reduceOnly=True ) )
-                    return
-
-
-                if( quantity >= canDoContracts + positionContracts and not account.canFlipPosition ):
-                    # we have to make sure each of the orders has the minimum order contracts
-                    order1 = canDoContracts + positionContracts
-                    order2 = quantity - (canDoContracts + positionContracts)
-                    if( order2 < minOrder ):
-                        diff = minOrder - order2
-                        if( order1 > minOrder + diff ):
-                            order1 -= diff
-
-                    # first order is the contracts in the position and the contracs we can afford with the liquidity
-                    account.ordersQueue.append( order_c( symbol, command, order1, leverage ) )
-
-                    # second order is whatever we can afford with the former position contracts + the change
-                    quantity -= order1
-                    if( quantity >= minOrder ): #we are done (should never happen)
-                        account.ordersQueue.append( order_c( symbol, command, quantity, leverage, 1.0 ) )
-
-                    return
-            # fall through
-
-        if( quantity < minOrder ):
-            account.print( timeNow(), " * E: Order too small:", quantity, "Minimum required:", minOrder )
-            return
-
-        order = order_c( symbol, command, quantity, leverage, reverse = reverse )
-        if( isLimit ):
-            order.type = 'limit'
-            order.customID = customID
-            order.price = priceLimit
-
-        account.ordersQueue.append( order )
-        return
-
-    account.print( " * W: Something went wrong. No order was placed")
-
-
 def parseAlert( data, account: account_c ):
 
     if( account == None ):
-        print( timeNow(), " * E: parseAlert called without an account" )
-        return
+        return { 'Error': " * E: parseAlert called without an account" }
     
     alert = {
         'symbol': None,
@@ -1516,10 +1460,13 @@ def parseAlert( data, account: account_c ):
         'isUSDT': False,
         'isBaseCurrency': False,
         'isPercentage': False,
-        'limitToken': None,
-        'cancelToken': None,
+        'priceLimit': 0.0,
+        'customID': None,
         'alert': data
     }
+
+    limitToken = None
+    cancelToken = None
 
     # Informal plain text syntax
     tokens = data.split()
@@ -1561,19 +1508,54 @@ def parseAlert( data, account: account_c ):
         elif token.lower()  == 'position' or token.lower()  == 'pos':
             alert['command'] = 'position'
         elif ( token[:5].lower()  == "limit" ):
-            alert['limitToken'] = token # we validate it at processing
+            limitToken = token # we validate it at processing
         elif ( token[:6].lower()  == "cancel" ):
-            alert['cancelToken'] = token # we validate it at processing
+            cancelToken = token # we validate it at processing
             alert['command'] = 'cancel'
     
-    # as long as we have a valid symbol and an account we store it for processing
+    # do some syntax validation
     if( alert['symbol'] == None ):
-        account.print( ' ' )
-        account.print( " ALERT:", data )
-        account.print('----------------------------')
-        account.print( " * E: Couldn't find symbol" )
-        return None
+        return { 'Error': " * E: Couldn't find symbol" }
     
+    if( alert['command'] == None ):
+        return { 'Error': " * E: Invalid Order: Missing command" }
+    
+    if( alert['command'] == 'buy' or alert['command'] == 'sell' or alert['command'] == 'position' ):
+        if( alert['quantity'] == None ):
+            return { 'Error': " * E: Invalid quantity value" }
+        if( alert['quantity'] < 0 and alert['command'] == 'buy' ):
+            return { 'Error': " * E: Invalid Order: Buy must have a positive amount" }
+        if( alert['quantity'] == 0 and alert['command'] != 'position' ):
+            return { 'Error':" * E: Invalid Order amount: 0" }
+        if( alert['command'] == 'sell' and alert['quantity'] < 0 ): # be flexible with sell having a negative amount
+            alert['quantity'] = abs(alert['quantity'])
+    
+    # parse de cancel and limit tokens
+    if( limitToken != None ):
+        if( alert['command'] != 'buy' and alert['command'] != 'sell' ):
+            return { 'Error': " * E: Limit orders can only be used with buy/sell commands" }
+
+        v = limitToken.split(':')
+        if( len(v) != 3 ):
+            return { 'Error': " * E: Limit command must be formatted as 'limit:customID:price' " }
+        else:
+            alert['customID'] = v[1]
+            alert['priceLimit'] = stringToValue(v[2])
+            if( alert['priceLimit'] <= 0 ):
+                return { 'Error': " * E: price limit must be bigger than 0" }
+    
+    if ( cancelToken != None ):
+        v = cancelToken.split(':')
+        if( len(v) != 2 ):
+            return { 'Error': " * E: Cancel command must be formatted as 'cancel:customID' " }
+        alert['customID'] = v[1]
+
+    if( alert['customID'] != None ):
+        if( len(alert['customID']) < 2 or len(alert['customID']) > 30 ):
+            return { 'Error': " * E: customID must be longer than 2 characters and shorter than 30' " }
+        if( account.exchange.id == 'coinex' and not alert['customID'].isdigit() ):
+            return { 'Error': " * E: Coinex only accepts numeric customID' " }
+
     if verbose : print( alert )
     return alert
 
@@ -1601,9 +1583,13 @@ def Alert( data ):
         if( account == None ): 
             print( timeNow(), ' * E: Account ID not found. ALERT:', line )
             continue
-
+        
         alert = parseAlert( line.replace('\n', ''), account )
-        if( alert == None ) : 
+        if( alert.get('Error') != None ):
+            account.print( ' ' )
+            account.print( " ALERT:", line.replace('\n', '') )
+            account.print('----------------------------')
+            account.print( alert.get('Error') )
             continue
 
         # check if the alert can be proccessed inmediately
@@ -1618,7 +1604,7 @@ def Alert( data ):
                 break
         
         if( not busy ):
-            proccessAlert( alert, account )
+            account.proccessAlert( alert )
             continue
         
         # delay the alert proccessing
