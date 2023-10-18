@@ -1200,7 +1200,7 @@ class account_c:
         quantity = alert['quantity']
         leverage = alert['leverage']
         isUSDT = alert['isUSDT']
-        isBaseCurrenty = alert['isBaseCurrency']
+        isBaseCurrency = alert['isBaseCurrency']
         isPercentage = alert['isPercentage']
         priceLimit = alert['priceLimit']
         customID = alert['customID']
@@ -1231,7 +1231,7 @@ class account_c:
             isUSDT = True
         
         # convert quantity to concracts if needed
-        if( (isUSDT or isBaseCurrenty) and quantity != 0.0 ) :
+        if( (isUSDT or isBaseCurrency) and quantity != 0.0 ) :
             # We don't know for sure yet if it's a buy or a sell, so we average
             oldQuantity = quantity
             try:
@@ -1245,7 +1245,7 @@ class account_c:
                 return
                 
             coin_name = cls.markets[symbol]['quote']
-            if( isBaseCurrenty ) :
+            if( isBaseCurrency ) :
                 quantity *= price
                 coin_name = cls.markets[symbol]['base']
 
