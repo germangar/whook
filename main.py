@@ -5,6 +5,7 @@ from flask import Flask, request, abort
 from threading import Timer
 import time
 import json
+import copy
 import logging
 from datetime import datetime
 from decimal import Decimal, ROUND_CEILING, ROUND_FLOOR, ROUND_HALF_EVEN
@@ -12,6 +13,7 @@ from pprint import pprint
 
 
 verbose = False
+ALERT_TIMEOUT = 60 * 3
 ORDER_TIMEOUT = 40
 REFRESH_POSITIONS_FREQUENCY = 5 * 60    # refresh positions every 5 minutes
 UPDATE_ORDERS_FREQUENCY = 0.25          # frametime in seconds at which the orders queue is refreshed.
@@ -710,22 +712,26 @@ class account_c:
             positions = cls.exchange.fetch_positions( params = {'settle':cls.SETTLE_COIN} ) # the 'settle' param is only required by phemex
 
         except Exception as e:
-            for a in e.args:
-                if a == "OK": # Coinex raises an exception to give an OK message when there are no positions... don't look at me, look at them
-                    positions = []
-                elif( 'Remote end closed connection' in a
-                or '500 Internal Server Error' in a
-                or '502 Bad Gateway' in a
-                or 'Internal Server Error' in a
-                or 'Server busy' in a or 'System busy' in a
-                or 'Service is not available' in a
-                or '"code":39999' in a
-                or '"retCode":10002' in a
-                or cls.exchange.id + ' GET' in a ):
-                    failed = True
-                else:
-                    print( timeNow(), cls.exchange.id, '* E: Refreshpositions:', a, type(e) )
-                    failed = True
+            a = e.args[0]
+            if a == "OK": # Coinex raises an exception to give an OK message when there are no positions... don't look at me, look at them
+                positions = []
+            elif( isinstance(e, ccxt.OnMaintenance) ):
+                failed = True
+            elif( 'Remote end closed connection' in a
+            or '500 Internal Server Error' in a
+            or '502 Bad Gateway' in a
+            or 'Internal Server Error' in a
+            or 'Server busy' in a or 'System busy' in a
+            or 'Service is not available' in a
+            or '"code":39999' in a
+            or '"retCode":10002' in a
+            or cls.exchange.id + ' GET' in a ):
+                failed = True
+                # this print is temporary to try to replace the string with the error type if possible
+                print( timeNow(), cls.exchange.id, '* E: Refreshpositions:', a, type(e) )
+            else:
+                print( timeNow(), cls.exchange.id, '* E: Refreshpositions:', a, type(e) )
+                failed = True
 
         if( failed ):
             cls.refreshPositionsFailed += 1
@@ -1042,7 +1048,6 @@ class account_c:
 
             if( cls.exchange.id == 'okx' ):
                 params['marginMode'] = MARGIN_MODE
-                #params['posSide'] = "net"
                 params['leverage'] = order.leverage
 
             if( order.type == 'limit' ):
@@ -1188,8 +1193,22 @@ class account_c:
         try:
             available = cls.fetchAvailableBalance() * 0.985
         except Exception as e:
-            # ccxt.base.errors.ExchangeError: Service is not available during funding fee settlement. Please try again later.
-            cls.print( " * E: Order cancelled. Couldn't reach the server:\n", e, type(e) )
+            a = e.args[0]
+            if( isinstance(e, ccxt.OnMaintenance) or isinstance(e, ccxt.NetworkError) 
+               or isinstance(e, ccxt.RateLimitExceeded) or 'Service is not available' in a ):
+                # ccxt.base.errors.ExchangeError: Service is not available during funding fee settlement. Please try again later.
+                if( alert.get('timestamp') + ALERT_TIMEOUT < time.monotonic() ):
+                    cls.print( " * E: Couldn't reach the server: Retrying in 30 seconds", e, type(e) )
+                    newAlert = copy.deepcopy( alert ) # the other alert will be deleted
+                    if( isinstance(e, ccxt.RateLimitExceeded) ):
+                        newAlert['delayTimestamp'] = time.monotonic() + 1
+                    else:
+                        newAlert['delayTimestamp'] = time.monotonic() + 30
+                    cls.latchedAlerts.append( newAlert )
+                else: 
+                    cls.print( " * E: Couldn't reach the server: Cancelling" )
+            else:
+                cls.print( " * E: Couldn't reach the server: Cancelling", e, type(e) )
             return
 
         #
@@ -1414,6 +1433,10 @@ def updateOrdersQueue():
         if( len(account.latchedAlerts) ):
             positionsRefreshed = False
             for alert in account.latchedAlerts:
+                if( alert.get('delayTimestamp') != None ):
+                    alert.get('delayTimestamp') < time.monotonic()
+                    continue
+
                 busy = False
                 for order in account.activeOrders:
                     if( order.symbol == alert['symbol'] ):
@@ -1472,7 +1495,8 @@ def parseAlert( data, account: account_c ):
         'isPercentage': False,
         'priceLimit': 0.0,
         'customID': None,
-        'alert': data
+        'alert': data,
+        'timestamp':time.monotonic()
     }
 
     limitToken = None
