@@ -1147,7 +1147,9 @@ class account_c:
                     
 
                 # bingx {"code":101500,"msg":"The current system is busy, please try again later","data":{}} <class 'ccxt.base.errors.ExchangeError'>
-                if 'Too Many Requests' in a or 'too many request' in a or 'service too busy' in a or 'system is busy' in a: 
+                # bitget {"code":"400172","msg":"The order validity period is invalid","requestTime":1697878512831,"data":null} <class 'ccxt.base.errors.ExchangeError'>
+                if( 'Too Many Requests' in a or 'too many request' in a or 'service too busy' in a 
+                   or 'system is busy' in a or 'code":"400172' in a ):
                     #set a bigger delay and try again
                     order.delay += 1.0
                     print( type(e) )
