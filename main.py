@@ -715,14 +715,14 @@ class account_c:
             a = e.args[0]
             if a == "OK": # Coinex raises an exception to give an OK message when there are no positions... don't look at me, look at them
                 positions = []
-            elif( isinstance(e, ccxt.OnMaintenance) ):
+            elif( isinstance(e, ccxt.OnMaintenance) or isinstance(e, ccxt.RequestTimeout) ):
                 failed = True
             elif( 'Remote end closed connection' in a
             or '500 Internal Server Error' in a
             or '502 Bad Gateway' in a
             or 'Internal Server Error' in a
             or 'Server busy' in a or 'System busy' in a
-            or 'Service is not available' in a
+            or 'Service is not available' in a # ccxt.base.errors.ExchangeError
             or '"code":39999' in a
             or '"retCode":10002' in a
             or cls.exchange.id + ' GET' in a ):
@@ -1038,6 +1038,7 @@ class account_c:
 
             if( cls.exchange.id == 'bitget' ):
                 params['side'] = 'buy_single' if( order.side == "buy" ) else 'sell_single'
+                params['timeInForce'] = 'normal'
                 if( order.reverse ):
                     params['reverse'] = True
 
