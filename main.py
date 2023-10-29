@@ -715,8 +715,11 @@ class account_c:
             a = e.args[0]
             if a == "OK": # Coinex raises an exception to give an OK message when there are no positions... don't look at me, look at them
                 positions = []
-            elif( isinstance(e, ccxt.OnMaintenance) or isinstance(e, ccxt.RequestTimeout) ):
+            elif( isinstance(e, ccxt.OnMaintenance) or isinstance(e, ccxt.NetworkError) 
+                 or isinstance(e, ccxt.RateLimitExceeded) or isinstance(e, ccxt.RequestTimeout) 
+                 or isinstance(e, ccxt.ExchangeNotAvailable) or 'not available' in a ):
                 failed = True
+            
             elif( 'Remote end closed connection' in a
             or '500 Internal Server Error' in a
             or '502 Bad Gateway' in a
@@ -1199,7 +1202,8 @@ class account_c:
         except Exception as e:
             a = e.args[0]
             if( isinstance(e, ccxt.OnMaintenance) or isinstance(e, ccxt.NetworkError) 
-               or isinstance(e, ccxt.RateLimitExceeded) or 'Service is not available' in a ):
+               or isinstance(e, ccxt.RateLimitExceeded) or isinstance(e, ccxt.RequestTimeout) 
+               or isinstance(e, ccxt.ExchangeNotAvailable) or 'not available' in a ):
                 # ccxt.base.errors.ExchangeError: Service is not available during funding fee settlement. Please try again later.
                 if( alert.get('timestamp') + ALERT_TIMEOUT < time.monotonic() ):
                     cls.print( " * E: Couldn't reach the server: Retrying in 30 seconds", e, type(e) )
