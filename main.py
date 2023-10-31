@@ -733,6 +733,7 @@ class account_c:
                   or '500 Internal Server Error' in a
                   or '502 Bad Gateway' in a
                   or 'Internal Server Error' in a
+                  or 'Server busy' in a or 'System busy' in a
                   or 'not available' in a # ccxt.base.errors.ExchangeError
                   or 'failure to get a peer' in a # ccxt.base.errors.ExchangeError (okx)
                   or '"code":39999' in a
