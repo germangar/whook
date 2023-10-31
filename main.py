@@ -727,7 +727,7 @@ class account_c:
                    or 'Server busy' in a or 'System busy' in a
                    or '"retCode":10002' in a
                    or cls.exchange.id + ' GET' in a ):
-                    print( timeNow(), cls.exchange.id, '* E: Refreshpositions:', a, type(e) )
+                    print( timeNow(), cls.exchange.id, '* E: Refreshpositions:(old)', a, type(e) )
             
             elif( 'Remote end closed connection' in a
                   or '500 Internal Server Error' in a
