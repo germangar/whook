@@ -154,6 +154,7 @@ I'm not a linux user so I struggled to open the ports in the Linux virtual machi
 
 
 ### KNOWN BUGS ### 
+- OKX: When placing orders in base currency with leverage the exchange will multiply the order by the leverage. Will fix this one soon.
 - Kraken: Whook is unable to set the margin mode. It will use whatever is set in the exchange for that symbol.
 - Kraken can't check leverage boundaries. If a order exceeds the maximum leverage the console may spam until the order times out.
 - BingX: Limit orders aren't setting the custom ID. They can only be cancelled using cancel:all
