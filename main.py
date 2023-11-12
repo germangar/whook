@@ -1283,7 +1283,10 @@ class account_c:
                 
             coin_name = cls.markets[symbol]['quote']
             if( isBaseCurrency ) :
-                quantity *= price
+                if( cls.exchange.id == 'okx' and leverage > 1 ):
+                    quantity = quantity * price / leverage
+                else:
+                    quantity *= price
                 coin_name = cls.markets[symbol]['base']
 
             quantity = cls.contractsFromUSDT( symbol, quantity, price, leverage )
