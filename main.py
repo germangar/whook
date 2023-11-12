@@ -1275,10 +1275,10 @@ class account_c:
                 price = cls.fetchAveragePrice(symbol)
                 
             except ccxt.ExchangeError as e:
-                cls.print( " * E: parseAlert->fetchAveragePrice:", e )
+                cls.print( " * E: proccessAlert->fetchAveragePrice:", e )
                 return
             except ValueError as e:
-                cls.print( " * E: Cancelling:", e, type(e) )
+                cls.print( " * E: proccessAlert->fetchAveragePrice", e, type(e) )
                 return
                 
             coin_name = cls.markets[symbol]['quote']
