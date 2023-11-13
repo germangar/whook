@@ -911,7 +911,7 @@ class account_c:
                 try:
                     response = cls.exchange.fetch_order( order.id, order.symbol )
                 except Exception as e:
-                    if( 'order not exists' in e.args[0] ):
+                    if( isinstance(e, ccxt.InvalidOrder) or 'order not exists' in e.args[0] ):
                         continue
 
                     cls.print( " * E: removeFirstCompletedOrder:", e, type(e) )
