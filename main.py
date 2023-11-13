@@ -950,19 +950,32 @@ class account_c:
     
 
     def cancelLimitOrder(cls, symbol, customID )->bool:
+        '''
         if( customID.lower() == 'all' ):
-            # def cancel_all_orders(self, symbol: Optional[str] = None, params={}):
-            try:
-                response = cls.exchange.cancel_all_orders(symbol)
-            except Exception as e:
-                print( ' * E: cancelLimitOrder:', e, type(e) )
-                # I've tried cancelling when there were no orders but it reported no error. Maybe I missed something.
+            if( cls.exchange.has.get('cancelAllOrders') ):
+                try:
+                    response = cls.exchange.cancel_all_orders(symbol)
+                except Exception as e:
+                    print( ' * E: cancelLimitOrder:', e, type(e) )
+                    # I've tried cancelling when there were no orders but it reported no error. Maybe I missed something.
+                else:
+                    cls.print( ' * All', symbol, 'orders have been cancelled' )
+                    # binance {'code': '200', 'msg': 'The operation of cancel all open order is done.'}
+                    # phemex {'code': '0', 'msg': '', 'data': '1'}
+                    # ( a list of orders ) bybit [{'info': {'orderId': '35ef0faf-27e5-44f0-a136-132350da72f0', 'orderLinkId': 'id004'}, 'id': '35ef0faf-27e5-44f0-a136-132350da72f0', 'clientOrderId': 'id004', 'timestamp': None, 'datetime': None, 'lastTradeTimestamp': None, 'lastUpdateTimestamp': None, 'symbol': 'BTC/USDT:USDT', 'type': None, 'timeInForce': None, 'postOnly': None, 'reduceOnly': None, 'side': None, 'price': None, 'stopPrice': None, 'triggerPrice': None, 'takeProfitPrice': None, 'stopLossPrice': None, 'amount': None, 'cost': None, 'average': None, 'filled': None, 'remaining': None, 'status': None, 'fee': None, 'trades': [], 'fees': []}, {'info': {'orderId': 'f1d6a649-0a71-4970-bd78-8eaa2a14f8f5', 'orderLinkId': 'id002'}, 'id': 'f1d6a649-0a71-4970-bd78-8eaa2a14f8f5', 'clientOrderId': 'id002', 'timestamp': None, 'datetime': None, 'lastTradeTimestamp': None, 'lastUpdateTimestamp': None, 'symbol': 'BTC/USDT:USDT', 'type': None, 'timeInForce': None, 'postOnly': None, 'reduceOnly': None, 'side': None, 'price': None, 'stopPrice': None, 'triggerPrice': None, 'takeProfitPrice': None, 'stopLossPrice': None, 'amount': None, 'cost': None, 'average': None, 'filled': None, 'remaining': None, 'status': None, 'fee': None, 'trades': [], 'fees': []}]
+                return True
             else:
-                cls.print( ' * All', symbol, 'orders have been cancelled' )
-                # binance {'code': '200', 'msg': 'The operation of cancel all open order is done.'}
-                # phemex {'code': '0', 'msg': '', 'data': '1'}
-                # ( a list of orders ) bybit [{'info': {'orderId': '35ef0faf-27e5-44f0-a136-132350da72f0', 'orderLinkId': 'id004'}, 'id': '35ef0faf-27e5-44f0-a136-132350da72f0', 'clientOrderId': 'id004', 'timestamp': None, 'datetime': None, 'lastTradeTimestamp': None, 'lastUpdateTimestamp': None, 'symbol': 'BTC/USDT:USDT', 'type': None, 'timeInForce': None, 'postOnly': None, 'reduceOnly': None, 'side': None, 'price': None, 'stopPrice': None, 'triggerPrice': None, 'takeProfitPrice': None, 'stopLossPrice': None, 'amount': None, 'cost': None, 'average': None, 'filled': None, 'remaining': None, 'status': None, 'fee': None, 'trades': [], 'fees': []}, {'info': {'orderId': 'f1d6a649-0a71-4970-bd78-8eaa2a14f8f5', 'orderLinkId': 'id002'}, 'id': 'f1d6a649-0a71-4970-bd78-8eaa2a14f8f5', 'clientOrderId': 'id002', 'timestamp': None, 'datetime': None, 'lastTradeTimestamp': None, 'lastUpdateTimestamp': None, 'symbol': 'BTC/USDT:USDT', 'type': None, 'timeInForce': None, 'postOnly': None, 'reduceOnly': None, 'side': None, 'price': None, 'stopPrice': None, 'triggerPrice': None, 'takeProfitPrice': None, 'stopLossPrice': None, 'amount': None, 'cost': None, 'average': None, 'filled': None, 'remaining': None, 'status': None, 'fee': None, 'trades': [], 'fees': []}]
-            return True
+                try:
+                    response = cls.exchange.fetch_open_orders( symbol, params = {'settleCoin':cls.SETTLE_COIN} )
+                except Exception as e:
+                    cls.print( 'cancelLimitOrder: No orders found', e, type(e) )
+                    return
+                else:
+                    for o in response:
+                        if( ( o['info'].get('cliOrdId') != None and o['info']['cliOrdId'] == customID )
+                        or ( o['info'].get('client_id') != None and o['info']['client_id'] == customID )
+                            or o['clientOrderId'] == customID ):
+                            id = o['id']'''
         
         id = customID
         params = {}
@@ -1007,6 +1020,28 @@ class account_c:
         else:
             cls.print( " * Linmit order [", customID, "] cancelled." )
         return True
+    
+    def cancelAllOrders(cls, symbol )->bool:
+            if( cls.exchange.has.get('cancelAllOrders') ):
+                try:
+                    response = cls.exchange.cancel_all_orders(symbol)
+                except Exception as e:
+                    print( ' * E: cancelLimitOrder:', e, type(e) )
+                    # I've tried cancelling when there were no orders but it reported no error. Maybe I missed something.
+                else:
+                    cls.print( ' * All', symbol, 'orders have been cancelled' )
+                return True
+
+            try:
+                response = cls.exchange.fetch_open_orders( symbol, params = {'settleCoin':cls.SETTLE_COIN} )
+            except Exception as e:
+                cls.print( 'cancelAllOrders: No orders found', e, type(e) )
+                return
+            
+            for o in response:
+                if( o.get('symbol') == symbol ):
+                    cls.cancelLimitOrder(cls, symbol, o.get('id') )
+                
 
 
     def updateOrdersQueue(cls):
@@ -1249,7 +1284,10 @@ class account_c:
         
         # No point in putting cancel orders in the queue. Just do it and leave.
         if( command == 'cancel' ):
-            cls.cancelLimitOrder( symbol, customID )
+            if( customID == 'all' ):
+                cls.cancelAllOrders( symbol )
+            else:
+                cls.cancelLimitOrder( symbol, customID )
             return
         
         # bybit is too slow at updating positions after an order is made, so make sure they're updated
