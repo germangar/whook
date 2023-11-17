@@ -713,7 +713,7 @@ class account_c:
 
         except Exception as e:
             a = e.args[0]
-            if a == "OK": # Coinex raises an exception to give an OK message when there are no positions... don't look at me, look at them
+            if 'OK' in a: # Coinex raises an exception to give an OK message when there are no positions... don't look at me, look at them
                 positions = []
             elif( isinstance(e, ccxt.OnMaintenance) or isinstance(e, ccxt.NetworkError) 
                  or isinstance(e, ccxt.RateLimitExceeded) or isinstance(e, ccxt.RequestTimeout) 
