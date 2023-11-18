@@ -1274,6 +1274,7 @@ class account_c:
         isUSDT = alert['isUSDT']
         isBaseCurrency = alert['isBaseCurrency']
         isPercentage = alert['isPercentage']
+        lockBaseCurrency = alert['lockBaseCurrency']
         priceLimit = alert['priceLimit']
         customID = alert['customID']
         reverse = False
@@ -1321,7 +1322,11 @@ class account_c:
                 
             coin_name = cls.markets[symbol]['quote']
             if( isBaseCurrency ) :
-                quantity *= price
+                if( lockBaseCurrency and leverage > 1 ):
+                    quantity = quantity * price / leverage
+                else:
+                    quantity *= price
+
                 coin_name = cls.markets[symbol]['base']
 
             quantity = cls.contractsFromUSDT( symbol, quantity, price, leverage )
@@ -1549,6 +1554,7 @@ def parseAlert( data, account: account_c ):
         'isUSDT': False,
         'isBaseCurrency': False,
         'isPercentage': False,
+        'lockBaseCurrency': False,
         'priceLimit': 0.0,
         'customID': None,
         'alert': data,
@@ -1583,6 +1589,8 @@ def parseAlert( data, account: account_c ):
             alert['isBaseCurrency'] = True
             arg = token
             alert['quantity'] = stringToValue(arg)
+        elif token.lower()  == 'lockbasecurrency' or token.lower() == "bclock":
+            alert['lockBaseCurrency'] = True
         elif ( token[:1].lower()  == "x" ):
             arg = token[1:]
             alert['leverage'] = int(stringToValue(arg))
