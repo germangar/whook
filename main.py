@@ -994,7 +994,7 @@ class account_c:
             cls.print( " * Linmit order [", customID, "] cancelled." )
         return True
     
-    
+
     def cancelAllOrders(cls, symbol )->bool:
             if( cls.exchange.has.get('cancelAllOrders') ):
                 try:
@@ -1012,10 +1012,13 @@ class account_c:
                 cls.print( 'cancelAllOrders: No orders found', e, type(e) )
                 return
             
+            if( len(response) == 0 ):
+                cls.print( 'cancelAllOrders: No orders found', e, type(e) )
+                return
+            
             cancelledCount = 0
             for o in response:
                 if( o.get('symbol') == symbol ):
-                    # cls.cancelLimitOrder(symbol, o.get('id') )
                     try:
                         response = cls.exchange.cancel_order( o.get('id'), symbol )
 
