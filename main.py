@@ -725,8 +725,7 @@ class account_c:
                    or '502 Bad Gateway' in a
                    or 'Internal Server Error' in a
                    or 'Server busy' in a or 'System busy' in a
-                   or '"retCode":10002' in a
-                   or cls.exchange.id + ' GET' in a ):
+                   or '"retCode":10002' in a ):
                     print( timeNow(), cls.exchange.id, '* E: Refreshpositions:(old)', a, type(e) )
             
             elif( 'Remote end closed connection' in a
@@ -737,8 +736,7 @@ class account_c:
                   or 'not available' in a # ccxt.base.errors.ExchangeError
                   or 'failure to get a peer' in a # ccxt.base.errors.ExchangeError (okx)
                   or '"code":39999' in a
-                  or '"retCode":10002' in a
-                  or cls.exchange.id + ' GET' in a ):
+                  or '"retCode":10002' in a ):
                 failed = True
                 # this print is temporary to try to replace the string with the error type if possible
                 print( timeNow(), cls.exchange.id, '* E: Refreshpositions:', a, type(e) )
