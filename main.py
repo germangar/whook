@@ -956,7 +956,7 @@ class account_c:
             try:
                 response = cls.exchange.fetch_open_orders( symbol, params = {'settleCoin':cls.SETTLE_COIN} )
             except Exception as e:
-                cls.print( 'Unhandled exception in cancelLimitOrder:', e, type(e) )
+                cls.print( 'Unhandled exception in cancelLimitOrder:', e.args[0], type(e) )
                 return
             else:
                 for o in response:
@@ -986,7 +986,7 @@ class account_c:
                 # coinex: order not exists (and that's all it says)
                 cls.print( ' * E: Limit order [', customID, '] not found' )
             else:
-                print( ' * E: cancelLimitOrder:', e, type(e) )
+                print( ' * E: cancelLimitOrder:', e.args[0], type(e) )
 
         else:
             cls.print( " * Linmit order [", customID, "] cancelled." )
@@ -998,7 +998,7 @@ class account_c:
                 try:
                     response = cls.exchange.cancel_all_orders(symbol)
                 except Exception as e:
-                    print( ' * E: cancelAllOrders:', e, type(e) )
+                    print( ' * E: cancelAllOrders:', e.args[0], type(e) )
                     # I've tried cancelling when there were no orders but it reported no error. Maybe I missed something.
                 else:
                     cls.print( ' * All', symbol, 'orders have been cancelled' )
@@ -1007,11 +1007,11 @@ class account_c:
             try:
                 response = cls.exchange.fetch_open_orders( symbol, params = {'settleCoin':cls.SETTLE_COIN} )
             except Exception as e:
-                cls.print( 'cancelAllOrders: No orders found', e, type(e) )
+                cls.print( 'cancelAllOrders: No orders found', e.args[0], type(e) )
                 return
             
             if( len(response) == 0 ):
-                cls.print( 'cancelAllOrders: No orders found', e, type(e) )
+                cls.print( 'cancelAllOrders: No orders found', e.args[0], type(e) )
                 return
             
             cancelledCount = 0
@@ -1026,6 +1026,7 @@ class account_c:
                         cancelledCount += 1
 
             cls.print( 'cancelAllOrders:', cancelledCount, 'orders cancelled' )
+            return True
                 
 
 
