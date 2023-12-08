@@ -1011,7 +1011,7 @@ class account_c:
                 return
             
             if( len(response) == 0 ):
-                cls.print( 'cancelAllOrders: No orders found', e.args[0], type(e) )
+                cls.print( 'cancelAllOrders: No orders found' )
                 return
             
             cancelledCount = 0
@@ -1019,7 +1019,6 @@ class account_c:
                 if( o.get('symbol') == symbol ):
                     try:
                         response = cls.exchange.cancel_order( o.get('id'), symbol )
-
                     except Exception as e:
                         pass
                     else:
