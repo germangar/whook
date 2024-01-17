@@ -1284,7 +1284,7 @@ class account_c:
         leverage = cls.verifyLeverageRange( symbol, leverage )
 
         # quantity is a percentage of the USDT balance
-        if( isPercentage ):
+        if( isPercentage and command != 'close' ):
             quantity = min( max( quantity, -100.0 ), 100.0 )
             balance = cls.fetchBalance()
             if verbose : print( 'PERCENTAGE: ' + str(quantity) + '% =', str( balance['total'] * quantity * 0.01) + '$' )
@@ -1329,6 +1329,12 @@ class account_c:
                 return
             positionContracts = pos.getKey('contracts')
             positionSide = pos.getKey( 'side' )
+
+            if( command == 'close' and isPercentage ):
+                quantity = min( abs(quantity), 100.0 )
+                positionContracts = positionContracts * quantity * 0.01
+
+
             if( positionSide == 'long' ):
                 cls.ordersQueue.append( order_c( symbol, 'sell', positionContracts, 0 ) )
             else: 
