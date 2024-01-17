@@ -1624,7 +1624,7 @@ def parseAlert( data, account: account_c ):
         else:
             alert['customID'] = v[1]
             alert['priceLimit'] = stringToValue(v[2])
-            if( alert['priceLimit'] <= 0 ):
+            if( alert['priceLimit'] == None or alert['priceLimit'] <= 0 ):
                 return { 'Error': " * E: price limit must be bigger than 0" }
     
     if ( cancelToken != None ):
