@@ -67,7 +67,8 @@ This alert is all you should really need for running 90% of the strategies in TV
 This would sell 0.25ETH<br>
 
 - **Close position**<br>
-[account_id] [symbol] [command] - **myKucoinA ETH/USD close**<br>
+[account_id] [symbol] [command] [percentage] - **myKucoinA ETH/USD close 33.33%**<br>
+The percentage parameter is optional. If not included it will close the full position.
 
 - **Limit buy command using USDT:**<br>
 [account_id] [symbol] [command] [value in USDT] [leverage] [limit:[customID]:[price]] - **myKucoinA ETH/USDT buy 300$ x3 limit:myid002:1012**<br>
@@ -162,6 +163,5 @@ I'm not a linux user so I struggled to open the ports in the Linux virtual machi
 ### TO DO LIST ### 
 - Split whook in 2 files, one containing the accounts class. So it can be imported by other scripts to create orders directly. In short, for bots.
 - Add some account configuration optional keys. Like order timeout, alert timeout, margin mode...
-- Add the option of closing positions by percentage.<br>
 - 'pricelock' a made up mode to attempt to place market orders as limit orders.
 - Create some form of past trades storage better than the logs. Usable for trading performance analytics.
