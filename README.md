@@ -108,7 +108,7 @@ pause<br>
 
 
 ### CONFIGURATION - API KEYS ###
-When you first launch the script it will create an accounts.json file in the script directory and exit with a no accounts found error. This file is a template to configure the accounts API data. This file can contain as many accounts as you want separated by commas. It looks like this:
+When you first launch the script it will create an accounts.json file in the script directory and exit with a 'no accounts found' error. This file is a template to configure the accounts API data. This file can contain as many accounts as you want separated by commas. It looks like this:
 
 
 [<br>
@@ -123,7 +123,7 @@ When you first launch the script it will create an accounts.json file in the scr
 
 
 You have to fill your API key and SECRET key information in the accounts.json file.<br>
-The ACCOUNT_ID field is the name you give to the account. It's to be included in the alert message to identify the alert target account.<br>
+The ACCOUNT_ID field is the **name you give to the account**. It's to be included in the alert message to identify the alert target account.<br>
 The password field is required by Kucoin and Bitget but other exchanges may or may not use it. If your exchange doesn't give you a password when creating the API key just leave the field blank.<br>
 The EXCHANGE field is self explanatory. Valid exchange names are:<br> 
 - "**kucoinfutures**"<br>
