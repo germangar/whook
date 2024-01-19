@@ -36,7 +36,8 @@ Currently supported exchanges:
 **sell or short** - places sell order.<br>
 **position or pos** - goes to a position of the given value. Use a positive value for Long and a negative value for Short.<br>
 **close** - closes the position (position 0 also does it).<br>
-**limit:[customID]:[price]** - Combined with buy/sell commads creates a limit order. The three fields must be separated by a colon with no spaces. CustomID is required and must always be different<br>
+**limit:[customID]:[price]** - Combined with buy/sell commads creates a limit order. The three fields must be separated by a colon with no spaces.<br>
+Every limit order must have assigned its own unique ID so it can be identified for cancelling it<br>
 **cancel:[customID]** - Cancels a limit order by its customID. The symbol is required in the order.<br>
 **cancel:all** - Special keyword which cancels all orders from that symbol at once.<br>
 
