@@ -108,7 +108,7 @@ pause<br>
 
 
 ### CONFIGURATION - API KEYS ###
-When you first launch the script it will create an accounts.json file in the script directory and exit with a 'no accounts found' error. This file is a template to configure the accounts API data. This file can contain as many accounts as you want separated by commas. It looks like this:
+When you first launch the script it will create an accounts.json file in the script directory and exit with a 'no accounts found' error. This file is a template to configure the accounts API data. This file can contain **as many accounts as you want separated by commas**. It looks like this:
 
 
 [<br>
@@ -141,7 +141,7 @@ The EXCHANGE field is self explanatory. Valid exchange names are:<br>
 - "**phemex**"<br>
 - "**phemexdemo**" (for testnet)<br>
 
-There is also one optional key: 'SETTLE_COIN' for cases where you want to trade non-USDT pairs (or non-USD in the case of Kraken). Different settle coins can't be combined, tho. Whook will only use one at once per account. If you want to trade in several settle coins you can create an account for each settle coin.
+There is also one optional key: 'SETTLE_COIN' for cases where you want to trade non-USDT pairs (or non-USD in the case of Kraken). Different settle coins can't be combined, tho. Whook will only use one at once per account. If you want to trade in several settle coins you can create an account for each settle coin (they can reuse the same API keys).
 
 
 ### HOW TO HOST IN AWS ### 
