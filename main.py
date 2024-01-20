@@ -1084,14 +1084,13 @@ class account_c:
                 if( order.reverse ):
                     params['reverse'] = True
 
-
             if( self.exchange.id == 'krakenfutures' ):
                 params['leverage'] = max( order.leverage, 1 )
                 params['marginMode'] = MARGIN_MODE
 
             if( self.exchange.id == 'okx' ):
+                params['leverage'] = max( order.leverage, 1 )
                 params['marginMode'] = MARGIN_MODE
-                params['leverage'] = order.leverage
 
             if( order.type == 'limit' ):
                 if( self.exchange.id == 'krakenfutures' ):
