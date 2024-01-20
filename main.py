@@ -709,7 +709,16 @@ class account_c:
     ### https://docs.ccxt.com/#/?id=position-structure ###
         failed = False
         try:
-            positions = self.exchange.fetch_positions( params = {'settle':self.SETTLE_COIN} ) # the 'settle' param is only required by phemex
+            symbols = None
+            if( self.exchange.id == 'bitget' ):
+                symbols = list(self.markets.keys())
+            positions = self.exchange.fetch_positions( symbols, params = {'settle':self.SETTLE_COIN} ) # the 'settle' param is only required by phemex
+
+            # params = {'settle':self.SETTLE_COIN}  # the 'settle' param is only required by phemex
+            # if( self.exchange.id == 'bitget' ):
+            #     params['marginCoin'] = self.SETTLE_COIN
+            #     params['productType'] = 'USDT-FUTURES'
+            # positions = self.exchange.fetch_positions( params = params )
 
         except Exception as e:
             a = e.args[0]
