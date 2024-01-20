@@ -27,7 +27,7 @@ Currently supported exchanges:
 
 ### ALERT SYNTAX ###
 
-* Symbol format:: ETHUSDT, ETH/USDT, ETH/USDT:USDT
+* Symbol format:: ETHUSDT, ETHUSDT.P, ETH/USDT, ETH/USDT:USDT. All these formats will be accepted.
 
 * Account id: Just add the id. No command associated. Account id must include at least one non-numeric character and obviously it shouldn't be the same as any of the command names.
 
@@ -36,7 +36,8 @@ Currently supported exchanges:
 **sell or short** - places sell order.<br>
 **position or pos** - goes to a position of the given value. Use a positive value for Long and a negative value for Short.<br>
 **close** - closes the position (position 0 also does it).<br>
-**limit:[customID]:[price]** - Combined with buy/sell commads creates a limit order. The three fields must be separated by a colon with no spaces. CustomID is required and must always be different<br>
+**limit:[customID]:[price]** - Combined with buy/sell commads creates a limit order. The three fields must be separated by a colon with no spaces.<br>
+Every limit order must have assigned its own unique ID so it can be identified for cancelling it<br>
 **cancel:[customID]** - Cancels a limit order by its customID. The symbol is required in the order.<br>
 **cancel:all** - Special keyword which cancels all orders from that symbol at once.<br>
 
@@ -107,7 +108,7 @@ pause<br>
 
 
 ### CONFIGURATION - API KEYS ###
-When you first launch the script it will create an accounts.json file in the script directory and exit with a no accounts found error. This file is a template to configure the accounts API data. This file can contain as many accounts as you want separated by commas. It looks like this:
+When you first launch the script it will create an accounts.json file in the script directory and exit with a 'no accounts found' error. This file is a template to configure the accounts API data. This file can contain **as many accounts as you want separated by commas**. It looks like this:
 
 
 [<br>
@@ -122,7 +123,7 @@ When you first launch the script it will create an accounts.json file in the scr
 
 
 You have to fill your API key and SECRET key information in the accounts.json file.<br>
-The ACCOUNT_ID field is the name you give to the account. It's to be included in the alert message to identify the alert target account.<br>
+The ACCOUNT_ID field is the **name you give to the account**. It's to be included in the alert message to identify the alert target account.<br>
 The password field is required by Kucoin and Bitget but other exchanges may or may not use it. If your exchange doesn't give you a password when creating the API key just leave the field blank.<br>
 The EXCHANGE field is self explanatory. Valid exchange names are:<br> 
 - "**kucoinfutures**"<br>
@@ -140,7 +141,7 @@ The EXCHANGE field is self explanatory. Valid exchange names are:<br>
 - "**phemex**"<br>
 - "**phemexdemo**" (for testnet)<br>
 
-There is also one optional key: 'SETTLE_COIN' for cases where you want to trade non-USDT pairs (or non-USD in the case of Kraken). Different settle coins can't be combined, tho. Whook will only use one at once per account. If you want to trade in several settle coins you can create an account for each settle coin.
+There is also one optional key: 'SETTLE_COIN' for cases where you want to trade non-USDT pairs (or non-USD in the case of Kraken). Different settle coins can't be combined, tho. Whook will only use one at once per account. If you want to trade in several settle coins you can create an account for each settle coin (they can reuse the same API keys).
 
 
 ### HOW TO HOST IN AWS ### 
