@@ -100,6 +100,12 @@ class position_c:
         elif( collateral != 0) : string += ' * ' + "{:.4f}[$]".format(collateral)
         string += ' * ' + "{:.2f}[$]".format(unrealizedPnl)
         string += ' * ' + "{:.2f}".format(p) + '%'
+
+        # OKX provides the position breakeven price info:bePx. Let's print that too
+        if( self.getKey('info') != None ):
+            be = self.getKey('info').get('bePx')
+            if( be != None ):
+                string += ' * ' + "{:.3f}".format(float(be)) + '[be]'
         return string
             
 
@@ -1426,8 +1432,10 @@ class account_c:
                     # balance when we try to order all the balance at once, which creates complications
                     # when reducing a reveral order. This is a temporary way to make it work, but 
                     # we should really calculate the fees
-                    if( self.exchange.id == 'bybit' and quantity > positionContracts ):
-                        self.ordersQueue.append( order_c( symbol, command, positionContracts, 0 ) )
+                    #
+                    # FIXME: Temporarily using this path for OKX too
+                    if( ( self.exchange.id == 'bybit' or self.exchange.id == 'okx' ) and quantity > positionContracts ):
+                        self.ordersQueue.append( order_c( symbol, command, positionContracts, 0, reduceOnly = True ) )
                         quantity -= positionContracts
                         if( quantity > minOrder ):
                             self.ordersQueue.append( order_c( symbol, command, quantity, leverage ) )
