@@ -29,7 +29,7 @@ Currently supported exchanges:
 
 * Symbol format:: ETHUSDT, ETHUSDT.P, ETH/USDT, ETH/USDT:USDT. All these formats will be accepted.
 
-* Account id: Just add the id. No command associated. Account id must include at least one non-numeric character and obviously it shouldn't be the same as any of the command names.
+* Account id: Just add the id you create for the account. No command associated. Account id must include at least one non-numeric character and obviously it shouldn't be the same as any of the command names.
 
 * Commands:<br>
 **buy or long** - places buy order.<br>
