@@ -29,7 +29,7 @@ Currently supported exchanges:
 
 * Symbol format:: ETHUSDT, ETHUSDT.P, ETH/USDT, ETH/USDT:USDT. All these formats will be accepted.
 
-* Account id: Just add the id. No command associated. Account id must include at least one non-numeric character and obviously it shouldn't be the same as any of the command names.
+* Account id: Just add the id you create for the account. No command associated. Account id must include at least one non-numeric character and obviously it shouldn't be the same as any of the command names.
 
 * Commands:<br>
 **buy or long** - places buy order.<br>
@@ -98,6 +98,8 @@ It's possible to add comments inside the alert message. The comment must be in a
 With these you can already run the script, but it won't have access online. For giving it access to the internet I recommend to use:<br>
 
 - [ngrok](https://ngrok.com/download). Create a free ngrok account. Download the last version of ngrok and unzip it. In the ngrok website they provide an auth key, copy it. Launch the software and paste the auth code into the ngrok console (with the authcode ngrok will be able to stay open forever). Then type in the ngrok console: "ngrok http 80". This will create an internet address for your webhook. You have to add /whook at the end of it to comunicate with the Whook server. This will be the address you introduce in the tradingview alert<br>
+
+Note: Ngrok now allows free accounts to create one static domain. It allows to close Ngrok and keep the same address the next time you open it, which is nice.
 
 Example of an address: https://e579-139-47-50-49.ngrok-free.app/whook<br>
 
