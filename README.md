@@ -7,7 +7,6 @@ Whook will do everything it can to fullfill orders, including resending rejected
 
 Whook only makes market orders and limit orders. Take profit and stop loss are not supported.<br>
 Whook only uses one-side mode. Hedge mode is not supported.<br>
-It's also always using isolated marging. However you should be able to change this relatively easy if you want to.
 
 You don't need to be a programmer nor know how to clone a repository to use Whook. All you need is to download the **main.py** file and follow the instructions below.
 
@@ -119,15 +118,17 @@ When you first launch the script it will create an accounts.json file in the scr
 &emsp;&emsp;		"EXCHANGE":"exchange_name", <br>
 &emsp;&emsp;		"API_KEY":"your_api_key", <br>
 &emsp;&emsp;		"SECRET_KEY":"your_secret_key", <br>
-&emsp;&emsp;		"PASSWORD":"your_API_password"<br>
+&emsp;&emsp;		"PASSWORD":"your_API_password",<br>
+&emsp;&emsp;		"MARGIN_MODE":"isolated"<br>
 &emsp;	}<br>
 ]<br>
 
 
-You have to fill your API key and SECRET key information in the accounts.json file.<br>
-The ACCOUNT_ID field is the **name you give to the account**. It's to be included in the alert message to identify the alert target account.<br>
-The password field is required by Kucoin and Bitget but other exchanges may or may not use it. If your exchange doesn't give you a password when creating the API key just leave the field blank.<br>
-The EXCHANGE field is self explanatory. Valid exchange names are:<br> 
+You have to fill your **API_KEY** and **SECRET_KEY** information in the accounts.json file.<br>
+The **ACCOUNT_ID** field is the **name you give to the account**. It's to be included in the alert message to identify the alert target account.<br>
+The **PASSWORD** field is required by Kucoin and Bitget but other exchanges may or may not use it. If your exchange doesn't give you a password when creating the API key just leave the field blank.<br>
+The **MARGIN_MODE** field defines the margin mode in which the account will operate. Valid names "isolated" or "cross". Defaults to isolated. It's only allowed to define it in a per account basis. There's no support to define it per symbol.<br>
+The **EXCHANGE** field is self explanatory. Valid exchange names are:<br> 
 - "**kucoinfutures**"<br>
 - "**bitget**"<br>
 - "**coinex**"<br>
@@ -143,7 +144,7 @@ The EXCHANGE field is self explanatory. Valid exchange names are:<br>
 - "**phemex**"<br>
 - "**phemexdemo**" (for testnet)<br>
 
-There is also one optional key: 'SETTLE_COIN' for cases where you want to trade non-USDT pairs (or non-USD in the case of Kraken). Different settle coins can't be combined, tho. Whook will only use one at once per account. If you want to trade in several settle coins you can create an account for each settle coin (they can reuse the same API keys).
+There is also one optional key: **'SETTLE_COIN'** for cases where you want to trade non-USDT pairs (or non-USD in the case of Kraken). Different settle coins can't be combined, tho. Whook will only use one at once per account. If you want to trade in several settle coins you can create an account for each settle coin (they can reuse the same API keys).
 
 
 ### HOW TO HOST IN AWS ### 
