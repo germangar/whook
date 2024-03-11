@@ -23,7 +23,7 @@ def fixVersionFormat( version )->str:
     vl = version.split(".")
     return f'{vl[0]}.{vl[1]}.{vl[2].zfill(3)}'
 
-minCCXTversion = '4.0.69'
+minCCXTversion = '4.1.11'
 CCXTversion = fixVersionFormat(ccxt.__version__)
 print( 'CCXT Version:', ccxt.__version__)
 if( CCXTversion < fixVersionFormat(minCCXTversion) ):
@@ -793,16 +793,6 @@ class account_c:
         for thisPosition in positions:
 
             symbol = thisPosition.get('symbol')
-
-            # HACK!! coinex doesn't have 'contracts'. The value comes in 'contractSize' and in info:{'amount'}
-            # reminder: Version 4.1.11 of ccxt fixes this. I'll keep it by now, but should remove it later.
-            if( self.exchange.id == 'coinex' ):
-                thisPosition['contracts'] = float( thisPosition['info']['amount'] )
-
-            # HACK!! bingx doesn't have 'contracts'. The value comes in 'contractSize' and in info:{'positionAmt'}
-            # reminder: Version 4.1.10 of ccxt fixes this. I'll keep it by now, but should remove it later.
-            if( self.exchange.id == 'bingx' ):
-                thisPosition['contracts'] = float( thisPosition['info']['positionAmt'] )
 
             # HACK!! bybit response doesn't contain a 'hedge' key, but it contains the information in the 'info' block
             if( self.exchange.id == 'bybit' ):
