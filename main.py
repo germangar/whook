@@ -32,11 +32,6 @@ if( CCXTversion < fixVersionFormat(minCCXTversion) ):
     print( 'While it may run with earlier versions wrong behaviors are expected to happen.' )
     print( 'Please update CCXT.' )
     print( '============== * WARNING * ==============\n')
-elif( CCXTversion > fixVersionFormat('4.0.88') and CCXTversion < fixVersionFormat('4.0.101') ):
-    print( '\n============== * WARNING * ==============')
-    print( 'There is a problem with CCXT versions between to 4.0.88 and 4.0.101')
-    print( 'when changing marginMode in *Bybit*. Please update CCXT module' )
-    print( '============== * WARNING * ==============\n')
     
 
 
