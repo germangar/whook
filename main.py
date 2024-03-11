@@ -606,6 +606,10 @@ class account_c:
             data = response['info']['accounts']['flex']
             return { 'free':float(data.get('availableMargin')), 'used':float(data.get('initialMarginWithOrders')), 'total': float(data.get('balanceValue')) }
 
+        if( response.get(self.SETTLE_COIN) == None ):
+            balance = { 'free':0.0, 'used':0.0, 'total':0.0 }
+            return balance
+        
         return response.get(self.SETTLE_COIN)
     
 
