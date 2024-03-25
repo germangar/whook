@@ -646,10 +646,12 @@ class account_c:
         return None
     
 
-    def findSymbolFromPairName(self, paircmd):
+    def findSymbolFromPairName(self, pairString):
         # this is only for the pair name we receive in the alert.
         # Once it's converted to ccxt symbol format there is no
         # need to use this method again.
+
+        paircmd = pairString.upper()
 
         if( paircmd.endswith('.P' ) ):
             paircmd = paircmd[:-2]
