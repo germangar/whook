@@ -803,12 +803,15 @@ class account_c:
 
             #some exchanges have the key set to None. Fix it when possible
             if( thisPosition.get('marginMode') == None ) :
-                if( self.exchange.has.get('setMarginMode') != True ):
+                if( self.exchange.id == 'bybit' ): # tradeMode - Classic & UTA (inverse): 0: cross-margin, 1: isolated margin
+                    self.markets[ symbol ]['local'][ 'marginMode' ] = 'isolated' if thisPosition['info']['tradeMode'] == '1' else 'cross'
+                elif( self.exchange.has.get('setMarginMode') != True ):
                     thisPosition['marginMode'] = MARGIN_MODE_NONE
                 else:
                     print( ' * W: refreshPositions: Could not get marginMode for', symbol )
-
-            self.markets[ symbol ]['local'][ 'marginMode' ] = thisPosition.get('marginMode')
+                    thisPosition['marginMode'] = MARGIN_MODE_NONE
+            else:
+                self.markets[ symbol ]['local'][ 'marginMode' ] = thisPosition.get('marginMode')
 
             # update the local leverage as well as we can
             leverage = -1
