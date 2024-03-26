@@ -23,7 +23,7 @@ def fixVersionFormat( version )->str:
     vl = version.split(".")
     return f'{vl[0]}.{vl[1]}.{vl[2].zfill(3)}'
 
-minCCXTversion = '4.1.11'
+minCCXTversion = '4.2.82'
 CCXTversion = fixVersionFormat(ccxt.__version__)
 print( 'CCXT Version:', ccxt.__version__)
 if( CCXTversion < fixVersionFormat(minCCXTversion) ):
