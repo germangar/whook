@@ -949,7 +949,7 @@ class account_c:
                 return True
             
             if ( status == 'closed' ):
-                self.print( " * Order succesful:", order.symbol, order.side, order.quantity, str(order.leverage)+"x", "at price", price, 'id', order.id )
+                self.print( " * Order successful:", order.symbol, order.side, order.quantity, str(order.leverage)+"x", "at price", price, 'id', order.id )
                 self.activeOrders.remove( order )
                 return True
         return False
@@ -1217,7 +1217,7 @@ class account_c:
                 self.ordersQueue.remove( order )
                 continue
             if( (remaining == None or remaining == 0) and response.get('status') == 'closed' ):
-                self.print( " * Order succesful:", order.symbol, order.side, order.quantity, str(order.leverage)+"x", "at price", response.get('price'), 'id', order.id )
+                self.print( " * Order successful:", order.symbol, order.side, order.quantity, str(order.leverage)+"x", "at price", response.get('price'), 'id', order.id )
                 self.ordersQueue.remove( order )
                 continue
 
