@@ -794,7 +794,9 @@ class account_c:
             # HACK!! bybit response doesn't contain a 'hedge' key, but it contains the information in the 'info' block
             if( self.exchange.id == 'bybit' ):
                 thisPosition['hedged'] = True if( thisPosition['info'].get( 'positionIdx' ) != '0' ) else False
-            
+
+            if( self.exchange.id == 'bingx' ): # 'onlyOnePosition': True,
+                thisPosition['hedged'] = not thisPosition['info'].get( 'onlyOnePosition' )
 
             # if the position contains positionMode information update our local data
             if( thisPosition.get('hedged') != None ) : # None means the exchange only supports oneWay
