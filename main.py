@@ -513,14 +513,6 @@ class account_c:
         ##########################################
         if( self.markets[ symbol ]['local']['leverage'] != leverage and self.exchange.has.get('setLeverage') == True ):
 
-            # bingx is special
-            if( self.exchange.id == 'bingx' ):
-                response = self.exchange.set_leverage( leverage, symbol, params = {'side':'LONG'} )
-                response2 = self.exchange.set_leverage( leverage, symbol, params = {'side':'SHORT'} )
-                if( response.get('code') == '0' and response2.get('code') == '0' ):
-                    self.markets[ symbol ]['local']['leverage'] = leverage
-                return
-
             # from phemex API documentation: The sign of leverageEr indicates margin mode,
             # i.e. leverage <= 0 means cross-margin-mode, leverage > 0 means isolated-margin-mode.
 
@@ -530,6 +522,15 @@ class account_c:
             elif( self.exchange.id == 'okx' ):
                 params['marginMode'] = self.markets[ symbol ]['local']['marginMode']
                 params['posSide'] = 'net'
+            elif( self.exchange.id == 'bingx' ):
+                if( self.markets[ symbol ]['local']['positionMode'] != 'oneway' ):
+                    response = self.exchange.set_leverage( leverage, symbol, params = {'side':'LONG'} )
+                    response2 = self.exchange.set_leverage( leverage, symbol, params = {'side':'SHORT'} )
+                    if( response.get('code') == '0' and response2.get('code') == '0' ):
+                        self.markets[ symbol ]['local']['leverage'] = leverage
+                    return
+                else:
+                    params['side'] = 'BOTH'
 
             try:
                 response = self.exchange.set_leverage( leverage, symbol, params )
@@ -1093,6 +1094,12 @@ class account_c:
                 params['leverage'] = max( order.leverage, 1 )
                 params['marginMode'] = self.MARGIN_MODE
 
+            if( self.exchange.id == 'bingx' ):
+                if( self.markets[ order.symbol ]['local']['positionMode'] == 'oneway' ):
+                    params['positionSide'] = 'BOTH'
+                else:
+                    params['positionSide'] = 'LONG' if( order.side == "buy" ) else 'SHORT'
+
             if( order.type == 'limit' ):
                 if( self.exchange.id == 'krakenfutures' ):
                     params['cliOrdId'] = order.customID
@@ -1200,7 +1207,7 @@ class account_c:
 
                 # [bitget/bitget] bitget {"code":"45110","msg":"less than the minimum amount 5 USDT","requestTime":1689481837614,"data":null}
                 # The deviation between your delegated price and the index price is greater than 20%, you can appropriately adjust your delegation price and try again     
-                self.print( ' * E: Unhandled exception. Cancelling:', a, type(e) )
+                self.print( ' * E: Unhandled exception. Cancelling:', a, type(e), ' updateOrdersQueue' )
                 self.ordersQueue.remove( order )
                 continue # back to the orders loop
 
