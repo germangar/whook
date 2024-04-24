@@ -31,8 +31,8 @@ Currently supported exchanges:
 * Account id: Just add the id you create for the account. No command associated. Account id must include at least one non-numeric character and obviously it shouldn't be the same as any of the command names.
 
 * Commands:<br>
-**buy or long** - places buy order.<br>
-**sell or short** - places sell order.<br>
+**buy** - places buy order.<br>
+**sell** - places sell order.<br>
 **position or pos** - goes to a position of the given value. Use a positive value for Long and a negative value for Short.<br>
 **close** - closes the position (position 0 also does it).<br>
 **limit:[customID]:[price]** - Combined with buy/sell commads creates a limit order. The three fields must be separated by a colon with no spaces.<br>
