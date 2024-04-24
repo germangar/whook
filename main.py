@@ -1606,9 +1606,15 @@ def parseAlert( data, account: account_c ):
         elif ( token[-1:].lower()  == "x" ):
             arg = token[:-1]
             alert['leverage'] = int(stringToValue(arg))
-        elif token.lower()  == 'long' or token.lower() == "buy":
+        elif token.lower()  == 'long':
             alert['command'] = 'buy'
-        elif token.lower()  == 'short' or token.lower() == "sell":
+            print( "WARNING: 'long' and 'short' commands are deprecated and will be removed in the future. Please use 'buy' and 'sell' instead" )
+        elif token.lower()  == 'short':
+            alert['command'] = 'sell'
+            print( "WARNING: 'long' and 'short' commands are deprecated and will be removed in the future. Please use 'buy' and 'sell' instead" )
+        elif token.lower() == "buy":
+            alert['command'] = 'buy'
+        elif token.lower() == "sell":
             alert['command'] = 'sell'
         elif token.lower()  == 'close':
             alert['command'] = 'close'
