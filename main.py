@@ -721,12 +721,6 @@ class account_c:
                 symbols = list(self.markets.keys())
             positions = self.exchange.fetch_positions( symbols, params = {'settle':self.SETTLE_COIN} ) # the 'settle' param is only required by phemex
 
-            # params = {'settle':self.SETTLE_COIN}  # the 'settle' param is only required by phemex
-            # if( self.exchange.id == 'bitget' ):
-            #     params['marginCoin'] = self.SETTLE_COIN
-            #     params['productType'] = 'USDT-FUTURES'
-            # positions = self.exchange.fetch_positions( params = params )
-
         except Exception as e:
             a = e.args[0]
             if 'OK' in a: # Coinex raises an exception to give an OK message when there are no positions... don't look at me, look at them
