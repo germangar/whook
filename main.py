@@ -2,6 +2,7 @@
 
 import ccxt
 from flask import Flask, request, abort
+from werkzeug.middleware.proxy_fix import ProxyFix
 from threading import Timer
 import time
 import json
@@ -13,6 +14,9 @@ from pprint import pprint
 
 
 verbose = False
+behind_proxy = False
+PORT = 80
+PROXY_PORT = 50000
 ALERT_TIMEOUT = 60 * 3
 ORDER_TIMEOUT = 40
 REFRESH_POSITIONS_FREQUENCY = 5 * 60    # refresh positions every 5 minutes
@@ -1793,6 +1797,13 @@ log = logging.getLogger('werkzeug')
 log.setLevel(logging.ERROR)
 log.disabled = True
 
+if behind_proxy == True:
+    # warn Flask that we are behind a Web proxy
+    app.wsgi_app = ProxyFix(
+        app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1
+    )
+    PORT = PROXY_PORT
+
 @app.route('/whook', methods=['GET','POST'])
 def webhook():
 
@@ -1833,6 +1844,6 @@ timerOrdersQueue.start()
 # start the webhook server
 if __name__ == '__main__':
     print( " * Listening" )
-    app.run(host="0.0.0.0", port=80, debug=False)
+    app.run(host="0.0.0.0", port=PORT, debug=False)
 
 
