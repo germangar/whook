@@ -148,15 +148,17 @@ There is also one optional key: **'SETTLE_COIN'** for cases where you want to tr
 
 
 ### HOW TO HOST IN AWS ### 
-(the easy way)
+
+#### Windows
 
 You can host a server in AWS EC2 for free. It can be a linux server or a windows server. You can find many tutorials in Youtube on how to do it. Here's a (slightly outdated) tutorial for windows: https://youtu.be/9z5YOXhxD9Q.<br>
 I host it in a Windows_server 2022 edition which was the latest at the time of writing this readme.<br>
 
 Once you have your virtual machine running follow the steps in the section above ("How to intall and run").
 
-I'm not a linux user so I struggled to open the ports in the Linux virtual machine. If you have experience in Linux this may be easy to you.
+#### Linux
 
+There is a Linux tutorial inside the tutorials directory. Thanks to @iZnogoude (https://github.com/iZnogoude/whook) for making it.
 
 ### KNOWN BUGS ### 
 - Kraken: Whook is unable to set the margin mode. It will use whatever is set in the exchange for that symbol.
