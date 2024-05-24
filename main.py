@@ -345,6 +345,12 @@ class account_c:
             if( minAmount == None ): # replace minimum amount with precision value
                 thisMarket['limits']['amount']['min'] = float(precision)
 
+
+            # HACK: Bingx has wrong leverage limits defined
+            if( self.exchange.id == 'bingx' ):
+                if thisMarket['limits']['leverage']['max'] < 50:
+                    thisMarket['limits']['leverage']['max'] = 100 # most coins are 50x but some are 100x, but there's no way to figure out which is which
+
             # also generate a local list to keep track of marginMode and Leverage status
             thisMarket['local'] = { 'marginMode':MARGIN_MODE_NONE, 'leverage':0, 'positionMode':'' }
             if( self.exchange.has.get('setPositionMode') != True ):
