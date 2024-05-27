@@ -348,8 +348,7 @@ class account_c:
 
             # HACK: Bingx has wrong leverage limits defined
             if( self.exchange.id == 'bingx' ):
-                if thisMarket['limits']['leverage']['max'] < 50:
-                    thisMarket['limits']['leverage']['max'] = 100 # most coins are 50x but some are 100x, but there's no way to figure out which is which
+                thisMarket['limits']['leverage']['max'] = None if self.exchange.has['fetchLeverage'] else max( 100, thisMarket['limits']['leverage']['max'] )
 
             # also generate a local list to keep track of marginMode and Leverage status
             thisMarket['local'] = { 'marginMode':MARGIN_MODE_NONE, 'leverage':0, 'positionMode':'' }
@@ -709,8 +708,18 @@ class account_c:
 
     def findMaxLeverageForSymbol(self, symbol)->float:
         maxLeverage = self.markets[symbol]['limits']['leverage'].get('max')
-        if( maxLeverage == None ):
-            maxLeverage = 100
+        if( maxLeverage == None ): 
+            if( self.exchange.has['fetchLeverage'] ):
+                info = self.exchange.fetch_leverage( symbol ).get('info')
+
+                if( info.get('maxLongLeverage') != None and info.get('maxShortLeverage') != None ):
+                    maxLeverage = min(int(info['maxLongLeverage']), int(info['maxShortLeverage']))
+                else:
+                    maxLeverage = 100
+                self.markets[symbol]['limits']['leverage']['max'] = maxLeverage
+            else:
+                maxLeverage = 100
+
         return maxLeverage
 
 
