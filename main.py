@@ -708,17 +708,15 @@ class account_c:
 
     def findMaxLeverageForSymbol(self, symbol)->float:
         maxLeverage = self.markets[symbol]['limits']['leverage'].get('max')
-        if( maxLeverage == None ): 
+        if( maxLeverage == None ):
+            maxLeverage = 100
             if( self.exchange.has['fetchLeverage'] ):
                 info = self.exchange.fetch_leverage( symbol ).get('info')
 
-                if( info.get('maxLongLeverage') != None and info.get('maxShortLeverage') != None ):
+                if( info != None and info.get('maxLongLeverage') != None and info.get('maxShortLeverage') != None ):
                     maxLeverage = min(int(info['maxLongLeverage']), int(info['maxShortLeverage']))
-                else:
-                    maxLeverage = 100
-                self.markets[symbol]['limits']['leverage']['max'] = maxLeverage
-            else:
-                maxLeverage = 100
+
+            self.markets[symbol]['limits']['leverage']['max'] = maxLeverage
 
         return maxLeverage
 
