@@ -178,7 +178,7 @@ class account_c:
                 "apiKey": apiKey,
                 "secret": secret,
                 'password': password,
-                "options": {'defaultType': 'swap', 'defaultMarginMode':self.MARGIN_MODE, 'adjustForTimeDifference' : True},
+                "options": {'defaultType': 'swap', 'adjustForTimeDifference' : True},
                 #"timeout": 60000,
                 "enableRateLimit": False
                 })
@@ -387,7 +387,10 @@ class account_c:
             return leverage
         
         thisMarket = self.markets.get( symbol )
-        validLeverages = list(map(int, thisMarket['info']['leverages']))
+        leverages = thisMarket['info'].get('leverage')
+        if( leverages == None ):
+            leverages = thisMarket['info'].get('leverages')
+        validLeverages = list(map(int, leverages))
         safeLeverage = 1
         for value in validLeverages:
             if( value > leverage ):
@@ -598,15 +601,7 @@ class account_c:
             balance['used'] = float( data.get('usdtEquity') ) - float( data.get('available') )
             balance['total'] = float( data.get('usdtEquity') )
             return balance
-        if( self.exchange.id == "coinex" ):
-            # Coinex response isn't much better. We also reconstruct it
-            data = response['info'].get('data')
-            data = data.get(self.SETTLE_COIN)
-            balance = {}
-            balance['free'] = float( data.get('available') )
-            balance['used'] = float( data.get('margin') )
-            balance['total'] = balance['free'] + balance['used'] + float( data.get('profit_unreal') )
-            return balance
+
         if( self.exchange.id == 'krakenfutures' ):
             data = response['info']['accounts']['flex']
             return { 'free':float(data.get('availableMargin')), 'used':float(data.get('initialMarginWithOrders')), 'total': float(data.get('balanceValue')) }
@@ -962,7 +957,7 @@ class account_c:
                 self.activeOrders.remove( order )
                 return True
             
-            if ( status == 'closed' ):
+            if ( status == 'closed' or status == 'filled' ):
                 self.print( " * Order successful:", order.symbol, order.side, order.quantity, str(order.leverage)+"x", "at price", price, 'id', order.id )
                 self.activeOrders.remove( order )
                 return True
@@ -1236,7 +1231,7 @@ class account_c:
                 self.ordersQueue.append( order_c( order.symbol, order.side, remaining, order.leverage, 0.5 ) )
                 self.ordersQueue.remove( order )
                 continue
-            if( (remaining == None or remaining == 0) and response.get('status') == 'closed' ):
+            if( (remaining == None or remaining == 0) and (response.get('status') == 'closed' or response.get('status') == 'filled') ):
                 self.print( " * Order successful:", order.symbol, order.side, order.quantity, str(order.leverage)+"x", "at price", response.get('price'), 'id', order.id )
                 self.ordersQueue.remove( order )
                 continue
