@@ -1258,17 +1258,18 @@ class account_c:
                or isinstance(e, ccxt.ExchangeNotAvailable) or 'not available' in a ):
                 # ccxt.base.errors.ExchangeError: Service is not available during funding fee settlement. Please try again later.
                 if( alert.get('timestamp') + ALERT_TIMEOUT < time.monotonic() ):
-                    self.print( " * E: Couldn't reach the server: Retrying in 30 seconds", e, type(e) )
                     newAlert = copy.deepcopy( alert ) # the other alert will be deleted
                     if( isinstance(e, ccxt.RateLimitExceeded) ):
                         newAlert['delayTimestamp'] = time.monotonic() + 1
+                        self.print( " * E: Rate limit exceeded. Retrying..." )
                     else:
                         newAlert['delayTimestamp'] = time.monotonic() + 30
+                        self.print( " * E: Couldn't reach the server: Retrying in 30 seconds", e, type(e) )
                     self.latchedAlerts.append( newAlert )
                 else: 
                     self.print( " * E: Couldn't reach the server: Cancelling" )
             else:
-                self.print( " * E: Couldn't reach the server: Cancelling", e, type(e) )
+                self.print( " * E: Error at fetching balance", e, type(e) )
             return
 
         #
