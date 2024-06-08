@@ -108,7 +108,7 @@ class position_c:
             
 
 class order_c:
-    def __init__(self, symbol = "", side = "", quantity = 0.0, leverage = 1, delay = 0, reverse = False, reduceOnly = False) -> None:
+    def __init__(self, symbol = "", side = "", quantity = 0.0, leverage = 1, delay = 0, reduceOnly = False) -> None:
         self.symbol = symbol
         self.type = 'market'
         self.side = side
@@ -120,7 +120,6 @@ class order_c:
         self.reduceOnly = True if leverage == 0 else reduceOnly
         self.id = ""
         self.delay = delay
-        self.reverse = reverse
         self.timestamp = time.monotonic()
     def timedOut(self):
         return ( self.timestamp + ORDER_TIMEOUT < time.monotonic() )
@@ -131,7 +130,6 @@ class account_c:
     def __init__(self, exchange = None, name = 'default', apiKey = None, secret = None, password = None, marginMode = None, settleCoin = None )->None:
         
         self.accountName = name
-        self.canFlipPosition = False
         self.refreshPositionsFailed = 0
         self.positionslist = []
         self.ordersQueue = []
@@ -163,7 +161,6 @@ class account_c:
                 #"timeout": 60000,
                 "enableRateLimit": False
                 })
-            self.canFlipPosition = True
         elif( exchange.lower() == 'bingx' ):
             self.exchange = ccxt.bingx({
                 "apiKey": apiKey,
@@ -182,7 +179,6 @@ class account_c:
                 #"timeout": 60000,
                 "enableRateLimit": False
                 })
-            self.canFlipPosition = False
         elif( exchange.lower() == 'phemex' ):
             self.exchange = ccxt.phemex({
                 "apiKey": apiKey,
@@ -1086,12 +1082,6 @@ class account_c:
                 params['leverage'] = max( order.leverage, 1 )
                 params['marginMode'] = self.MARGIN_MODE
 
-            if( self.exchange.id == 'bitget' ):
-                params['side'] = 'buy_single' if( order.side == "buy" ) else 'sell_single'
-                params['timeInForce'] = 'normal'
-                if( order.reverse ):
-                    params['reverse'] = True
-
             if( self.exchange.id == 'krakenfutures' ):
                 params['leverage'] = max( order.leverage, 1 )
                 params['marginMode'] = self.MARGIN_MODE
@@ -1285,7 +1275,6 @@ class account_c:
         lockBaseCurrency = alert['lockBaseCurrency']
         priceLimit = alert['priceLimit']
         customID = alert['customID']
-        reverse = False
         isLimit = True if priceLimit > 0.0 else False
 
 
@@ -1416,16 +1405,6 @@ class account_c:
 
                     # do we need to divide these in 2 orders?
 
-                    # on bitget try to use the position reverse feature
-                    if( self.exchange.id == 'bitget' ):
-                        if( quantity >= positionContracts * 2 and leverage == self.markets[symbol]['local']['leverage'] ):
-                            self.ordersQueue.append( order_c( symbol, command, positionContracts, leverage, reverse=True ) )
-                            quantity -= positionContracts * 2
-                            if( quantity > minOrder ):
-                                self.ordersQueue.append( order_c( symbol, command, quantity, leverage ) )
-                            return
-                            # fall throught with the rest of contracts
-
                     # bingx must make one order for close and a second one for the new position
                     if( self.exchange.id == 'bingx' ):
                         if( quantity > positionContracts ):
@@ -1450,7 +1429,7 @@ class account_c:
                             self.ordersQueue.append( order_c( symbol, command, quantity, leverage ) )
                         return
 
-                    if( quantity >= canDoContracts + positionContracts and not self.canFlipPosition ):
+                    if( quantity >= canDoContracts + positionContracts ):
                         # we have to make sure each of the orders has the minimum order contracts
                         order1 = canDoContracts + positionContracts
                         order2 = quantity - (canDoContracts + positionContracts)
@@ -1474,7 +1453,7 @@ class account_c:
                 self.print( timeNow(), " * E: Order too small:", quantity, "Minimum required:", minOrder )
                 return
 
-            order = order_c( symbol, command, quantity, leverage, reverse = reverse )
+            order = order_c( symbol, command, quantity, leverage )
             if( isLimit ):
                 order.type = 'limit'
                 order.customID = customID
