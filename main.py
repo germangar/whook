@@ -588,16 +588,6 @@ class account_c:
 
         response = self.exchange.fetch_balance( params )
 
-        if( self.exchange.id == "bitget" ):
-            # Bitget response message is all over the place!!
-            # so we reconstruct it from the embedded exchange info
-            data = response['info'][0]
-            balance = {}
-            balance['free'] = float( data.get('available') )
-            balance['used'] = float( data.get('usdtEquity') ) - float( data.get('available') )
-            balance['total'] = float( data.get('usdtEquity') )
-            return balance
-
         if( self.exchange.id == 'krakenfutures' ):
             data = response['info']['accounts']['flex']
             return { 'free':float(data.get('availableMargin')), 'used':float(data.get('initialMarginWithOrders')), 'total': float(data.get('balanceValue')) }
