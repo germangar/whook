@@ -1289,8 +1289,7 @@ class account_c:
         if( isPercentage and command != 'close' ):
             quantity = min( max( quantity, -100.0 ), 100.0 )
             balance = self.fetchBalance()
-            print( "   Balance:", str(balance['total']) + '$', str(quantity) + '% =', str( balance['total'] * quantity * 0.01) + '$' )
-            if verbose : print( 'PERCENTAGE: ' + str(quantity) + '% =', str( balance['total'] * quantity * 0.01) + '$' )
+            self.print( "   Balance:", str(balance['total']) + '$', str(quantity) + '% =', str( balance['total'] * quantity * 0.01) + '$' )
             quantity = balance['total'] * quantity * 0.01
             isUSDT = True
         
