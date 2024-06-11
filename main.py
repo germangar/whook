@@ -14,7 +14,8 @@ from pprint import pprint
 
 
 verbose = False
-behind_proxy = False
+SHOW_BALANCE = False # print account balance at exchange initialization
+USE_PROXY = False
 PORT = 80
 PROXY_PORT = 50000
 ALERT_TIMEOUT = 60 * 3
@@ -354,8 +355,9 @@ class account_c:
             # Store the market into the local markets dictionary
             self.markets[key] = thisMarket
 
-        balance = self.fetchBalance() # { 'free':0.0, 'used':0.0, 'total':0.0 }
-        print( "          Balance: {:.2f}[$]".format(balance['total']) , "- Available {:.2f}[$]".format(balance['free']) )
+        if SHOW_BALANCE:
+            balance = self.fetchBalance() # { 'free':0.0, 'used':0.0, 'total':0.0 }
+            print( "          Balance: {:.2f}[$]".format(balance['total']) , "- Available {:.2f}[$]".format(balance['free']) )
         if( verbose ):
             pprint( self.markets['BTC/' + self.SETTLE_COIN + ':' + self.SETTLE_COIN] )
             
@@ -1710,6 +1712,56 @@ def Alert( data ):
 
 print('----------------------------')
 
+#### Open config file #####
+
+def writeConfig():
+    with open('config.json', 'w') as f:
+        configString = '[\n\t{\n'
+        configString += '\t\t"ALERT_TIMEOUT":'+str(ALERT_TIMEOUT)+',\n'
+        configString += '\t\t"ORDER_TIMEOUT":'+str(ORDER_TIMEOUT)+',\n'
+        configString += '\t\t"REFRESH_POSITIONS_FREQUENCY":'+str(REFRESH_POSITIONS_FREQUENCY)+',\n'
+        configString += '\t\t"UPDATE_ORDERS_FREQUENCY":'+str(UPDATE_ORDERS_FREQUENCY)+',\n'
+        configString += '\t\t"VERBOSE":'+str(verbose).lower()+',\n'
+        configString += '\t\t"SHOW_BALANCE":'+str(SHOW_BALANCE).lower()+',\n'
+        configString += '\t\t"USE_PROXY":'+str(USE_PROXY).lower()+',\n'
+        configString += '\t\t"PROXY_PORT":'+str(PROXY_PORT)+'\n'
+        configString += '\t}\n]'
+        
+        f.write( configString )
+        f.close()
+
+try:
+    with open('config.json', 'r') as config_file:
+        config = json.load(config_file)
+        config = config[0]
+        config_file.close()
+except FileNotFoundError:
+    writeConfig()
+    print( "Config file created.\n----------------------------")
+else:
+    # parse the config file
+    if( config.get('ALERT_TIMEOUT') != None ):
+        ALERT_TIMEOUT = int(config.get('ALERT_TIMEOUT'))
+    if( config.get('ORDER_TIMEOUT') != None ):
+        ORDER_TIMEOUT = int(config.get('ORDER_TIMEOUT'))
+    if( config.get('REFRESH_POSITIONS_FREQUENCY') != None ):
+        REFRESH_POSITIONS_FREQUENCY = int(config.get('REFRESH_POSITIONS_FREQUENCY'))
+    if( config.get('UPDATE_ORDERS_FREQUENCY') != None ):
+        UPDATE_ORDERS_FREQUENCY = float(config.get('UPDATE_ORDERS_FREQUENCY'))
+    if( config.get('SHOW_BALANCE') != None ):
+        SHOW_BALANCE = bool(config.get('SHOW_BALANCE'))
+    if( config.get('VERBOSE') != None ):
+        verbose = bool(config.get('VERBOSE'))
+    if( config.get('USE_PROXY') != None ):
+        USE_PROXY = bool(config.get('USE_PROXY'))
+    if( config.get('PROXY_PORT') != None ):
+        PROXY_PORT = int(config.get('PROXY_PORT'))
+    #rewrite the config file
+    writeConfig()
+
+
+#### Open accounts file ###
+
 try:
     with open('accounts.json', 'r') as accounts_file:
         accounts_data = json.load(accounts_file)
@@ -1775,7 +1827,7 @@ log = logging.getLogger('werkzeug')
 log.setLevel(logging.ERROR)
 log.disabled = True
 
-if behind_proxy == True:
+if USE_PROXY == True:
     # warn Flask that we are behind a Web proxy
     app.wsgi_app = ProxyFix(
         app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1
