@@ -355,8 +355,8 @@ class account_c:
             # Store the market into the local markets dictionary
             self.markets[key] = thisMarket
 
-        if SHOW_BALANCE:
-            balance = self.fetchBalance() # { 'free':0.0, 'used':0.0, 'total':0.0 }
+        if SHOW_BALANCE or verbose:
+            balance = self.fetchBalance()
             print( "          Balance: {:.2f}[$]".format(balance['total']) , "- Available {:.2f}[$]".format(balance['free']) )
         if( verbose ):
             pprint( self.markets['BTC/' + self.SETTLE_COIN + ':' + self.SETTLE_COIN] )
