@@ -15,6 +15,8 @@ from pprint import pprint
 
 verbose = False
 SHOW_BALANCE = False # print account balance at exchange initialization
+SHOW_BREAKEVEN = True # in positions when available
+SHOW_ENTRYPRICE = False # in positions
 USE_PROXY = False
 PORT = 80
 PROXY_PORT = 50000
@@ -100,11 +102,18 @@ class position_c:
         string += ' * ' + "{:.2f}[$]".format(unrealizedPnl)
         string += ' * ' + "{:.2f}".format(p) + '%'
 
-        # OKX provides the position breakeven price info:bePx. Let's print that too
+        if( self.getKey('entryPrice') != None ):
+            string += ' * ' + "[ep]{:.3f}".format(float(self.getKey('entryPrice')))
+
+        # OKX and Bitget provide the position breakeven price info:bePx. Let's print that too
         if( self.getKey('info') != None ):
             be = self.getKey('info').get('bePx')
-            if( be != None ):
-                string += ' * ' + "{:.3f}".format(float(be)) + '[be]'
+            if( be == None ):
+                be = self.getKey('info').get('breakEvenPrice')
+
+            if( be != None and SHOW_BREAKEVEN ):
+                string += ' * ' + "[be]{:.4f}".format(float(be))
+
         return string
             
 
@@ -1723,6 +1732,8 @@ def writeConfig():
         configString += '\t\t"UPDATE_ORDERS_FREQUENCY":'+str(UPDATE_ORDERS_FREQUENCY)+',\n'
         configString += '\t\t"VERBOSE":'+str(verbose).lower()+',\n'
         configString += '\t\t"SHOW_BALANCE":'+str(SHOW_BALANCE).lower()+',\n'
+        configString += '\t\t"SHOW_ENTRYPRICE":'+str(SHOW_ENTRYPRICE).lower()+',\n'
+        configString += '\t\t"SHOW_BREAKEVEN":'+str(SHOW_BREAKEVEN).lower()+',\n'
         configString += '\t\t"USE_PROXY":'+str(USE_PROXY).lower()+',\n'
         configString += '\t\t"PROXY_PORT":'+str(PROXY_PORT)+'\n'
         configString += '\t}\n]'
@@ -1750,6 +1761,10 @@ else:
         UPDATE_ORDERS_FREQUENCY = float(config.get('UPDATE_ORDERS_FREQUENCY'))
     if( config.get('SHOW_BALANCE') != None ):
         SHOW_BALANCE = bool(config.get('SHOW_BALANCE'))
+    if( config.get('SHOW_ENTRYPRICE') != None ):
+        SHOW_BREAKEVEN = bool(config.get('SHOW_ENTRYPRICE'))
+    if( config.get('SHOW_BREAKEVEN') != None ):
+        SHOW_BREAKEVEN = bool(config.get('SHOW_BREAKEVEN'))
     if( config.get('VERBOSE') != None ):
         verbose = bool(config.get('VERBOSE'))
     if( config.get('USE_PROXY') != None ):
