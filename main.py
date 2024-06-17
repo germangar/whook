@@ -484,8 +484,9 @@ class account_c:
 
     def print( self, *args, sep=" ", **kwargs ): # adds account and exchange information to the message
         self.logger.info( '['+ dateString()+']['+timeNow()+'] ' +sep.join(map(str,args)), **kwargs)
-        print( timeNow(), '['+ self.accountName +'/'+ self.exchange.id +'] '+sep.join(map(str,args)), **kwargs)
-
+        print( timeNow(), '['+ self.accountName +'/'+ self.exchange.id +'] '+ sep.join(map(str,args)), **kwargs )
+        if( args[0].beginswith(' * E:') ):
+            telegramAdminMsg( '['+ self.accountName +'/'+ self.exchange.id +']\n'+ sep.join(map(str,args)), **kwargs )
 
     def verifyLeverageRange( self, symbol, leverage )->int:
 
@@ -1018,8 +1019,7 @@ class account_c:
         # go through the queue and remove the first completed order
         for order in self.activeOrders:
             if( order.timedOut() ):
-                self.print( " * Active Order Timed out", order.symbol, order.side, order.quantity, str(order.leverage)+'x' )
-                telegramAdminMsg( "ERROR: Active Order Timed out", order.symbol, order.side, order.quantity, str(order.leverage)+'x' )
+                self.print( " * E: Active Order Timed out", order.symbol, order.side, order.quantity, str(order.leverage)+'x' )
                 self.activeOrders.remove( order )
                 continue
 
@@ -1082,8 +1082,7 @@ class account_c:
             try:
                 response = self.exchange.fetch_open_orders( symbol, params = {'settleCoin':self.SETTLE_COIN} )
             except Exception as e:
-                self.print( 'Unhandled exception in cancelLimitOrder:', e.args[0], type(e) )
-                telegramAdminMsg( 'ERROR: Unhandled exception in cancelLimitOrder', symbol, e.args[0] )
+                self.print( ' * E: Unhandled exception in cancelLimitOrder:', e.args[0], type(e) )
                 return
             else:
                 for o in response:
@@ -1113,8 +1112,7 @@ class account_c:
                 # coinex: order not exists (and that's all it says)
                 self.print( ' * E: Limit order [', customID, '] not found' )
             else:
-                print( ' * E: cancelLimitOrder:', e.args[0], type(e) )
-                telegramAdminMsg( "ERROR: Couldn't cancel limit order", symbol, e.args[0] )
+                self.print( ' * E: cancelLimitOrder:', e.args[0], type(e) )
 
         else:
             self.print( " * Linmit order [", customID, "] cancelled." )
@@ -1126,8 +1124,7 @@ class account_c:
                 try:
                     response = self.exchange.cancel_all_orders(symbol)
                 except Exception as e:
-                    print( ' * E: cancelAllOrders:', e.args[0], type(e) )
-                    telegramAdminMsg( "ERROR: Failed to cancel orders" )
+                    self.print( ' * E: cancelAllOrders:', e.args[0], type(e) )
                     # I've tried cancelling when there were no orders but it reported no error. Maybe I missed something.
                 else:
                     self.print( ' * All', symbol, 'orders have been cancelled' )
@@ -1258,7 +1255,6 @@ class account_c:
                         order.reduced = True
                         if( order.quantity < self.findMinimumAmountForSymbol(order.symbol) ):
                             self.print( ' * E: Balance insufficient: Minimum contracts required:', self.findMinimumAmountForSymbol(order.symbol), ' Cancelling')
-                            telegramAdminMsg( 'ERROR: Balance insufficient', order.symbol, order.quantity, ': Minimum contracts required:', self.findMinimumAmountForSymbol(order.symbol), ' Cancelling' )
                             self.ordersQueue.remove( order )
                         else:
                             self.print( ' * E: Balance insufficient: Was', oldQuantity, 'Reducing to', order.quantity, "contracts")
@@ -1271,14 +1267,12 @@ class account_c:
                             order.quantity = roundDownTick( order.quantity * 0.95, precision )
                             if( order.quantity < self.findMinimumAmountForSymbol(order.symbol) ):
                                 self.print( ' * E: Balance insufficient: Cancelling' )
-                                telegramAdminMsg( 'ERROR: Balance insufficient', order.symbol, order.quantity, ': Cancelling' )
                                 self.ordersQueue.remove( order )
                             else:
                                 self.print( ' * E: Balance insufficient: Reducing by 5%')
 
                     else: # cancel the order
-                        self.print( ' * E: Balance insufficient: Cancelling')
-                        telegramAdminMsg( 'ERROR: Balance insufficient', order.symbol, order.quantity, ': Cancelling' )
+                        self.print( ' * E: Balance insufficient: Cancelling' )
                         self.ordersQueue.remove( order )
 
                     continue # back to the orders loop
@@ -1289,19 +1283,15 @@ class account_c:
                     if 'Order price is not within' in a:
                         d = json.loads(a.lstrip(self.exchange.id + ' '))
                         self.print( ' * E:', d['data'][0].get('sMsg') )
-                        telegramAdminMsg( 'ERROR: Order price is not within range', order.symbol, order.quantity, ': Cancelling' )
                         self.ordersQueue.remove( order )
                     elif 'invalidSize' in a:
                         self.print( ' * E: Order size invalid:', order.quantity, 'x'+str(order.leverage) )
-                        telegramAdminMsg( 'ERROR: Order size invalid', order.symbol, order.quantity, ': Cancelling' )
                         self.ordersQueue.remove( order )
                     elif '"retCode":20094' in a or '"code":-4015' in a or 'ID already exists' in a:
                         self.print( ' * E: Cancelling Linmit order: ID [', order.customID, '] was used before' )
-                        telegramAdminMsg( 'ERROR: Cancelling Linmit order: ID [', order.customID, '] was used before', order.symbol, ': Cancelling' )
                         self.ordersQueue.remove( order )
                     else:
                         self.print( ' * E: Invalid Order. Cancelling', e )
-                        telegramAdminMsg( 'ERROR: Invalid Order', order.symbol, ': Cancelling' )
                         self.ordersQueue.remove( order )
                     
                     continue # back to the orders loop
@@ -1311,7 +1301,6 @@ class account_c:
                 # Basically, he's ghosting us!! It may have found it super offensive.
                 if( self.exchange.id == 'bingx' and order.type == 'limit' and '"code":101500' in a ):
                     self.print( ' * E: Cancelling Linmit order: ID [', order.customID, '] was used before' )
-                    telegramAdminMsg( 'ERROR: Linmit order: ID [', order.customID, '] was used before', order.symbol, ': Cancelling' )
                     self.ordersQueue.remove( order )
                     continue
                     
@@ -1328,13 +1317,12 @@ class account_c:
                 # [bitget/bitget] bitget {"code":"45110","msg":"less than the minimum amount 5 USDT","requestTime":1689481837614,"data":null}
                 # The deviation between your delegated price and the index price is greater than 20%, you can appropriately adjust your delegation price and try again     
                 self.print( ' * E: Unhandled exception. Cancelling:', a, type(e), ' updateOrdersQueue' )
-                telegramAdminMsg( 'ERROR: Unhandled exception', order.symbol, ': Cancelling', a )
                 self.ordersQueue.remove( order )
                 continue # back to the orders loop
 
 
             if( response.get('id') == None ):
-                self.print( " * Order denied:", response['info'], "Cancelling" )
+                self.print( " * E: Order denied:", response['info'], "Cancelling" )
                 self.ordersQueue.remove( order )
                 continue # back to the orders loop
 
@@ -1383,10 +1371,8 @@ class account_c:
                     self.latchedAlerts.append( newAlert )
                 else: 
                     self.print( " * E: Couldn't reach the server: Cancelling" )
-                    telegramAdminMsg( "ALERT:", alert['alert'], '\n-----\n', "ERROR: Couldn't reach the server: Cancelling" )
             else:
                 self.print( " * E: Couldn't fetch balance: Cancelling", e, type(e) )
-                telegramAdminMsg( "ALERT:", alert['alert'], '\n-----\n', "ERROR: Couldn't fetch balance: Cancelling" )
             return
 
         #
@@ -1438,11 +1424,9 @@ class account_c:
                 
             except ccxt.ExchangeError as e:
                 self.print( " * E: proccessAlert->fetchAveragePrice:", e )
-                telegramAdminMsg( "ALERT:", alert['alert'], '\n-----\n', "ERROR: Couldn't fetch price from server. Cancelling" )
                 return
             except ValueError as e:
                 self.print( " * E: proccessAlert->fetchAveragePrice", e, type(e) )
-                telegramAdminMsg( "ALERT:", alert['alert'], '\n-----\n', "ERROR: Couldn't fetch price. Cancelling" )
                 return
                 
             coin_name = self.markets[symbol]['quote']
@@ -1579,7 +1563,6 @@ class account_c:
 
             if( quantity < minOrder ):
                 self.print( timeNow(), " * E: Order too small:", quantity, "Minimum required:", minOrder )
-                telegramAdminMsg( "ALERT:", alert['alert'], '\n-----\n', "ERROR: Order too small:", quantity, "Minimum required:", minOrder )
                 return
 
             order = order_c( symbol, command, quantity, leverage )
@@ -1591,8 +1574,7 @@ class account_c:
             self.ordersQueue.append( order )
             return
 
-        self.print( " * W: Something went wrong. No order was placed")
-        telegramAdminMsg( "ALERT:", alert['alert'], '\n-----\n', "ERROR: Something went wrong. No order was placed" )
+        self.print( " * E: Something went wrong. No order was placed")
 
 
 accounts = []
@@ -1914,7 +1896,7 @@ if( len(accounts) == 0 ):
     print( " * FATAL ERROR: No valid accounts found. Please edit 'accounts.json' and introduce your API keys" )
     raise SystemExit()
 
-telegramAdminMsg( 'whook initialized.' )
+telegramAdminMsg( 'Whook started.' )
 
 ############################################
 
