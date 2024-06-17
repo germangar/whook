@@ -162,7 +162,7 @@ There is a Linux tutorial inside the tutorials directory. Thanks to @iZnogoude (
 
 ### TELEGRAM ADMIN ALERTS ### 
 
-You can set up a telegram bot **to receive a warning message when an order fails to be placed** for one or another reason.
+You can set up a telegram bot **to receive a notification when an order fails to be placed** for one or another reason.
 For doing this you need to create a telegram bot and open a chat with it. I'm not covering this part. There are tutorials online and it's a simple proccess.
 
 The first thing to do on our side is to install the python telegram bot module with '**pip install python-telegram-bot==13.7**'. It must be version 13.7. Other versions won't be accepted<br><br>
