@@ -485,7 +485,7 @@ class account_c:
     def print( self, *args, sep=" ", **kwargs ): # adds account and exchange information to the message
         self.logger.info( '['+ dateString()+']['+timeNow()+'] ' +sep.join(map(str,args)), **kwargs)
         print( timeNow(), '['+ self.accountName +'/'+ self.exchange.id +'] '+ sep.join(map(str,args)), **kwargs )
-        if( args[0].beginswith(' * E:') ):
+        if( args[0].startswith(' * E:') ):
             telegramAdminMsg( '['+ self.accountName +'/'+ self.exchange.id +']\n'+ sep.join(map(str,args)), **kwargs )
 
     def verifyLeverageRange( self, symbol, leverage )->int:
