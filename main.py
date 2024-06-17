@@ -116,18 +116,24 @@ else:
 ##### Initialize telegram bot ######
 
 if TELEGRAM_BOT_TOKEN != '':
-    import asyncio # only used for the telegram bot. We don't need paralellism at all for a few alerts, but well...
     try:
-        from telegram import Bot as tBot
+        import telegram
+        from telegram import Bot as telegram_bot, Update as telegram_update
     except ImportError:
         print( "Telegram module not present")
-        print( "If you intend to use the telegram alerts use: 'pip install python-telegram-bot' to obtain the module")
+        print( "If you intend to use the telegram alerts use: 'pip install python-telegram-bot==13.7' to obtain the module")
+    else:
+        print( telegram.__version__ )
+        if( telegram.__version__ != '13.7' ):
+            print( 'Telegram module: python-telegram-bot version is not 13.7' )
+            print( "Please make sure to install the correct version with: 'pip install python-telegram-bot==13.7'" )
+            TELEGRAM_BOT_TOKEN = ''
 
 # load the bot
 telegramBot = None
 try:
     if( TELEGRAM_BOT_TOKEN != '' ):
-        telegramBot = tBot(token=TELEGRAM_BOT_TOKEN)
+        telegramBot = telegram_bot(token=TELEGRAM_BOT_TOKEN)
 except Exception as e:
     telegramBot = None
     print( "Couldn't initializate telegram bot:", e )
@@ -135,14 +141,11 @@ else:
     if( telegramBot != None ):
         print( "Telegram bot connected" )
 
-async def telegram_send_message( *args, sep=" ", **kwargs ): # adds account and exchange information to the message
-    #message = sep.join(map(str, args))
-    await telegramBot.send_message(chat_id=TELEGRAM_CHAT_ID, text = sep.join(map(str, args)) )
-
 def telegramAdminMsg( *args, sep=" ", **kwargs ):
-    if telegramBot and TELEGRAM_BOT_TOKEN != '' and TELEGRAM_MODE == 'ADMIN':
-        asyncio.run(telegram_send_message(sep.join(map(str, args))))
+    if telegramBot != None and TELEGRAM_BOT_TOKEN != '' and TELEGRAM_MODE == 'ADMIN':
+        telegramBot.send_message(chat_id=TELEGRAM_CHAT_ID, text = sep.join(map(str, args)) )
 
+##### Utils #####
 
 def dateString():
     return datetime.today().strftime("%Y/%m/%d")
