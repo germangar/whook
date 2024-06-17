@@ -174,6 +174,11 @@ With this information you go to whook's config.json file and you fill the fields
 &emsp;&emsp;				"TELEGRAM_BOT_TOKEN":"your telegram bot token",<br>
 &emsp;&emsp;				"TELEGRAM_CHAT_ID":"your telegram chat id",<br>
 
+Optionally, if you also want to place orders from Telegram you can enable it by filling the whook url (same one you'd use for Tradingview Alerts) in the field:<br>
+If this field is left empty sending orders/commands to whook will be disabled, but it will still send you notifications. Note: Telegram only accepts 'https' urls.
+
+&emsp;&emsp;				"TELEGRAM_WHOOK_URL":"your whook url",
+
 That's all. The bot will be sending you messages if anything happens.<br>
 
 This other field is not used yet. Admin mode is the only mode available:<br>
