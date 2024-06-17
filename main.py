@@ -45,6 +45,7 @@ REFRESH_POSITIONS_FREQUENCY = 5 * 60    # refresh positions every 5 minutes
 UPDATE_ORDERS_FREQUENCY = 0.25          # frametime in seconds at which the orders queue is refreshed.
 TELEGRAM_BOT_TOKEN = ''
 TELEGRAM_CHAT_ID = ''
+TELEGRAM_WHOOK_URL = ''
 TELEGRAM_MODE = 'ADMIN'
 MARGIN_MODE_NONE = '------'
 
@@ -63,6 +64,7 @@ def writeConfig():
         configString += '\t\t"SHOW_BREAKEVEN":'+str(SHOW_BREAKEVEN).lower()+',\n'
         configString += '\t\t"TELEGRAM_BOT_TOKEN":"'+str(TELEGRAM_BOT_TOKEN)+'",\n'
         configString += '\t\t"TELEGRAM_CHAT_ID":"'+str(TELEGRAM_CHAT_ID)+'",\n'
+        configString += '\t\t"TELEGRAM_WHOOK_URL":"'+str(TELEGRAM_WHOOK_URL)+'",\n'
         configString += '\t\t"TELEGRAM_MODE":"'+str(TELEGRAM_MODE).upper()+'",\n'
         configString += '\t\t"USE_PROXY":'+str(USE_PROXY).lower()+',\n'
         configString += '\t\t"PROXY_PORT":'+str(PROXY_PORT)+'\n'
@@ -101,6 +103,8 @@ else:
         TELEGRAM_BOT_TOKEN = str(config.get('TELEGRAM_BOT_TOKEN'))
     if( config.get('TELEGRAM_CHAT_ID') != None ):
         TELEGRAM_CHAT_ID = str(config.get('TELEGRAM_CHAT_ID'))
+    if( config.get('TELEGRAM_WHOOK_URL') != None ):
+        TELEGRAM_WHOOK_URL = str(config.get('TELEGRAM_WHOOK_URL'))
     if( config.get('TELEGRAM_MODE') != None ):
         TELEGRAM_MODE = str(config.get('TELEGRAM_MODE')).upper()
         if( TELEGRAM_MODE != 'ADMIN' and TELEGRAM_MODE != 'PUCLIC' ):
@@ -123,7 +127,6 @@ if TELEGRAM_BOT_TOKEN != '':
         print( "Telegram module not present")
         print( "If you intend to use the telegram alerts use: 'pip install python-telegram-bot==13.7' to obtain the module")
     else:
-        print( telegram.__version__ )
         if( telegram.__version__ != '13.7' ):
             print( 'Telegram module: python-telegram-bot version is not 13.7' )
             print( "Please make sure to install the correct version with: 'pip install python-telegram-bot==13.7'" )
@@ -140,6 +143,7 @@ except Exception as e:
 else:
     if( telegramBot != None ):
         print( "Telegram bot connected" )
+        telegramBot.set_webhook(url=TELEGRAM_WHOOK_URL)
 
 def telegramAdminMsg( *args, sep=" ", **kwargs ):
     if telegramBot != None and TELEGRAM_BOT_TOKEN != '' and TELEGRAM_MODE == 'ADMIN':
@@ -1814,6 +1818,7 @@ def Alert( data ):
                     break
         if( account == None ): 
             print( timeNow(), ' * E: Account ID not found. ALERT:', line )
+            telegramAdminMsg( 'Account ID not found. ALERT:', line )
             continue
         
         alert = parseAlert( line.replace('\n', ''), account )
@@ -1909,6 +1914,8 @@ if( len(accounts) == 0 ):
     print( " * FATAL ERROR: No valid accounts found. Please edit 'accounts.json' and introduce your API keys" )
     raise SystemExit()
 
+telegramAdminMsg( 'whook initialized.' )
+
 ############################################
 
 # define the webhook server
@@ -1929,6 +1936,32 @@ if USE_PROXY == True:
 def webhook():
 
     if request.method == 'POST':
+        content_type = request.headers.get('Content-Type')
+        if content_type == 'application/json':
+            data = request.get_json()
+
+            if data and 'update_id' in data:  # Typical key in Telegram bot updates
+
+                # Extract message text and chat ID
+                if 'message' in data:
+                    chat_id = data['message']['chat']['id']
+                    message = data['message']['text']
+                    
+                    # Log the received message
+                    #print( "Received message from chat_id", chat_id, ':', message )
+
+                    if( message[:1] == '/' and message[:2] != '//' ): # / is a command // is alert comments
+                        telegramAdminMsg( "unknown command.")
+                    else:
+                        telegramAdminMsg( "Posting alert.")
+                        Alert( message ) # try to proccess it as an alert
+
+                return 'Telegram message processed', 200
+
+            # we received a json but apparently it's not from telegram
+            return 'success', 200
+        
+        # Standard alert
         data = request.get_data(as_text=True)
         Alert(data)
         return 'success', 200
