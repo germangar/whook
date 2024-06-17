@@ -13,19 +13,6 @@ from decimal import Decimal, ROUND_CEILING, ROUND_FLOOR, ROUND_HALF_EVEN
 from pprint import pprint
 
 
-verbose = False
-SHOW_BALANCE = False # print account balance at exchange initialization
-SHOW_BREAKEVEN = True # in positions when available
-SHOW_ENTRYPRICE = False # in positions
-USE_PROXY = False
-PORT = 80
-PROXY_PORT = 50000
-ALERT_TIMEOUT = 60 * 3
-ORDER_TIMEOUT = 40
-REFRESH_POSITIONS_FREQUENCY = 5 * 60    # refresh positions every 5 minutes
-UPDATE_ORDERS_FREQUENCY = 0.25          # frametime in seconds at which the orders queue is refreshed.
-MARGIN_MODE_NONE = '------'
-
 def fixVersionFormat( version )->str:
     vl = version.split(".")
     return f'{vl[0]}.{vl[1]}.{vl[2].zfill(3)}'
@@ -40,6 +27,120 @@ if( CCXTversion < fixVersionFormat(minCCXTversion) ):
     print( 'Please update CCXT.' )
     print( '============== * WARNING * ==============\n')
     
+
+###################
+##### Globals #####
+###################
+
+verbose = False
+SHOW_BALANCE = False # print account balance at exchange initialization
+SHOW_BREAKEVEN = True # in positions when available
+SHOW_ENTRYPRICE = False # in positions
+USE_PROXY = False
+PORT = 80
+PROXY_PORT = 50000
+ALERT_TIMEOUT = 60 * 3
+ORDER_TIMEOUT = 40
+REFRESH_POSITIONS_FREQUENCY = 5 * 60    # refresh positions every 5 minutes
+UPDATE_ORDERS_FREQUENCY = 0.25          # frametime in seconds at which the orders queue is refreshed.
+TELEGRAM_BOT_TOKEN = ''
+TELEGRAM_CHAT_ID = ''
+TELEGRAM_MODE = 'ADMIN'
+MARGIN_MODE_NONE = '------'
+
+#### Open config file #####
+
+def writeConfig():
+    with open('config.json', 'w') as f:
+        configString = '[\n\t{\n'
+        configString += '\t\t"ALERT_TIMEOUT":'+str(ALERT_TIMEOUT)+',\n'
+        configString += '\t\t"ORDER_TIMEOUT":'+str(ORDER_TIMEOUT)+',\n'
+        configString += '\t\t"REFRESH_POSITIONS_FREQUENCY":'+str(REFRESH_POSITIONS_FREQUENCY)+',\n'
+        configString += '\t\t"UPDATE_ORDERS_FREQUENCY":'+str(UPDATE_ORDERS_FREQUENCY)+',\n'
+        configString += '\t\t"VERBOSE":'+str(verbose).lower()+',\n'
+        configString += '\t\t"SHOW_BALANCE":'+str(SHOW_BALANCE).lower()+',\n'
+        configString += '\t\t"SHOW_ENTRYPRICE":'+str(SHOW_ENTRYPRICE).lower()+',\n'
+        configString += '\t\t"SHOW_BREAKEVEN":'+str(SHOW_BREAKEVEN).lower()+',\n'
+        configString += '\t\t"TELEGRAM_BOT_TOKEN":"'+str(TELEGRAM_BOT_TOKEN)+'",\n'
+        configString += '\t\t"TELEGRAM_CHAT_ID":"'+str(TELEGRAM_CHAT_ID)+'",\n'
+        configString += '\t\t"TELEGRAM_MODE":"'+str(TELEGRAM_MODE).upper()+'",\n'
+        configString += '\t\t"USE_PROXY":'+str(USE_PROXY).lower()+',\n'
+        configString += '\t\t"PROXY_PORT":'+str(PROXY_PORT)+'\n'
+        configString += '\t}\n]'
+        
+        f.write( configString )
+        f.close()
+
+try:
+    with open('config.json', 'r') as config_file:
+        config = json.load(config_file)
+        config = config[0]
+        config_file.close()
+except FileNotFoundError:
+    writeConfig()
+    print( "Config file created.\n----------------------------")
+else:
+    # parse the config file
+    if( config.get('ALERT_TIMEOUT') != None ):
+        ALERT_TIMEOUT = int(config.get('ALERT_TIMEOUT'))
+    if( config.get('ORDER_TIMEOUT') != None ):
+        ORDER_TIMEOUT = int(config.get('ORDER_TIMEOUT'))
+    if( config.get('REFRESH_POSITIONS_FREQUENCY') != None ):
+        REFRESH_POSITIONS_FREQUENCY = int(config.get('REFRESH_POSITIONS_FREQUENCY'))
+    if( config.get('UPDATE_ORDERS_FREQUENCY') != None ):
+        UPDATE_ORDERS_FREQUENCY = float(config.get('UPDATE_ORDERS_FREQUENCY'))
+    if( config.get('SHOW_BALANCE') != None ):
+        SHOW_BALANCE = bool(config.get('SHOW_BALANCE'))
+    if( config.get('SHOW_ENTRYPRICE') != None ):
+        SHOW_BREAKEVEN = bool(config.get('SHOW_ENTRYPRICE'))
+    if( config.get('SHOW_BREAKEVEN') != None ):
+        SHOW_BREAKEVEN = bool(config.get('SHOW_BREAKEVEN'))
+    if( config.get('VERBOSE') != None ):
+        verbose = bool(config.get('VERBOSE'))
+    if( config.get('TELEGRAM_BOT_TOKEN') != None ):
+        TELEGRAM_BOT_TOKEN = str(config.get('TELEGRAM_BOT_TOKEN'))
+    if( config.get('TELEGRAM_CHAT_ID') != None ):
+        TELEGRAM_CHAT_ID = str(config.get('TELEGRAM_CHAT_ID'))
+    if( config.get('TELEGRAM_MODE') != None ):
+        TELEGRAM_MODE = str(config.get('TELEGRAM_MODE')).upper()
+        if( TELEGRAM_MODE != 'ADMIN' and TELEGRAM_MODE != 'PUCLIC' ):
+            print( "Telegram mode must be either 'admin' or 'public. Resetting to 'admin'" )
+            TELEGRAM_MODE = 'ADMIN'
+    if( config.get('USE_PROXY') != None ):
+        USE_PROXY = bool(config.get('USE_PROXY'))
+    if( config.get('PROXY_PORT') != None ):
+        PROXY_PORT = int(config.get('PROXY_PORT'))
+    #rewrite the config file
+    writeConfig()
+
+##### Initialize telegram bot ######
+
+if TELEGRAM_BOT_TOKEN != '':
+    import asyncio # only used for the telegram bot. We don't need paralellism at all for a few alerts, but well...
+    try:
+        from telegram import Bot as tBot
+    except ImportError:
+        print( "Telegram module not present")
+
+# load the bot
+telegramBot = None
+try:
+    if( TELEGRAM_BOT_TOKEN != '' ):
+        telegramBot = tBot(token=TELEGRAM_BOT_TOKEN)
+except Exception as e:
+    telegramBot = None
+    print( "Couldn't initializate telegram bot", e )
+else:
+    if( telegramBot != None ):
+        print( "Telegram bot connected" )
+
+async def telegram_send_message( *args, sep=" ", **kwargs ): # adds account and exchange information to the message
+    #message = sep.join(map(str, args))
+    await telegramBot.send_message(chat_id=TELEGRAM_CHAT_ID, text = sep.join(map(str, args)) )
+
+def telegramAdminMsg( *args, sep=" ", **kwargs ):
+    if telegramBot and TELEGRAM_BOT_TOKEN != '' and TELEGRAM_MODE == 'ADMIN':
+        asyncio.run(telegram_send_message(sep.join(map(str, args))))
 
 
 def dateString():
@@ -910,6 +1011,7 @@ class account_c:
         for order in self.activeOrders:
             if( order.timedOut() ):
                 self.print( " * Active Order Timed out", order.symbol, order.side, order.quantity, str(order.leverage)+'x' )
+                telegramAdminMsg( "ERROR: Active Order Timed out", order.symbol, order.side, order.quantity, str(order.leverage)+'x' )
                 self.activeOrders.remove( order )
                 continue
 
@@ -973,6 +1075,7 @@ class account_c:
                 response = self.exchange.fetch_open_orders( symbol, params = {'settleCoin':self.SETTLE_COIN} )
             except Exception as e:
                 self.print( 'Unhandled exception in cancelLimitOrder:', e.args[0], type(e) )
+                telegramAdminMsg( 'ERROR: Unhandled exception in cancelLimitOrder', symbol, e.args[0] )
                 return
             else:
                 for o in response:
@@ -1003,6 +1106,7 @@ class account_c:
                 self.print( ' * E: Limit order [', customID, '] not found' )
             else:
                 print( ' * E: cancelLimitOrder:', e.args[0], type(e) )
+                telegramAdminMsg( "ERROR: Couldn't cancel limit order", symbol, e.args[0] )
 
         else:
             self.print( " * Linmit order [", customID, "] cancelled." )
@@ -1015,6 +1119,7 @@ class account_c:
                     response = self.exchange.cancel_all_orders(symbol)
                 except Exception as e:
                     print( ' * E: cancelAllOrders:', e.args[0], type(e) )
+                    telegramAdminMsg( "ERROR: Failed to cancel orders" )
                     # I've tried cancelling when there were no orders but it reported no error. Maybe I missed something.
                 else:
                     self.print( ' * All', symbol, 'orders have been cancelled' )
@@ -1145,6 +1250,7 @@ class account_c:
                         order.reduced = True
                         if( order.quantity < self.findMinimumAmountForSymbol(order.symbol) ):
                             self.print( ' * E: Balance insufficient: Minimum contracts required:', self.findMinimumAmountForSymbol(order.symbol), ' Cancelling')
+                            telegramAdminMsg( 'ERROR: Balance insufficient', order.symbol, order.quantity, ': Minimum contracts required:', self.findMinimumAmountForSymbol(order.symbol), ' Cancelling' )
                             self.ordersQueue.remove( order )
                         else:
                             self.print( ' * E: Balance insufficient: Was', oldQuantity, 'Reducing to', order.quantity, "contracts")
@@ -1157,12 +1263,14 @@ class account_c:
                             order.quantity = roundDownTick( order.quantity * 0.95, precision )
                             if( order.quantity < self.findMinimumAmountForSymbol(order.symbol) ):
                                 self.print( ' * E: Balance insufficient: Cancelling' )
+                                telegramAdminMsg( 'ERROR: Balance insufficient', order.symbol, order.quantity, ': Cancelling' )
                                 self.ordersQueue.remove( order )
                             else:
                                 self.print( ' * E: Balance insufficient: Reducing by 5%')
 
                     else: # cancel the order
                         self.print( ' * E: Balance insufficient: Cancelling')
+                        telegramAdminMsg( 'ERROR: Balance insufficient', order.symbol, order.quantity, ': Cancelling' )
                         self.ordersQueue.remove( order )
 
                     continue # back to the orders loop
@@ -1173,15 +1281,19 @@ class account_c:
                     if 'Order price is not within' in a:
                         d = json.loads(a.lstrip(self.exchange.id + ' '))
                         self.print( ' * E:', d['data'][0].get('sMsg') )
+                        telegramAdminMsg( 'ERROR: Order price is not within range', order.symbol, order.quantity, ': Cancelling' )
                         self.ordersQueue.remove( order )
                     elif 'invalidSize' in a:
                         self.print( ' * E: Order size invalid:', order.quantity, 'x'+str(order.leverage) )
+                        telegramAdminMsg( 'ERROR: Order size invalid', order.symbol, order.quantity, ': Cancelling' )
                         self.ordersQueue.remove( order )
                     elif '"retCode":20094' in a or '"code":-4015' in a or 'ID already exists' in a:
                         self.print( ' * E: Cancelling Linmit order: ID [', order.customID, '] was used before' )
+                        telegramAdminMsg( 'ERROR: Cancelling Linmit order: ID [', order.customID, '] was used before', order.symbol, ': Cancelling' )
                         self.ordersQueue.remove( order )
                     else:
                         self.print( ' * E: Invalid Order. Cancelling', e )
+                        telegramAdminMsg( 'ERROR: Invalid Order', order.symbol, ': Cancelling' )
                         self.ordersQueue.remove( order )
                     
                     continue # back to the orders loop
@@ -1191,6 +1303,7 @@ class account_c:
                 # Basically, he's ghosting us!! It may have found it super offensive.
                 if( self.exchange.id == 'bingx' and order.type == 'limit' and '"code":101500' in a ):
                     self.print( ' * E: Cancelling Linmit order: ID [', order.customID, '] was used before' )
+                    telegramAdminMsg( 'ERROR: Linmit order: ID [', order.customID, '] was used before', order.symbol, ': Cancelling' )
                     self.ordersQueue.remove( order )
                     continue
                     
@@ -1207,6 +1320,7 @@ class account_c:
                 # [bitget/bitget] bitget {"code":"45110","msg":"less than the minimum amount 5 USDT","requestTime":1689481837614,"data":null}
                 # The deviation between your delegated price and the index price is greater than 20%, you can appropriately adjust your delegation price and try again     
                 self.print( ' * E: Unhandled exception. Cancelling:', a, type(e), ' updateOrdersQueue' )
+                telegramAdminMsg( 'ERROR: Unhandled exception', order.symbol, ': Cancelling', a )
                 self.ordersQueue.remove( order )
                 continue # back to the orders loop
 
@@ -1261,8 +1375,10 @@ class account_c:
                     self.latchedAlerts.append( newAlert )
                 else: 
                     self.print( " * E: Couldn't reach the server: Cancelling" )
+                    telegramAdminMsg( "ALERT:", alert['alert'], '\n-----\n', "ERROR: Couldn't reach the server: Cancelling" )
             else:
-                self.print( " * E: Error at fetching balance", e, type(e) )
+                self.print( " * E: Couldn't fetch balance: Cancelling", e, type(e) )
+                telegramAdminMsg( "ALERT:", alert['alert'], '\n-----\n', "ERROR: Couldn't fetch balance: Cancelling" )
             return
 
         #
@@ -1314,9 +1430,11 @@ class account_c:
                 
             except ccxt.ExchangeError as e:
                 self.print( " * E: proccessAlert->fetchAveragePrice:", e )
+                telegramAdminMsg( "ALERT:", alert['alert'], '\n-----\n', "ERROR: Couldn't fetch price from server. Cancelling" )
                 return
             except ValueError as e:
                 self.print( " * E: proccessAlert->fetchAveragePrice", e, type(e) )
+                telegramAdminMsg( "ALERT:", alert['alert'], '\n-----\n', "ERROR: Couldn't fetch price. Cancelling" )
                 return
                 
             coin_name = self.markets[symbol]['quote']
@@ -1453,6 +1571,7 @@ class account_c:
 
             if( quantity < minOrder ):
                 self.print( timeNow(), " * E: Order too small:", quantity, "Minimum required:", minOrder )
+                telegramAdminMsg( "ALERT:", alert['alert'], '\n-----\n', "ERROR: Order too small:", quantity, "Minimum required:", minOrder )
                 return
 
             order = order_c( symbol, command, quantity, leverage )
@@ -1465,6 +1584,7 @@ class account_c:
             return
 
         self.print( " * W: Something went wrong. No order was placed")
+        telegramAdminMsg( "ALERT:", alert['alert'], '\n-----\n', "ERROR: Something went wrong. No order was placed" )
 
 
 accounts = []
@@ -1726,60 +1846,6 @@ def Alert( data ):
 ###################
 
 print('----------------------------')
-
-#### Open config file #####
-
-def writeConfig():
-    with open('config.json', 'w') as f:
-        configString = '[\n\t{\n'
-        configString += '\t\t"ALERT_TIMEOUT":'+str(ALERT_TIMEOUT)+',\n'
-        configString += '\t\t"ORDER_TIMEOUT":'+str(ORDER_TIMEOUT)+',\n'
-        configString += '\t\t"REFRESH_POSITIONS_FREQUENCY":'+str(REFRESH_POSITIONS_FREQUENCY)+',\n'
-        configString += '\t\t"UPDATE_ORDERS_FREQUENCY":'+str(UPDATE_ORDERS_FREQUENCY)+',\n'
-        configString += '\t\t"VERBOSE":'+str(verbose).lower()+',\n'
-        configString += '\t\t"SHOW_BALANCE":'+str(SHOW_BALANCE).lower()+',\n'
-        configString += '\t\t"SHOW_ENTRYPRICE":'+str(SHOW_ENTRYPRICE).lower()+',\n'
-        configString += '\t\t"SHOW_BREAKEVEN":'+str(SHOW_BREAKEVEN).lower()+',\n'
-        configString += '\t\t"USE_PROXY":'+str(USE_PROXY).lower()+',\n'
-        configString += '\t\t"PROXY_PORT":'+str(PROXY_PORT)+'\n'
-        configString += '\t}\n]'
-        
-        f.write( configString )
-        f.close()
-
-try:
-    with open('config.json', 'r') as config_file:
-        config = json.load(config_file)
-        config = config[0]
-        config_file.close()
-except FileNotFoundError:
-    writeConfig()
-    print( "Config file created.\n----------------------------")
-else:
-    # parse the config file
-    if( config.get('ALERT_TIMEOUT') != None ):
-        ALERT_TIMEOUT = int(config.get('ALERT_TIMEOUT'))
-    if( config.get('ORDER_TIMEOUT') != None ):
-        ORDER_TIMEOUT = int(config.get('ORDER_TIMEOUT'))
-    if( config.get('REFRESH_POSITIONS_FREQUENCY') != None ):
-        REFRESH_POSITIONS_FREQUENCY = int(config.get('REFRESH_POSITIONS_FREQUENCY'))
-    if( config.get('UPDATE_ORDERS_FREQUENCY') != None ):
-        UPDATE_ORDERS_FREQUENCY = float(config.get('UPDATE_ORDERS_FREQUENCY'))
-    if( config.get('SHOW_BALANCE') != None ):
-        SHOW_BALANCE = bool(config.get('SHOW_BALANCE'))
-    if( config.get('SHOW_ENTRYPRICE') != None ):
-        SHOW_BREAKEVEN = bool(config.get('SHOW_ENTRYPRICE'))
-    if( config.get('SHOW_BREAKEVEN') != None ):
-        SHOW_BREAKEVEN = bool(config.get('SHOW_BREAKEVEN'))
-    if( config.get('VERBOSE') != None ):
-        verbose = bool(config.get('VERBOSE'))
-    if( config.get('USE_PROXY') != None ):
-        USE_PROXY = bool(config.get('USE_PROXY'))
-    if( config.get('PROXY_PORT') != None ):
-        PROXY_PORT = int(config.get('PROXY_PORT'))
-    #rewrite the config file
-    writeConfig()
-
 
 #### Open accounts file ###
 
