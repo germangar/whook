@@ -162,7 +162,22 @@ There is a Linux tutorial inside the tutorials directory. Thanks to @iZnogoude (
 
 ### TELEGRAM ADMIN ALERTS ### 
 
-Coming soon.
+You can set up a telegram bot to receive alerts when an error happens in whook. Basically when an order fails for one or another reason.
+For doing this you need to create a telegram bot and open a chat with it. I'm not covering this part. There are tutorials online and it's a simple proccess.
+
+The first thing to do is to install the python telegram bot module with **pip install python-telegram-bot**.<br>
+**Notice: If you aren't going to use the telegram alerts there's no need to install this module**.<br>
+Once the module is installed you will need to obtain your **telegram bot token** and your **chat id**. Once again, this is covered in the tutorials on how to create a telegram bot. It's really simple.<br>
+
+With this information you go to whook's config.json file and you fill the fields:<br>
+
+&emsp;&emsp;				"TELEGRAM_BOT_TOKEN":"your telegram bot token",<br>
+&emsp;&emsp;				"TELEGRAM_CHAT_ID":"your telegram chat id",<br>
+
+That's all. The bot will be sending you messages if anything happens.<br>
+
+This other field is not used yet. Admin mode is the only mode available:<br>
+&emsp;&emsp;				"TELEGRAM_MODE":"ADMIN",<br>
 
 ### KNOWN BUGS ### 
 - Kraken: Whook is unable to set the margin mode. It will use whatever is set in the exchange for that symbol.
