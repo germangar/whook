@@ -160,6 +160,10 @@ Once you have your virtual machine running follow the steps in the section above
 
 There is a Linux tutorial inside the tutorials directory. Thanks to @iZnogoude (https://github.com/iZnogoude/whook) for making it.
 
+### TELEGRAM ADMIN ALERTS ### 
+
+Coming soon.
+
 ### KNOWN BUGS ### 
 - Kraken: Whook is unable to set the margin mode. It will use whatever is set in the exchange for that symbol.
 - Kraken can't check leverage boundaries. If a order exceeds the maximum leverage the console may spam until the order times out.
