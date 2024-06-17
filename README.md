@@ -162,11 +162,11 @@ There is a Linux tutorial inside the tutorials directory. Thanks to @iZnogoude (
 
 ### TELEGRAM ADMIN ALERTS ### 
 
-You can set up a telegram bot to receive alerts when an error happens in whook. Basically when an order fails for one or another reason.
+You can set up a telegram bot **to receive a warning message when an order fails to be placed** for one or another reason.
 For doing this you need to create a telegram bot and open a chat with it. I'm not covering this part. There are tutorials online and it's a simple proccess.
 
-The first thing to do is to install the python telegram bot module with **pip install python-telegram-bot**.<br>
-**Notice: If you aren't going to use the telegram alerts there's no need to install this module**.<br>
+The first thing to do is to install the python telegram bot module with **pip install python-telegram-bot**.<br><br>
+**Notice: If you aren't going to use the telegram alerts there's no need to install this module**.<br><br>
 Once the module is installed you will need to obtain your **telegram bot token** and your **chat id**. Once again, this is covered in the tutorials on how to create a telegram bot. It's really simple.<br>
 
 With this information you go to whook's config.json file and you fill the fields:<br>
