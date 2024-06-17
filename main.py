@@ -121,6 +121,7 @@ if TELEGRAM_BOT_TOKEN != '':
         from telegram import Bot as tBot
     except ImportError:
         print( "Telegram module not present")
+        print( "If you intend to use the telegram alerts use: 'pip install python-telegram-bot' to obtain the module")
 
 # load the bot
 telegramBot = None
@@ -129,7 +130,7 @@ try:
         telegramBot = tBot(token=TELEGRAM_BOT_TOKEN)
 except Exception as e:
     telegramBot = None
-    print( "Couldn't initializate telegram bot", e )
+    print( "Couldn't initializate telegram bot:", e )
 else:
     if( telegramBot != None ):
         print( "Telegram bot connected" )
