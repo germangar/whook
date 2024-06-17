@@ -1231,12 +1231,13 @@ class account_c:
                 a = e.args[0]
                 
                 if( isinstance(e, ccxt.InsufficientFunds) or '"code":"40762"' in a or 'code":101204' in a or '"code":-4131' in a
-                   or 'balance not enough' in a ):
+                   or 'code":101253' in a or 'balance not enough' in a ):
                     # coinex E: Cancelling: balance not enough <class 'ccxt.base.errors.ExchangeError'>
                     # KUCOIN: kucoinfutures Balance insufficient. The order would cost 304.7268292695.
                     # BITGET: {"code":"40754","msg":"balance not enough","requestTime":1689363604542,"data":null}
                     # bitget {"code":"40762","msg":"The order size is greater than the max open size","requestTime":1695925262092,"data":null} <class 'ccxt.base.errors.ExchangeError'>
                     # bingx {"code":101204,"msg":"Insufficient margin","data":{}}
+                    # bingx {"code":101253,"msg":"Insufficient margin","data":{}}
                     # phemex {"code":11082,"msg":"TE_CANNOT_COVER_ESTIMATE_ORDER_LOSS","data":null}
                     # phemex {"code":11001,"msg":"TE_NO_ENOUGH_AVAILABLE_BALANCE","data":null}
                     # bybit {"retCode":140007,"retMsg":"remark:order[1643476 23006bb4-630a-4917-af0d-5412aaa1c950] fix price failed for CannotAffordOrderCost.","result":{},"retExtInfo":{},"time":1690540657794}
@@ -1316,7 +1317,7 @@ class account_c:
 
                 # [bitget/bitget] bitget {"code":"45110","msg":"less than the minimum amount 5 USDT","requestTime":1689481837614,"data":null}
                 # The deviation between your delegated price and the index price is greater than 20%, you can appropriately adjust your delegation price and try again     
-                self.print( ' * E: Unhandled exception. Cancelling:', a, type(e), ' updateOrdersQueue' )
+                self.print( ' * E: UpdateOrdersQueue: Unhandled exception. Cancelling:', a, type(e) )
                 self.ordersQueue.remove( order )
                 continue # back to the orders loop
 
