@@ -162,7 +162,7 @@ There is a Linux tutorial inside the tutorials directory. Thanks to @iZnogoude (
 
 ### TELEGRAM ADMIN ALERTS ### 
 
-You can set up a telegram bot **to receive a notification when an order fails to be placed**.
+**Optionally** you can set up a telegram bot **to receive a notification when an order fails to be placed**.
 For doing this you need to create a telegram bot and open a chat with it. I'm not covering this part. There are tutorials online (or ask chatGPT as I did). t's a simple proccess.
 
 The first thing to do on our side is to install the python telegram bot module with '**pip install python-telegram-bot==13.7**'. It must be version 13.7. Other versions won't be accepted<br><br>
@@ -174,9 +174,16 @@ With this information you go to whook's config.json file and you fill the fields
 &emsp;&emsp;				"TELEGRAM_BOT_TOKEN":"your telegram bot token",<br>
 &emsp;&emsp;				"TELEGRAM_CHAT_ID":"your telegram chat id",<br>
 
-Optionally, if you also want to place orders from Telegram you can enable it by filling the whook url (same one you'd use for Tradingview Alerts) in the field:<br>
+Optionally, if you also want to **place orders from Telegram** you can enable it by filling the whook url (same one you'd use for Tradingview Alerts) in the field:<br>
 
 &emsp;&emsp;				"TELEGRAM_WHOOK_URL":"your whook url",<br>
+
+With the url the following commands become available through Telegram:
+
+- **/balance [account name]** - The bot responds with the balance of the requested account, or all accounts if no account is specified
+- **/positions [account name]** - The bot responds with the positions of the requested account, or all accounts if not specified.
+
+For placing orders type the alert in the chat normally.
 
 If this field is left empty sending orders/commands to whook will be disabled, but it will still send you notifications. Note: Telegram only accepts 'https' urls.<br>
 
