@@ -1830,7 +1830,67 @@ def Alert( data ):
         # delay the alert proccessing
         account.latchedAlerts.append( alert )
 
+def telegramCommand( message ):
+    if( message[:1] == '/' ):
+        message = message[1:]
+    tokens = message.split()
+    if( tokens[0].lower() == 'balance' ):
+        if( len(tokens) == 1 ): # all accounts
+            msg = ''
+            for a in accounts:
+                msg += a.accountName + '\n'
+                msg += "Total: {:.2f}\n".format(a.fetchBalance().get('total'))
 
+            if( len(msg) == '0' ):
+                msg = 'No accounts found'
+            else:
+                telegramAdminMsg( msg )
+            return
+        
+        # specific account requested
+        account = None
+        for token in tokens:
+            for a in accounts:
+                if( token == a.accountName ):
+                    account = a
+                    break
+        if( account == None ):
+            telegramAdminMsg( "Account not found" )
+        else:
+            telegramAdminMsg( "Total: {:.2f}\n".format(a.fetchBalance().get('total')) )
+        return
+    
+    if( tokens[0].lower() == 'positions' ):
+        if( len(tokens) == 1 ): # all accounts
+            if( len(accounts) == '0' ):
+                telegramAdminMsg( 'No accounts found' )
+            else:
+                telegramAdminMsg( generatePositionsString() )
+            return
+        
+        # specific account requested
+        account = None
+        for token in tokens:
+            for a in accounts:
+                if( token == a.accountName ):
+                    account = a
+                    break
+        if( account == None ):
+            telegramAdminMsg( "Account not found" )
+        else:
+            msg = ''
+            account.refreshPositions()
+            numPositions = len(account.positionslist)
+            msg += '---------------------\n'
+            msg += 'Refreshing positions '+account.accountName+': ' + str(numPositions) + ' positions found\n'
+            if( numPositions > 0 ):
+                for pos in account.positionslist:
+                    msg += pos.generatePrintString() + '\n'
+
+            telegramAdminMsg( msg )
+        return
+
+    telegramAdminMsg( "unknown command." )
 
 
 ###################
@@ -1934,7 +1994,7 @@ def webhook():
                     #print( "Received message from chat_id", chat_id, ':', message )
 
                     if( message[:1] == '/' and message[:2] != '//' ): # / is a command // is alert comments
-                        telegramAdminMsg( "unknown command.")
+                        telegramCommand( message )
                     else:
                         telegramAdminMsg( "Posting alert.")
                         Alert( message ) # try to proccess it as an alert
