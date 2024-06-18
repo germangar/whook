@@ -1411,9 +1411,9 @@ class account_c:
 
         # quantity is a percentage of the USDT balance
         if( isPercentage and command != 'close' ):
-            quantity = min( max( quantity, -100.0 ), 100.0 )
-            balance = self.fetchBalance()
-            quantity = balance['total'] * quantity * 0.01
+            quantity = min( max( float(quantity), -100.0 ), 100.0 )
+            balance = float( self.fetchBalance().get( 'total' ) )
+            quantity = round( balance * quantity * 0.01, 4 )
             isUSDT = True
         
         # convert quantity to concracts if needed
