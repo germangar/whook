@@ -1281,11 +1281,12 @@ class account_c:
 
                 if( isinstance(e, ccxt.InvalidOrder) ):
                     # ERROR Cancelling: okx {"code":"1","data":[{"clOrdId":"001","ordId":"","sCode":"51006","sMsg":"Order price is not within the price limit (Maximum buy price: 26,899.6; minimum sell price: 25,844.6)","tag":""}],"inTime":"1695698840518495","msg":"","outTime":"1695698840518723"}
+                    # bitget {"code":"45110","msg":"less than the minimum amount 5 USDT","requestTime":1719060978643,"data":null}
                     if 'Order price is not within' in a:
                         d = json.loads(a.lstrip(self.exchange.id + ' '))
                         self.print( ' * E:', d['data'][0].get('sMsg') )
                         self.ordersQueue.remove( order )
-                    elif 'invalidSize' in a:
+                    elif 'invalidSize' in a or 'code":"45110' in a:
                         self.print( ' * E: Order size invalid:', order.quantity, 'x'+str(order.leverage) )
                         self.ordersQueue.remove( order )
                     elif '"retCode":20094' in a or '"code":-4015' in a or 'ID already exists' in a:
