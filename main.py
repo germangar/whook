@@ -1392,6 +1392,10 @@ class account_c:
         customID = alert['customID']
         isLimit = True if priceLimit > 0.0 else False
 
+        if( verbose ):
+            print( "PROCESSALERT: alert['isUSDT']:", alert['isUSDT'], "isUSDT:", isUSDT )
+            print( "PROCESSALERT: alert['isBaseCurrency']:", alert['isBaseCurrency'], "isBaseCurrency:", isBaseCurrency )
+
 
         #time to put the order on the queue
         
@@ -1420,6 +1424,8 @@ class account_c:
         # convert quantity to concracts if needed
         if( (isUSDT or isBaseCurrency) and quantity != 0.0 ) :
             # We don't know for sure yet if it's a buy or a sell, so we average
+            if( verbose ):
+                print( "PROCESSALERT: isUSDT path" )
             oldQuantity = quantity
             try:
                 price = self.fetchAveragePrice(symbol)
@@ -1433,6 +1439,8 @@ class account_c:
                 
             coin_name = self.markets[symbol]['quote']
             if( isBaseCurrency ) :
+                if( verbose ):
+                    print( "PROCESSALERT: isBaseCurrency path" )
                 if( lockBaseCurrency and leverage > 1 ):
                     quantity = quantity * price / leverage
                 else:
@@ -1705,10 +1713,16 @@ def parseAlert( data, account: account_c ):
             alert['quantity'] = stringToValue(arg)
         elif token.lower()  == 'force_usdt':
             alert['isUSDT'] = True
+            if( verbose ):
+                print( "PARSEALERT: force_usdt enabled" )
         elif token.lower()  == 'force_percent':
             alert['isPercentage'] = True
+            if( verbose ):
+                print( "PARSEALERT: force_percent enabled" )
         elif token.lower()  == 'force_basecurrency':
             alert['isBaseCurrency'] = True
+            if( verbose ):
+                print( "PARSEALERT: force_basecurrency enabled" )
         elif token.lower()  == 'lockbasecurrency' or token.lower() == "bclock":
             alert['lockBaseCurrency'] = True
         elif ( token[:1].lower()  == "x" ):
@@ -1736,6 +1750,12 @@ def parseAlert( data, account: account_c ):
         elif ( token[:6].lower()  == "cancel" ):
             cancelToken = token # we validate it at processing
             alert['command'] = 'cancel'
+
+    if( alert['isPercentage'] ):
+        alert['isBaseCurrency'] = False
+        alert['isUSDT'] = False
+    if( alert['isUSDT'] ):
+        alert['isBaseCurrency'] = False
     
     # do some syntax validation
     if( alert['symbol'] == None ):
