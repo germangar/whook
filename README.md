@@ -185,7 +185,7 @@ With the url the following commands become available through Telegram:
 
 For placing orders type the alert in the chat normally.
 
-If this field is left empty sending orders/commands to whook will be disabled, but it will still send you notifications. Note: Telegram only accepts 'https' urls.<br>
+If the url field is left empty sending orders/commands to whook will not be enabled, but the bot will still receive notifications. Note: Telegram only accepts 'https' urls.<br>
 
 That's all. The bot will be sending you messages if anything happens.<br>
 
