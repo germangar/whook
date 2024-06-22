@@ -1703,6 +1703,12 @@ def parseAlert( data, account: account_c ):
             alert['isBaseCurrency'] = True
             arg = token
             alert['quantity'] = stringToValue(arg)
+        elif token.lower()  == 'force_usdt':
+            alert['isUSDT'] = True
+        elif token.lower()  == 'force_percent':
+            alert['isPercentage'] = True
+        elif token.lower()  == 'force_basecurrency':
+            alert['isBaseCurrency'] = True
         elif token.lower()  == 'lockbasecurrency' or token.lower() == "bclock":
             alert['lockBaseCurrency'] = True
         elif ( token[:1].lower()  == "x" ):
