@@ -1738,6 +1738,8 @@ def parseAlert( data, account: account_c ):
         elif ( token[:6].lower()  == "cancel" ):
             cancelToken = token # we validate it at processing
             alert['command'] = 'cancel'
+        else:
+            print( "Unknown alert command:", token )
 
     if( alert['isPercentage'] ):
         alert['isBaseCurrency'] = False
@@ -1844,6 +1846,7 @@ def Alert( data ):
         
         # delay the alert proccessing
         account.latchedAlerts.append( alert )
+
 
 def telegramCommand( message ):
     if( message[:1] == '/' ):
