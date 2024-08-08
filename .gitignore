@@ -25,6 +25,7 @@ Insomnia.Core-2023.2.2-portable.exe
 okxdemo.log
 fetch_all.py
 stuff/*
+logs/*
 okxdemos1.log
 okx.log
 kucoin1.log
@@ -32,3 +33,4 @@ okx1.log
 config.json
 bitmart.log
 ascendex.log
+gserver.rdp

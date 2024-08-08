@@ -4,7 +4,9 @@ import ccxt
 from flask import Flask, request, abort
 from werkzeug.middleware.proxy_fix import ProxyFix
 from threading import Timer
+import os
 import time
+import os
 import json
 import copy
 import logging
@@ -43,6 +45,7 @@ ALERT_TIMEOUT = 60 * 3
 ORDER_TIMEOUT = 40
 REFRESH_POSITIONS_FREQUENCY = 5 * 60    # refresh positions every 5 minutes
 UPDATE_ORDERS_FREQUENCY = 0.25          # frametime in seconds at which the orders queue is refreshed.
+LOGS_DIRECTORY = 'logs'
 TELEGRAM_BOT_TOKEN = ''
 TELEGRAM_CHAT_ID = ''
 TELEGRAM_WHOOK_URL = ''
@@ -62,6 +65,7 @@ def writeConfig():
         configString += '\t\t"SHOW_BALANCE":'+str(SHOW_BALANCE).lower()+',\n'
         configString += '\t\t"SHOW_ENTRYPRICE":'+str(SHOW_ENTRYPRICE).lower()+',\n'
         configString += '\t\t"SHOW_BREAKEVEN":'+str(SHOW_BREAKEVEN).lower()+',\n'
+        configString += '\t\t"LOGS_DIRECTORY":"'+str(LOGS_DIRECTORY)+'",\n'
         configString += '\t\t"TELEGRAM_BOT_TOKEN":"'+str(TELEGRAM_BOT_TOKEN)+'",\n'
         configString += '\t\t"TELEGRAM_CHAT_ID":"'+str(TELEGRAM_CHAT_ID)+'",\n'
         configString += '\t\t"TELEGRAM_WHOOK_URL":"'+str(TELEGRAM_WHOOK_URL)+'",\n'
@@ -99,6 +103,8 @@ else:
         SHOW_BREAKEVEN = bool(config.get('SHOW_BREAKEVEN'))
     if( config.get('VERBOSE') != None ):
         verbose = bool(config.get('VERBOSE'))
+    if( config.get('LOGS_DIRECTORY') != None ):
+        LOGS_DIRECTORY = str(config.get('LOGS_DIRECTORY'))
     if( config.get('TELEGRAM_BOT_TOKEN') != None ):
         TELEGRAM_BOT_TOKEN = str(config.get('TELEGRAM_BOT_TOKEN'))
     if( config.get('TELEGRAM_CHAT_ID') != None ):
@@ -410,8 +416,19 @@ class account_c:
             raise ValueError('Exchange creation failed')
         
         # crate a logger for each account
+
+        # make sure the logs directory exists
+        if( LOGS_DIRECTORY == '' ):
+            path = f'{self.accountName}.log'
+        else:
+            path = f'{LOGS_DIRECTORY}/{self.accountName}.log'
+            script_dir = os.path.dirname(os.path.realpath(__file__))
+            if not os.path.exists(os.path.join(script_dir, LOGS_DIRECTORY)):
+                os.makedirs(os.path.join(script_dir, LOGS_DIRECTORY))
+
+
         self.logger = logging.getLogger( self.accountName )
-        fh = logging.FileHandler( self.accountName + '.log')
+        fh = logging.FileHandler( path )
         self.logger.addHandler( fh )
         self.logger.level = logging.INFO
 
@@ -483,8 +500,8 @@ class account_c:
     ## methods ##
 
     def print( self, *args, sep=" ", **kwargs ): # adds account and exchange information to the message
-        self.logger.info( '['+ dateString()+']['+timeNow()+'] ' +sep.join(map(str,args)), **kwargs)
         print( timeNow(), '['+ self.accountName +'/'+ self.exchange.id +'] '+ sep.join(map(str,args)), **kwargs )
+        self.logger.info( '['+ dateString()+']['+timeNow()+'] ' +sep.join(map(str,args)), **kwargs)
         if( args[0].startswith(' * E:') ):
             telegramAdminMsg( '['+ self.accountName +'/'+ self.exchange.id +']\n'+ sep.join(map(str,args)), **kwargs )
 
@@ -2039,11 +2056,12 @@ def webhook():
 
         # Return the requested log file
         try:
-            wmsg = open( response+'.log', encoding="utf-8" )
+            wmsg = open( f'{LOGS_DIRECTORY}/{response}.log', encoding="utf-8" )
         except FileNotFoundError:
             return 'Not found'
         else:
             text = wmsg.read()
+            wmsg.close()
             return app.response_class(text, mimetype='text/plain; charset=utf-8')
         
     else:
