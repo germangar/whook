@@ -47,7 +47,7 @@ Every limit order must have assigned its own unique ID so it can be identified f
 **[value]%** - quantity as percentage of total USDT balance. Use a negative value for shorts when using the position command.<br>
 All quantity types are interchangeable. All can be used with buy/sell/position commands.
 
-Notice: Whook expects the alerts to be encoded as utf-8. Tradingview already handles this, but when sending the alerts from somewhere else you should make sure your text is encoded as utf-8 or you may run into problems with the symbols '$' and '%'. If you experience issues with orders in usdt or percentage you can alternatively issue your orders with '[value] force_usdt' and '[value] force_percent' (with a space inbetween number and command).<br>
+Notice: Whook expects the alerts to be encoded as utf-8. Tradingview already handles this, but when sending the alerts from somewhere else you should make sure your text is encoded as utf-8 or you may run into problems with the symbols '$' and '%'. If you experience issues with orders in usdt or percentage you can alternatively add the commands 'force_usdt' or 'force_percent' to your alert to override the symbols.<br>
 
 * Leverage:<br>
 **[value]x or x[value]** - The x identifies this value as the leverage.<br>
