@@ -145,7 +145,8 @@ try:
         telegramBot = telegram_bot(token=TELEGRAM_BOT_TOKEN)
 except Exception as e:
     telegramBot = None
-    print( "Couldn't initializate telegram bot:", e )
+    if TELEGRAM_BOT_TOKEN != '':
+        print( "Couldn't initializate telegram bot:", e )
 else:
     if( telegramBot != None ):
         print( "Telegram bot connected" )
