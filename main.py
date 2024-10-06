@@ -1662,9 +1662,14 @@ def generatePositionsString()->str:
         numPositions = len(account.positionslist)
         balanceString = ''
         if SHOW_BALANCE:
-            balance = account.fetchBalance()
-            balanceString = " * Balance: {:.2f}[$]".format(balance['total'])
-            balanceString += " - Available {:.2f}[$]".format(balance['free'])
+            try:
+                balance = account.fetchBalance()
+            except Exception as e:
+                balanceString = ''
+            else:
+                balanceString = " * Balance: {:.2f}[$]".format(balance['total'])
+                balanceString += " - Available {:.2f}[$]".format(balance['free'])
+
         msg += '---------------------\n'
         msg += 'Refreshing positions '+account.accountName+': ' + str(numPositions) + ' positions found' + balanceString + '\n'
         if( numPositions == 0 ):
