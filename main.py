@@ -46,10 +46,6 @@ ORDER_TIMEOUT = 40
 REFRESH_POSITIONS_FREQUENCY = 5 * 60    # refresh positions every 5 minutes
 UPDATE_ORDERS_FREQUENCY = 0.25          # frametime in seconds at which the orders queue is refreshed.
 LOGS_DIRECTORY = 'logs'
-TELEGRAM_BOT_TOKEN = ''
-TELEGRAM_CHAT_ID = ''
-TELEGRAM_WHOOK_URL = ''
-TELEGRAM_MODE = 'ADMIN'
 MARGIN_MODE_NONE = '------'
 
 #### Open config file #####
@@ -66,10 +62,6 @@ def writeConfig():
         configString += '\t\t"SHOW_ENTRYPRICE":'+str(SHOW_ENTRYPRICE).lower()+',\n'
         configString += '\t\t"SHOW_BREAKEVEN":'+str(SHOW_BREAKEVEN).lower()+',\n'
         configString += '\t\t"LOGS_DIRECTORY":"'+str(LOGS_DIRECTORY)+'",\n'
-        configString += '\t\t"TELEGRAM_BOT_TOKEN":"'+str(TELEGRAM_BOT_TOKEN)+'",\n'
-        configString += '\t\t"TELEGRAM_CHAT_ID":"'+str(TELEGRAM_CHAT_ID)+'",\n'
-        configString += '\t\t"TELEGRAM_WHOOK_URL":"'+str(TELEGRAM_WHOOK_URL)+'",\n'
-        configString += '\t\t"TELEGRAM_MODE":"'+str(TELEGRAM_MODE).upper()+'",\n'
         configString += '\t\t"USE_PROXY":'+str(USE_PROXY).lower()+',\n'
         configString += '\t\t"PROXY_PORT":'+str(PROXY_PORT)+'\n'
         configString += '\t}\n]'
@@ -105,17 +97,6 @@ else:
         verbose = bool(config.get('VERBOSE'))
     if( config.get('LOGS_DIRECTORY') != None ):
         LOGS_DIRECTORY = str(config.get('LOGS_DIRECTORY'))
-    if( config.get('TELEGRAM_BOT_TOKEN') != None ):
-        TELEGRAM_BOT_TOKEN = str(config.get('TELEGRAM_BOT_TOKEN'))
-    if( config.get('TELEGRAM_CHAT_ID') != None ):
-        TELEGRAM_CHAT_ID = str(config.get('TELEGRAM_CHAT_ID'))
-    if( config.get('TELEGRAM_WHOOK_URL') != None ):
-        TELEGRAM_WHOOK_URL = str(config.get('TELEGRAM_WHOOK_URL'))
-    if( config.get('TELEGRAM_MODE') != None ):
-        TELEGRAM_MODE = str(config.get('TELEGRAM_MODE')).upper()
-        if( TELEGRAM_MODE != 'ADMIN' and TELEGRAM_MODE != 'PUCLIC' ):
-            print( "Telegram mode must be either 'admin' or 'public. Resetting to 'admin'" )
-            TELEGRAM_MODE = 'ADMIN'
     if( config.get('USE_PROXY') != None ):
         USE_PROXY = bool(config.get('USE_PROXY'))
     if( config.get('PROXY_PORT') != None ):
@@ -123,38 +104,6 @@ else:
     #rewrite the config file
     writeConfig()
 
-##### Initialize telegram bot ######
-
-if TELEGRAM_BOT_TOKEN != '':
-    try:
-        import telegram
-        from telegram import Bot as telegram_bot, Update as telegram_update
-    except ImportError:
-        print( "Telegram module not present")
-        print( "If you intend to use the telegram alerts use: 'pip install python-telegram-bot==13.7' to obtain the module")
-    else:
-        if( telegram.__version__ != '13.7' ):
-            print( 'Telegram module: python-telegram-bot version is not 13.7' )
-            print( "Please make sure to install the correct version with: 'pip install python-telegram-bot==13.7'" )
-            TELEGRAM_BOT_TOKEN = ''
-
-# load the bot
-telegramBot = None
-try:
-    if( TELEGRAM_BOT_TOKEN != '' ):
-        telegramBot = telegram_bot(token=TELEGRAM_BOT_TOKEN)
-except Exception as e:
-    telegramBot = None
-    if TELEGRAM_BOT_TOKEN != '':
-        print( "Couldn't initializate telegram bot:", e )
-else:
-    if( telegramBot != None ):
-        print( "Telegram bot connected" )
-        telegramBot.set_webhook(url=TELEGRAM_WHOOK_URL)
-
-def telegramAdminMsg( *args, sep=" ", **kwargs ):
-    if telegramBot != None and TELEGRAM_BOT_TOKEN != '' and TELEGRAM_MODE == 'ADMIN':
-        telegramBot.send_message(chat_id=TELEGRAM_CHAT_ID, text = sep.join(map(str, args)) )
 
 ##### Utils #####
 
@@ -503,8 +452,6 @@ class account_c:
     def print( self, *args, sep=" ", **kwargs ): # adds account and exchange information to the message
         print( timeNow(), '['+ self.accountName +'/'+ self.exchange.id +'] '+ sep.join(map(str,args)), **kwargs )
         self.logger.info( '['+ dateString()+']['+timeNow()+'] ' +sep.join(map(str,args)), **kwargs)
-        if( args[0].startswith(' * E:') ):
-            telegramAdminMsg( '['+ self.accountName +'/'+ self.exchange.id +']\n'+ sep.join(map(str,args)), **kwargs )
 
     def verifyLeverageRange( self, symbol, leverage )->int:
 
@@ -1841,7 +1788,6 @@ def Alert( data ):
                     break
         if( account == None ): 
             print( timeNow(), ' * E: Account ID not found. ALERT:', line )
-            telegramAdminMsg( 'Account ID not found. ALERT:', line )
             continue
         
         alert = parseAlert( line.replace('\n', ''), account )
@@ -1870,68 +1816,6 @@ def Alert( data ):
         # delay the alert proccessing
         account.latchedAlerts.append( alert )
 
-
-def telegramCommand( message ):
-    if( message[:1] == '/' ):
-        message = message[1:]
-    tokens = message.split()
-    if( tokens[0].lower() == 'balance' ):
-        if( len(tokens) == 1 ): # all accounts
-            msg = ''
-            for a in accounts:
-                msg += a.accountName + '\n'
-                msg += "Total: {:.2f}\n".format(a.fetchBalance().get('total'))
-
-            if( len(msg) == '0' ):
-                msg = 'No accounts found'
-            else:
-                telegramAdminMsg( msg )
-            return
-        
-        # specific account requested
-        account = None
-        for token in tokens:
-            for a in accounts:
-                if( token == a.accountName ):
-                    account = a
-                    break
-        if( account == None ):
-            telegramAdminMsg( "Account not found" )
-        else:
-            telegramAdminMsg( "Total: {:.2f}\n".format(a.fetchBalance().get('total')) )
-        return
-    
-    if( tokens[0].lower() == 'positions' ):
-        if( len(tokens) == 1 ): # all accounts
-            if( len(accounts) == '0' ):
-                telegramAdminMsg( 'No accounts found' )
-            else:
-                telegramAdminMsg( generatePositionsString() )
-            return
-        
-        # specific account requested
-        account = None
-        for token in tokens:
-            for a in accounts:
-                if( token == a.accountName ):
-                    account = a
-                    break
-        if( account == None ):
-            telegramAdminMsg( "Account not found" )
-        else:
-            msg = ''
-            account.refreshPositions()
-            numPositions = len(account.positionslist)
-            msg += '---------------------\n'
-            msg += 'Refreshing positions '+account.accountName+': ' + str(numPositions) + ' positions found\n'
-            if( numPositions > 0 ):
-                for pos in account.positionslist:
-                    msg += pos.generatePrintString() + '\n'
-
-            telegramAdminMsg( msg )
-        return
-
-    telegramAdminMsg( "unknown command." )
 
 
 ###################
@@ -1998,7 +1882,6 @@ if( len(accounts) == 0 ):
     print( " * FATAL ERROR: No valid accounts found. Please edit 'accounts.json' and introduce your API keys" )
     raise SystemExit()
 
-telegramAdminMsg( 'Whook started.' )
 
 ############################################
 
@@ -2025,24 +1908,15 @@ def webhook():
             data = request.get_json()
 
             if data and 'update_id' in data:  # Typical key in Telegram bot updates
-
                 # Extract message text and chat ID
                 if 'message' in data:
                     chat_id = data['message']['chat']['id']
                     message = data['message']['text']
-                    
                     # Log the received message
-                    #print( "Received message from chat_id", chat_id, ':', message )
-
-                    if( message[:1] == '/' and message[:2] != '//' ): # / is a command // is alert comments
-                        telegramCommand( message )
-                    else:
-                        telegramAdminMsg( "Posting alert.")
-                        Alert( message ) # try to proccess it as an alert
-
+                    print( "Received message from chat_id", chat_id, ':', message )
                 return 'Telegram message processed', 200
 
-            # we received a json but apparently it's not from telegram
+            # we received a json of unknown source
             return 'success', 200
         
         # Standard alert
