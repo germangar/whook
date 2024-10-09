@@ -1655,7 +1655,7 @@ def parseAlert( data, account: account_c ):
     for token in tokens:
         if( account.findSymbolFromPairName(token) != None ): # GMXUSDTM, GMX/USDT:USDT and GMX/USDT are all acceptable formats
             alert['symbol'] = account.findSymbolFromPairName(token) 
-        elif ( token == account.accountName ):
+        elif ( token.lower() == account.accountName.lower() ):
             pass
         elif ( token[-1:]  == "$" ): # value in USDT
             alert['isUSDT'] = True
@@ -1783,7 +1783,7 @@ def Alert( data ):
         tokens = line.split()
         for token in tokens:
             for a in accounts:
-                if( token == a.accountName ):
+                if( token.lower() == a.accountName.lower() ):
                     account = a
                     break
         if( account == None ): 
