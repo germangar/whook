@@ -36,6 +36,7 @@ if( CCXTversion < fixVersionFormat(minCCXTversion) ):
 
 verbose = False
 SHOW_BALANCE = False # print account balance at exchange initialization
+SHOW_LIQUIDATION = False # in positions when available
 SHOW_BREAKEVEN = True # in positions when available
 SHOW_ENTRYPRICE = False # in positions
 USE_PROXY = False
@@ -60,6 +61,7 @@ def writeConfig():
         configString += '\t\t"VERBOSE":'+str(verbose).lower()+',\n'
         configString += '\t\t"SHOW_BALANCE":'+str(SHOW_BALANCE).lower()+',\n'
         configString += '\t\t"SHOW_ENTRYPRICE":'+str(SHOW_ENTRYPRICE).lower()+',\n'
+        configString += '\t\t"SHOW_LIQUIDATION":'+str(SHOW_LIQUIDATION).lower()+',\n'
         configString += '\t\t"SHOW_BREAKEVEN":'+str(SHOW_BREAKEVEN).lower()+',\n'
         configString += '\t\t"LOGS_DIRECTORY":"'+str(LOGS_DIRECTORY)+'",\n'
         configString += '\t\t"USE_PROXY":'+str(USE_PROXY).lower()+',\n'
@@ -90,7 +92,9 @@ else:
     if( config.get('SHOW_BALANCE') != None ):
         SHOW_BALANCE = bool(config.get('SHOW_BALANCE'))
     if( config.get('SHOW_ENTRYPRICE') != None ):
-        SHOW_BREAKEVEN = bool(config.get('SHOW_ENTRYPRICE'))
+        SHOW_ENTRYPRICE = bool(config.get('SHOW_ENTRYPRICE'))
+    if( config.get('SHOW_LIQUIDATION') != None ):
+        SHOW_LIQUIDATION = bool(config.get('SHOW_LIQUIDATION'))
     if( config.get('SHOW_BREAKEVEN') != None ):
         SHOW_BREAKEVEN = bool(config.get('SHOW_BREAKEVEN'))
     if( config.get('VERBOSE') != None ):
@@ -167,8 +171,11 @@ class position_c:
         string += ' * ' + "{:.2f}[$]".format(unrealizedPnl)
         string += ' * ' + "{:.2f}".format(p) + '%'
 
-        if( self.getKey('entryPrice') != None ):
+        if( self.getKey('entryPrice') != None and SHOW_ENTRYPRICE ):
             string += ' * ' + "[ep]{:.3f}".format(float(self.getKey('entryPrice')))
+
+        if( self.getKey('liquidationPrice') != None and SHOW_LIQUIDATION ):
+            string += ' * ' + "[li]{:.3f}".format(float(self.getKey('liquidationPrice')))
 
         # OKX and Bitget provide the position breakeven price info:bePx. Let's print that too
         if( self.getKey('info') != None ):
