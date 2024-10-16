@@ -1155,6 +1155,15 @@ class account_c:
             # see if the leverage in the server needs to be changed and set marginMode
             self.updateSymbolLeverage( order.symbol, order.leverage )
 
+            if( order.type == 'changeleverage' ):
+                if( self.markets[ order.symbol ]['local']['leverage'] == order.leverage ):
+                    self.print( " * Leverage changed to", self.markets[ order.symbol ]['local']['leverage'] )
+                else:
+                    self.print( " * E: Failed to change leverage." )
+                self.ordersQueue.remove( order )
+                continue
+
+
             # set up exchange specific parameters
             params = {}
 
@@ -1423,9 +1432,20 @@ class account_c:
         # check for a existing position
         pos = self.getPositionBySymbol( symbol )
 
+        if( command == 'changeleverage' ):
+            if( pos == None ):
+                self.print( " * E: No position to change leverage" )
+                return
+            if( self.markets[ symbol ]['local']['leverage'] == leverage ):
+                self.print( " * Position already has leverage:", leverage )
+                return
+            self.ordersQueue.append( order_c( symbol, 'changeleverage', leverage = leverage ) )
+            return
+            
+
         if( command == 'close' or (command == 'position' and quantity == 0) ):
             if pos == None:
-                self.print( timeNow(), " * 'Close", symbol, "' No position found" )
+                self.print( " * 'Close", symbol, "' No position found" )
                 return
             positionContracts = pos.getKey('contracts')
             positionSide = pos.getKey( 'side' )
@@ -1473,7 +1493,11 @@ class account_c:
                 command = 'sell' if positionContracts > quantity else 'buy'
                 quantity = abs( quantity - positionContracts )
                 if( quantity < minOrder ):
-                    self.print( " * Order completed: Request matched current position")
+                    # we don't need to buy nor sell, but do we need to change the leverage?
+                    if( leverage != self.markets[ symbol ]['local']['leverage'] ):
+                        self.ordersQueue.append( order_c( symbol, 'changeleverage', leverage = leverage ) )
+                    else:
+                        self.print( " * Order completed: Request matched current position" )
                     return
             # fall through
 
@@ -1710,6 +1734,8 @@ def parseAlert( data, account: account_c ):
             alert['command'] = 'close'
         elif token.lower()  == 'position' or token.lower()  == 'pos':
             alert['command'] = 'position'
+        elif token.lower()  == 'changeleverage':
+            alert['command'] = 'changeleverage'
         elif ( token[:5].lower()  == "limit" ):
             limitToken = token # we validate it at processing
         elif ( token[:6].lower()  == "cancel" ):
@@ -1740,6 +1766,17 @@ def parseAlert( data, account: account_c ):
             return { 'Error':" * E: Invalid Order amount: 0" }
         if( alert['command'] == 'sell' and alert['quantity'] < 0 ): # be flexible with sell having a negative amount
             alert['quantity'] = abs(alert['quantity'])
+
+    if( alert['command'] == "changeleverage" ):
+        alert['isBaseCurrency'] = False
+        alert['isUSDT'] = False
+        alert['isBaseCurrency'] = False
+        if( alert['quantity'] == None ):
+            alert['quantity'] = alert['leverage']
+            if( alert['quantity'] == None ):
+                return { 'Error': " * E: Couldn't find a leverage value for setleverage" }
+        if( alert['leverage'] == None ):
+            alert['leverage'] = int( alert['quantity'] )
     
     # parse de cancel and limit tokens
     if( limitToken != None ):
