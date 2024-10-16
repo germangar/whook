@@ -1499,6 +1499,24 @@ class account_c:
                     else:
                         self.print( " * Order completed: Request matched current position" )
                     return
+                # if we are reducing the size and changing leverage we want to reduce size first, then modify the leverage
+                if( command == 'sell' and leverage != self.markets[ symbol ]['local']['leverage'] ):
+                    alert = {
+                        'symbol': symbol,
+                        'command': 'changeleverage',
+                        'quantity': None,
+                        'leverage': leverage,
+                        'isUSDT': False,
+                        'isBaseCurrency': False,
+                        'isPercentage': False,
+                        'lockBaseCurrency': False,
+                        'priceLimit': 0.0,
+                        'customID': None,
+                        'alert': f"{symbol} changeleverage {leverage}",
+                        'timestamp':time.monotonic()
+                    }
+                    self.latchedAlerts.append( alert )
+                    leverage = self.markets[ symbol ]['local']['leverage'] # reduce the position with current leverage
             # fall through
 
 
@@ -1773,9 +1791,9 @@ def parseAlert( data, account: account_c ):
         alert['isBaseCurrency'] = False
         if( alert['quantity'] == None ):
             alert['quantity'] = alert['leverage']
-            if( alert['quantity'] == None ):
+            if( alert['quantity'] == 0 ):
                 return { 'Error': " * E: Couldn't find a leverage value for setleverage" }
-        if( alert['leverage'] == None ):
+        if( alert['leverage'] == 0 ):
             alert['leverage'] = int( alert['quantity'] )
     
     # parse de cancel and limit tokens
