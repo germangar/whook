@@ -1439,7 +1439,9 @@ class account_c:
             if( self.markets[ symbol ]['local']['leverage'] == leverage ):
                 self.print( " * Position already has leverage:", leverage )
                 return
-            self.ordersQueue.append( order_c( symbol, 'changeleverage', leverage = leverage ) )
+            o = order_c( symbol, '', leverage = leverage )
+            o.type = 'changeleverage'
+            self.ordersQueue.append( o )
             return
             
 
