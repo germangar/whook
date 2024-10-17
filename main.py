@@ -1155,7 +1155,7 @@ class account_c:
             # see if the leverage in the server needs to be changed and set marginMode
             self.updateSymbolLeverage( order.symbol, order.leverage )
 
-            if( order.type == 'changeleverage' ):
+            if( order.side == 'changeleverage' ):
                 if( self.markets[ order.symbol ]['local']['leverage'] == order.leverage ):
                     self.print( " * Leverage changed to", self.markets[ order.symbol ]['local']['leverage'] )
                 else:
@@ -1439,9 +1439,7 @@ class account_c:
             if( self.markets[ symbol ]['local']['leverage'] == leverage ):
                 self.print( " * Position already has leverage:", leverage )
                 return
-            o = order_c( symbol, '', leverage = leverage )
-            o.type = 'changeleverage'
-            self.ordersQueue.append( o )
+            self.ordersQueue.append( order_c( symbol, 'changeleverage', leverage = leverage ) )
             return
             
 
