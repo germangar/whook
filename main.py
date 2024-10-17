@@ -1500,7 +1500,7 @@ class account_c:
                         self.print( " * Order completed: Request matched current position" )
                     return
                 # if we are reducing the size and changing leverage we want to reduce size first, then modify the leverage
-                if( command == 'sell' and leverage != self.markets[ symbol ]['local']['leverage'] ):
+                if( command == 'sell' and leverage != self.markets[ symbol ]['local']['leverage'] and self.markets[ symbol ]['local']['leverage'] != 0 ): # kucoin has 0 local leverage until an order is processed
                     alert = {
                         'symbol': symbol,
                         'command': 'changeleverage',
