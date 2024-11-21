@@ -166,7 +166,6 @@ There is a Linux tutorial inside the tutorials directory. Thanks to @iZnogoude (
 - Kraken: Whook is unable to set the margin mode. It will use whatever is set in the exchange for that symbol.
 - Kraken can't check leverage boundaries. If a order exceeds the maximum leverage the console may spam until the order times out.
 - BingX: Limit orders aren't setting the custom ID. They can only be cancelled using cancel:all
-- Things will most likely go south if you have a position with a leverage and you order the same position with a different leverage. Some exchanges may take the leverage change as you trying to change the leverage of the current position but not changing the amount of contracts. The order will go through, but the resulting position will depend on the exchange. I'll try to handle it but it's not a big priority for me.
 
 ### TO DO LIST ### 
 - Split whook in 2 files, one containing the accounts class. So it can be imported by other scripts to create orders directly. In short, for bots.
