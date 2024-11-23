@@ -169,5 +169,4 @@ There is a Linux tutorial inside the tutorials directory. Thanks to @iZnogoude (
 
 ### TO DO LIST ### 
 - Split whook in 2 files, one containing the accounts class. So it can be imported by other scripts to create orders directly. In short, for bots.
-- 'pricelock' a made up mode to attempt to place market orders as limit orders.
-- Create some form of past trades storage better than the logs. Usable for trading performance analytics.
+
