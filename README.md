@@ -23,7 +23,7 @@ Currently supported exchanges:
 - **Phemex** futures ( also [Phemex testnet](https://testnet.phemex.com) )
 - **Kraken** futures ( also [Kraken futures testnet](https://demo-futures.kraken.com) )
 
-Note: I don't have access to OKX futures anymore (European problems), and I have been mostly using Bitget from the last six months. If anything has changed the other exchanges APIs I will probably have missed it. If you experience any bugs report them in 'Issues' and I'll fix them in a few days (Except for OKX which I can't test anymore). 
+Note: I don't have access to OKX futures anymore (being European problems), and I have been mostly using Bitget from the last six months. If anything has changed in the other exchanges APIs I will probably have missed it. If you experience any bugs report them in 'Issues' and I'll fix them in a few days. 
 
 ### ALERT SYNTAX ###
 
