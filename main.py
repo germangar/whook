@@ -492,7 +492,7 @@ class account_c:
         # Make sure the exchange is in oneway mode
 
         if( self.exchange.has.get('setPositionMode') != True and self.markets[ symbol ]['local']['positionMode'] != 'oneway' ):
-            print( " * E: updateSymbolPositionMode: Exchange", self.exchange.id, "doesn't have setPositionMode nor is set to oneway" )
+            self.print( " * E: updateSymbolPositionMode: Exchange", self.exchange.id, "doesn't have setPositionMode nor is set to oneway" )
             return
         
         if( self.markets[ symbol ]['local']['positionMode'] != 'oneway' and self.exchange.has.get('setPositionMode') == True ):
