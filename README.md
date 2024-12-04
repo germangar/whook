@@ -23,6 +23,7 @@ Currently supported exchanges:
 - **Phemex** futures ( also [Phemex testnet](https://testnet.phemex.com) )
 - **Kraken** futures ( also [Kraken futures testnet](https://demo-futures.kraken.com) )
 
+Note: I don't have access to OKX futures anymore (being European problems), and I have been mostly using Bitget from the last six months. If anything has changed in the other exchanges APIs I will probably have missed it. If you experience any bugs report them in 'Issues' and I'll fix them in a few days. 
 
 ### ALERT SYNTAX ###
 
@@ -166,9 +167,7 @@ There is a Linux tutorial inside the tutorials directory. Thanks to @iZnogoude (
 - Kraken: Whook is unable to set the margin mode. It will use whatever is set in the exchange for that symbol.
 - Kraken can't check leverage boundaries. If a order exceeds the maximum leverage the console may spam until the order times out.
 - BingX: Limit orders aren't setting the custom ID. They can only be cancelled using cancel:all
-- Things will most likely go south if you have a position with a leverage and you order the same position with a different leverage. Some exchanges may take the leverage change as you trying to change the leverage of the current position but not changing the amount of contracts. The order will go through, but the resulting position will depend on the exchange. I'll try to handle it but it's not a big priority for me.
 
 ### TO DO LIST ### 
 - Split whook in 2 files, one containing the accounts class. So it can be imported by other scripts to create orders directly. In short, for bots.
-- 'pricelock' a made up mode to attempt to place market orders as limit orders.
-- Create some form of past trades storage better than the logs. Usable for trading performance analytics.
+
