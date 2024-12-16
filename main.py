@@ -1371,6 +1371,7 @@ class account_c:
         lockBaseCurrency = alert['lockBaseCurrency']
         priceLimit = alert['priceLimit']
         customID = alert['customID']
+        usdtValue = None
         isLimit = True if priceLimit > 0.0 else False
 
         if( verbose ):
@@ -1423,6 +1424,7 @@ class account_c:
 
                 coin_name = self.markets[symbol]['base']
 
+            usdtValue = quantity
             quantity = self.contractsFromUSDT( symbol, quantity, price, leverage )
             if verbose : print( "   CONVERTING (x"+str(leverage)+")", oldQuantity, coin_name, '==>', quantity, "contracts" )
             if( abs(quantity) < minOrder ):
@@ -1461,7 +1463,7 @@ class account_c:
                 self.ordersQueue.append( order_c( symbol, 'buy', positionContracts, 0 ) )
 
             return
-        
+
         # position orders are absolute. Convert them to buy/sell order
         if( command == 'position' ):
             if( pos == None or pos.getKey('contracts') == None ):
@@ -1489,6 +1491,32 @@ class account_c:
                 positionSide = pos.getKey( 'side' )
                 if( positionSide == 'short' ):
                     positionContracts = -positionContracts
+
+                # !! We have to recalculate *from USDT* when the price is above the entry in a LONG and below the entry in a SHORT
+                if( usdtValue != None ):
+                    extraMargin = 0
+                    entryPrice = float(pos.getKey('entryPrice'))
+                    markPrice = self.fetchAveragePrice(symbol)
+                    initialMargin = -1 if(pos.getKey('initialMargin') == None) else float(pos.getKey('initialMargin'))
+                    if( initialMargin == -1 and self.markets[ symbol ]['local']['leverage'] > 0 ): # figure it out from the entry price and number or contracts
+                        initialMargin = (positionContracts * entryPrice)/float(self.markets[ symbol ]['local']['leverage'])
+
+                    if( initialMargin != -1 ):
+                        #if we're going to change the leverage we need to manipulate the initial margen
+                        if( leverage != self.markets[ symbol ]['local']['leverage'] ):
+                            #if the new leverage is bigger the margin will be reduced
+                            initialMargin = initialMargin * ( float(self.markets[ symbol ]['local']['leverage'] / float(leverage)) )
+
+
+                        if( positionSide == 'long' and markPrice > entryPrice + account.findPrecisionForSymbol(symbol) ):
+                            extraMargin = usdtValue - initialMargin
+                            quantity = positionContracts + self.contractsFromUSDT( symbol, extraMargin, price, leverage )
+                        #FIXME: Short is untested. We're un a bullrun and I don't have any shorts.
+                        elif( positionSide == 'short' and markPrice < entryPrice - account.findPrecisionForSymbol(symbol) ):
+                            extraMargin = abs(usdtValue) - initialMargin
+                            quantity = positionContracts - self.contractsFromUSDT( symbol, extraMargin, price, leverage )
+
+
 
                 command = 'sell' if positionContracts > quantity else 'buy'
                 quantity = abs( quantity - positionContracts )
