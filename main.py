@@ -1508,11 +1508,13 @@ class account_c:
                             initialMargin = initialMargin * ( float(self.markets[ symbol ]['local']['leverage'] / float(leverage)) )
 
 
-                        if( positionSide == 'long' and markPrice > entryPrice + self.findPrecisionForSymbol(symbol) ):
+                        #if( positionSide == 'long' and markPrice > entryPrice + self.findPrecisionForSymbol(symbol) ):
+                        if( positionSide == 'long' and markPrice > entryPrice ):
                             extraMargin = usdtValue - initialMargin
                             quantity = positionContracts + self.contractsFromUSDT( symbol, extraMargin, price, leverage )
                         #FIXME: Short is untested. We're un a bullrun and I don't have any shorts.
-                        elif( positionSide == 'short' and markPrice < entryPrice - self.findPrecisionForSymbol(symbol) ):
+                        # elif( positionSide == 'short' and markPrice < entryPrice - self.findPrecisionForSymbol(symbol) ):
+                        elif( positionSide == 'short' and markPrice < entryPrice ):
                             extraMargin = abs(usdtValue) - initialMargin
                             quantity = positionContracts - self.contractsFromUSDT( symbol, extraMargin, price, leverage )
 
