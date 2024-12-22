@@ -35,6 +35,7 @@ if( CCXTversion < fixVersionFormat(minCCXTversion) ):
 ###################
 
 verbose = False
+debug_order = False
 SHOW_BALANCE = False # print account balance at exchange initialization
 SHOW_LIQUIDATION = False # in positions when available
 SHOW_BREAKEVEN = True # in positions when available
@@ -1202,6 +1203,11 @@ class account_c:
 
             # make sure it's precision adjusted properly
             order.quantity = roundToTick( order.quantity, self.findPrecisionForSymbol(order.symbol) )
+
+            if debug_order:
+                print( timeNow(), " * Debug Order", order.symbol, order.side, order.quantity, str(order.leverage)+'x' )
+                self.ordersQueue.remove( order )
+                continue
 
             # send the actual order
             try:
