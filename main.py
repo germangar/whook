@@ -580,6 +580,11 @@ class account_c:
                         # binance {'code': -4046, 'msg': 'No need to change margin type.'}
                         # updateSymbolLeverage->set_margin_mode: {'code': -4046, 'msg': 'No need to change margin type.'}
                         self.markets[ symbol ]['local']['marginMode'] = self.MARGIN_MODE
+                    if( self.exchange.id == 'bitget' and 'code":"45117' in a):
+                        print( " * W: Bitget: Currently holding positions or orders, the margin mode cannot be adjusted" )
+                        #self.markets[ symbol ]['local']['marginMode'] = 'cross' if self.MARGIN_MODE == 'isolated' else 'isolated'
+                        # * E: updateSymbolLeverage->set_margin_mode: bitget {"code":"45117","msg":"Currently holding positions or orders, the margin mode cannot be adjusted","requestTime":1734896200804,"data":null} <class 'ccxt.base.errors.ExchangeError'>
+                        # * E: UpdateOrdersQueue: Unhandled exception. Cancelling: bitget {"code":"45117","msg":"Currently holding positions or orders, the margin mode cannot be adjusted","requestTime":1734896201207,"data":null} <class 'ccxt.base.errors.ExchangeError'>
                     else:
                         print( " * E: updateSymbolLeverage->set_margin_mode:", a, type(e) )
             else:
@@ -1154,7 +1159,8 @@ class account_c:
             self.updateSymbolPositionMode( order.symbol )
 
             # see if the leverage in the server needs to be changed and set marginMode
-            self.updateSymbolLeverage( order.symbol, order.leverage )
+            if not debug_order:
+                self.updateSymbolLeverage( order.symbol, order.leverage )
 
             if( order.side == 'changeleverage' ):
                 if( self.markets[ order.symbol ]['local']['leverage'] == order.leverage ):
@@ -1205,7 +1211,9 @@ class account_c:
             order.quantity = roundToTick( order.quantity, self.findPrecisionForSymbol(order.symbol) )
 
             if debug_order:
-                print( timeNow(), " * Debug Order", order.symbol, order.side, order.quantity, str(order.leverage)+'x' )
+                price = account.fetchAveragePrice( order.symbol )
+                print( timeNow(), " * Debug Order:", order.symbol, order.side, f": {(order.quantity * price)/float(order.leverage):.2f}$" )
+                print( timeNow(), " * Debug Order:", f"{order.quantity} contracts", str(order.leverage)+'x' )
                 self.ordersQueue.remove( order )
                 continue
 
@@ -1515,12 +1523,12 @@ class account_c:
 
 
                         #if( positionSide == 'long' and markPrice > entryPrice + self.findPrecisionForSymbol(symbol) ):
-                        if( positionSide == 'long' and markPrice > entryPrice ):
+                        if( positionSide == 'long' ):
                             extraMargin = usdtValue - initialMargin
                             quantity = positionContracts + self.contractsFromUSDT( symbol, extraMargin, price, leverage )
                         #FIXME: Short is untested. We're un a bullrun and I don't have any shorts.
                         # elif( positionSide == 'short' and markPrice < entryPrice - self.findPrecisionForSymbol(symbol) ):
-                        elif( positionSide == 'short' and markPrice < entryPrice ):
+                        elif( positionSide == 'short' ):
                             extraMargin = abs(usdtValue) - initialMargin
                             quantity = positionContracts - self.contractsFromUSDT( symbol, extraMargin, price, leverage )
 
