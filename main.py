@@ -1521,13 +1521,11 @@ class account_c:
                             #if the new leverage is bigger the margin will be reduced
                             initialMargin = initialMargin * ( float(self.markets[ symbol ]['local']['leverage'] / float(leverage)) )
 
-
-                        #if( positionSide == 'long' and markPrice > entryPrice + self.findPrecisionForSymbol(symbol) ):
                         if( positionSide == 'long' ):
                             extraMargin = usdtValue - initialMargin
                             quantity = positionContracts + self.contractsFromUSDT( symbol, extraMargin, price, leverage )
-                        #FIXME: Short is untested. We're un a bullrun and I don't have any shorts.
-                        # elif( positionSide == 'short' and markPrice < entryPrice - self.findPrecisionForSymbol(symbol) ):
+
+                        #FIXME: Short is untested. We're in a bullrun and I don't have any shorts.
                         elif( positionSide == 'short' ):
                             extraMargin = abs(usdtValue) - initialMargin
                             quantity = positionContracts - self.contractsFromUSDT( symbol, extraMargin, price, leverage )
