@@ -1378,7 +1378,7 @@ class account_c:
         symbol = alert['symbol']
         command = alert['command']
         quantity = alert['quantity']
-        leverage = alert['leverage']
+        leverage = alert['leverage'] if alert['leverage'] != 0 else self.markets[ symbol ]['local']['leverage']
         isUSDT = alert['isUSDT']
         isBaseCurrency = alert['isBaseCurrency']
         isPercentage = alert['isPercentage']
