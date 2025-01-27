@@ -1102,7 +1102,11 @@ class account_c:
                 try:
                     response = self.exchange.cancel_all_orders(symbol)
                 except Exception as e:
-                    self.print( ' * E: cancelAllOrders:', e.args[0], type(e) )
+                    # * E: cancelAllOrders: bitget {"code":"22001","msg":"No order to cancel","requestTime":1737926193912,"data":null} <class 'ccxt.base.errors.ExchangeError'>
+                    if( 'code":"22001' in e.args[0] ):
+                        self.print( 'cancelAllOrders: No orders found' )
+                    else:
+                        self.print( ' * E: cancelAllOrders:', e.args[0], type(e) )
                     # I've tried cancelling when there were no orders but it reported no error. Maybe I missed something.
                 else:
                     self.print( ' * All', symbol, 'orders have been cancelled' )
