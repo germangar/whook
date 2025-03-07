@@ -1491,6 +1491,8 @@ class account_c:
                 else:
                     command = 'buy'
                 quantity = abs(quantity)
+
+            # FIXME: Buy/sell commands can change marginmode in Bitget and retain the position. Maybe this isn't needed.
             elif( self.markets[symbol]['local']['marginMode'] != self.MARGIN_MODE and self.exchange.has['setMarginMode'] ):
                 # to change marginMode we need to close the old position first
                 if( pos.getKey('side') == 'long' ):
@@ -1511,7 +1513,7 @@ class account_c:
                     positionContracts = -positionContracts
 
                 # !! We have to recalculate *from USDT* when the price is above the entry in a LONG and below the entry in a SHORT
-                if( usdtValue != None ):
+                if( usdtValue != None and positionSide == ("short" if quantity < 0.0 else "long") ):
                     extraMargin = 0
                     entryPrice = float(pos.getKey('entryPrice'))
                     markPrice = self.fetchAveragePrice(symbol)
