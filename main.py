@@ -1516,7 +1516,6 @@ class account_c:
                 if( usdtValue != None and positionSide == ("short" if quantity < 0.0 else "long") ):
                     extraMargin = 0
                     entryPrice = float(pos.getKey('entryPrice'))
-                    markPrice = self.fetchAveragePrice(symbol)
                     initialMargin = -1 if(pos.getKey('initialMargin') == None) else float(pos.getKey('initialMargin'))
                     if( initialMargin == -1 and self.markets[ symbol ]['local']['leverage'] > 0 ): # figure it out from the entry price and number or contracts
                         initialMargin = (positionContracts * entryPrice)/float(self.markets[ symbol ]['local']['leverage'])
@@ -1531,7 +1530,6 @@ class account_c:
                             extraMargin = usdtValue - initialMargin
                             quantity = positionContracts + self.contractsFromUSDT( symbol, extraMargin, price, leverage )
 
-                        #FIXME: Short is untested. We're in a bullrun and I don't have any shorts.
                         elif( positionSide == 'short' ):
                             extraMargin = abs(usdtValue) - initialMargin
                             quantity = positionContracts - self.contractsFromUSDT( symbol, extraMargin, price, leverage )
