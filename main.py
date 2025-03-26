@@ -2036,8 +2036,23 @@ def webhook():
         # https://b361-139-47-50-177.ngrok-free.app/whook?response=kucoin
         response = request.args.get('response')
         if( response == None ):
-            msg = generatePositionsString()
-            return app.response_class( msg, mimetype='text/plain; charset=utf-8' )
+            fontSize = 18
+            if fontSize > 0:
+                msg = f"""
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Positions</title>
+                </head>
+                <body>
+                    <pre style="font-size: {fontSize}px;">{generatePositionsString()}</pre>
+                </body>
+                </html>
+                """
+                return app.response_class( msg, mimetype='text/html; charset=utf-8' )
+            else:
+                msg = generatePositionsString()
+                return app.response_class( msg, mimetype='text/plain; charset=utf-8' )
         
         if response == 'whook':
             return 'WHOOKITYWOOK'
