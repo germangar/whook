@@ -77,8 +77,8 @@ The percentage parameter is optional. If not included it will close the full pos
 [account_id] [symbol] [command] [value in USDT] [leverage] [limit:[customID]:[price]] - **myKucoinA ETH/USDT buy 300$ x3 limit:myid002:1012**<br>
 Will open a buy order at 1012. The management of the customID falls on you if you ever want to cancel it. Remember you can't open 2 orders with the same customID<br>
 Some exchange peculiarities to be aware of:<br>
-Bybit will not accept the same customID twice, even if the previous order is already cancelled.<br>
-Coinex only accepts numeric customIDs.<br>
+-Bybit will not accept the same customID twice, even if the previous order is already cancelled.<br>
+-Coinex only accepts numeric customIDs.<br>
 
 - **Cancel limit order:**<br>
 [account_id] [symbol] [cancel:[customID]] - **myKucoinA ETH/USDT cancel:myid002**<br>
