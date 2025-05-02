@@ -34,7 +34,7 @@ Note: I don't have access to OKX futures anymore (being European problems), and 
 * Commands:<br>
 **buy** - places buy order.<br>
 **sell** - places sell order.<br>
-**position or pos** - goes to a position of the given value. Use a positive value for Long and a negative value for Short.<br>
+**position or pos** - Creates a position of the given value, or modifies the pre-existing one to match it. Use a positive value for Long and a negative value for Short.<br>
 **close** - closes the position (position 0 also does it).<br>
 **limit:[customID]:[price]** - Combined with buy/sell commads creates a limit order. The three fields must be separated by a colon with no spaces.<br>
 Every limit order must have assigned its own unique ID so it can be identified for cancelling it<br>
@@ -44,7 +44,7 @@ Every limit order must have assigned its own unique ID so it can be identified f
 * Quantities:<br>
 **[value]** - quantity in base currency. Just the number without any extra character. Base currency is the coin you're trading.<br>
 **[value]$** - quantity in USDT. No command associated. Just the number and the dollar sign.<br>
-**[value]@** - quantity in contracts. No command associated. Just the number and the 'at' sign.<br>
+**[value]@** - quantity in contracts. The value of a contract differs from exchange to exchange. Just the number and the 'at' sign.<br>
 **[value]%** - quantity as percentage of total USDT balance. Use a negative value for shorts when using the position command.<br>
 All quantity types are interchangeable. All can be used with buy/sell/position commands.
 
@@ -58,9 +58,8 @@ Examples:<br>
 [account_id] [symbol] [command] [value in USDT] [leverage] - **myKucoinA ETH/USDT buy 300$ x3**<br>
 
 - **Position command using contracts:**<br>
-[symbol] [command] [value in contracts] [leverage] [account_id] - **ETH/USDT position -500@ x3 myKucoinA**<br>
-Notice: This is a short position. For a long position use a positive value. Same goes when the value is in USDT<br>
-The value of a contract differs from exchange to exchange. You have to check it in the exchange under contract information<br>
+[symbol] [command] [value in base currency] [leverage] [account_id] - **ETH/USDT position -50 x3 myKucoinA**<br>
+Notice: This would open a 50ETH short at 3x. For a long position use a positive value. Same goes when the value is in USDT<br>
 Example of a position alert from a strategy in Tradingview:<br>
 **myKucoinA {{ticker}} pos {{strategy.position_size}} x3**<br>
 This alert is all you should really need for running 90% of the strategies in TV
@@ -77,8 +76,8 @@ The percentage parameter is optional. If not included it will close the full pos
 [account_id] [symbol] [command] [value in USDT] [leverage] [limit:[customID]:[price]] - **myKucoinA ETH/USDT buy 300$ x3 limit:myid002:1012**<br>
 Will open a buy order at 1012. The management of the customID falls on you if you ever want to cancel it. Remember you can't open 2 orders with the same customID<br>
 Some exchange peculiarities to be aware of:<br>
-Bybit will not accept the same customID twice, even if the previous order is already cancelled.<br>
-Coinex only accepts numeric customIDs.<br>
+-Bybit will not accept the same customID twice, even if the previous order is already cancelled.<br>
+-Coinex only accepts numeric customIDs.<br>
 
 - **Cancel limit order:**<br>
 [account_id] [symbol] [cancel:[customID]] - **myKucoinA ETH/USDT cancel:myid002**<br>
