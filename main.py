@@ -1752,15 +1752,15 @@ def parseAlert( data, account: account_c ):
             alert['symbol'] = account.findSymbolFromPairName(token) 
         elif ( token.lower() == account.accountName.lower() ):
             pass
-        elif ( token[-1:]  == "$" ): # value in USDT
+        elif ( token[:1].lower() == "$" or token[-1:] == "$" ): # value in USDT
             alert['isUSDT'] = True
-            arg = token[:-1]
+            arg = token.lower().strip().replace("$", "")
             alert['quantity'] = stringToValue( arg )
-        elif ( token[-1:]  == "@" ): # value in contracts
-            arg = token[:-1]
+        elif ( token[:1].lower() == "@" or token[-1:] == "@" ): # value in contracts
+            arg = token.lower().strip().replace("@", "")
             alert['quantity'] = stringToValue( arg )
-        elif ( token[-1:]  == "%" ): # value in percentage of balance
-            arg = token[:-1]
+        elif ( token[:1].lower() == "%" or token[-1:] == "%" ): # value in percentage of balance
+            arg = token.lower().strip().replace("%", "")
             alert['quantity'] = stringToValue( arg )
             alert['isPercentage'] = True
         elif ( token[:1]  == "-" ): # this is a minus symbol! What a bitch (value in base currency)
