@@ -1778,12 +1778,10 @@ def parseAlert( data, account: account_c ):
             alert['isBaseCurrency'] = True
         elif token.lower()  == 'lockbasecurrency' or token.lower() == "bclock":
             alert['lockBaseCurrency'] = True
-        elif ( token[:1].lower()  == "x" ):
-            arg = token[1:]
-            alert['leverage'] = int(stringToValue(arg))
-        elif ( token[-1:].lower()  == "x" ):
-            arg = token[:-1]
-            alert['leverage'] = int(stringToValue(arg))
+        elif ( token[:1].lower() == "x" or token[-1:].lower() == "x"):
+            arg = token.lower().strip().replace("x", "")
+            leverage = stringToValue(arg)
+            alert['leverage'] = int(leverage) if leverage is not None else 0
         elif token.lower()  == 'long':
             alert['command'] = 'buy'
             print( "WARNING: 'long' and 'short' commands are deprecated and will be removed in the future. Please use 'buy' and 'sell' instead" )
