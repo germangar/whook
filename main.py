@@ -39,6 +39,7 @@ debug_order = False
 SHOW_BALANCE = False # print account balance at exchange initialization
 SHOW_LIQUIDATION = False # in positions when available
 SHOW_BREAKEVEN = True # in positions when available
+SHOW_REALIZEDPNL = False # in position when available
 SHOW_ENTRYPRICE = False # in positions
 USE_PROXY = False
 PORT = 80
@@ -61,6 +62,7 @@ def writeConfig():
         configString += '\t\t"UPDATE_ORDERS_FREQUENCY":'+str(UPDATE_ORDERS_FREQUENCY)+',\n'
         configString += '\t\t"VERBOSE":'+str(verbose).lower()+',\n'
         configString += '\t\t"SHOW_BALANCE":'+str(SHOW_BALANCE).lower()+',\n'
+        configString += '\t\t"SHOW_REALIZEDPNL":'+str(SHOW_REALIZEDPNL).lower()+',\n'
         configString += '\t\t"SHOW_ENTRYPRICE":'+str(SHOW_ENTRYPRICE).lower()+',\n'
         configString += '\t\t"SHOW_LIQUIDATION":'+str(SHOW_LIQUIDATION).lower()+',\n'
         configString += '\t\t"SHOW_BREAKEVEN":'+str(SHOW_BREAKEVEN).lower()+',\n'
@@ -92,6 +94,8 @@ else:
         UPDATE_ORDERS_FREQUENCY = float(config.get('UPDATE_ORDERS_FREQUENCY'))
     if( config.get('SHOW_BALANCE') != None ):
         SHOW_BALANCE = bool(config.get('SHOW_BALANCE'))
+    if( config.get('SHOW_REALIZEDPNL') != None ):
+        SHOW_REALIZEDPNL = bool(config.get('SHOW_REALIZEDPNL'))
     if( config.get('SHOW_ENTRYPRICE') != None ):
         SHOW_ENTRYPRICE = bool(config.get('SHOW_ENTRYPRICE'))
     if( config.get('SHOW_LIQUIDATION') != None ):
@@ -147,6 +151,31 @@ class position_c:
     def getKey(self, key):
         return self.position.get(key)
     
+    def getRealizedPNL( self ):
+        # try all the different keys from the exchanges
+        #
+        if( self.getKey('realizedPnl') != None ):
+            # 'realizedPnl' # Bitget
+            return float(self.getKey('realizedPnl'))
+
+        if( self.getKey('info') != None ):
+            info = self.getKey('info')
+            # 'realisedPnl' # OKX, Kucoin
+            if( info.get('realisedPnl') != None ):
+                return float(info.get('realisedPnl'))
+            # 'achievedProfits' # Bitget (but it has generic)
+            if( info.get('achievedProfits') != None ):
+                return float(info.get('achievedProfits'))
+            # 'profit_real' # Coinex
+            if( info.get('profit_real') != None ):
+                return float(info.get('profit_real'))
+            # 'cumRealisedPnl' # dirty, dirty Bybit
+            if( info.get('cumRealisedPnl') != None ):
+                return float(info.get('cumRealisedPnl'))
+
+        return 0.0
+
+    
     def generatePrintString(self)->str:
         if( self.thisMarket == None ): 
             return ''
@@ -171,6 +200,9 @@ class position_c:
         elif( collateral != 0) : string += ' * ' + "{:.4f}[$]".format(collateral)
         string += ' * ' + "{:.2f}[$]".format(unrealizedPnl)
         string += ' * ' + "{:.2f}".format(p) + '%'
+
+        if( SHOW_REALIZEDPNL ):
+            string += ' * ' + "[rp]{:.2f}".format(self.getRealizedPNL())
 
         if( self.getKey('entryPrice') != None and SHOW_ENTRYPRICE ):
             string += ' * ' + "[ep]{:.3f}".format(float(self.getKey('entryPrice')))
