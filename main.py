@@ -1478,7 +1478,7 @@ class account_c:
             quantity = self.contractsFromUSDT( symbol, quantity, price, leverage )
             if verbose : print( "   CONVERTING (x"+str(leverage)+")", oldQuantity, coin_name, '==>', quantity, "contracts" )
             if( abs(quantity) < minOrder ):
-                self.print( timeNow(), " * E: Order too small:", quantity, "Minimum required:", minOrder )
+                self.print( " * E: Order too small:", quantity, "Minimum required:", minOrder )
                 return
 
         # check for a existing position
