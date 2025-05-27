@@ -206,27 +206,20 @@ class position_c:
 
         if( self.getKey('entryPrice') != None and SHOW_ENTRYPRICE ):
             entryprice = float(self.getKey('entryPrice'))
-            if(entryprice >= 100.0 ):
-                string += ' * ' + "[ep]{:.2f}".format(entryprice)
-            elif(entryprice >= 10.0 ):
-                string += ' * ' + "[ep]{:.3f}".format(entryprice)
-            elif(entryprice >= 1.0 ):
-                string += ' * ' + "[ep]{:.4f}".format(entryprice)
-            else:
-                string += ' * ' + "[ep]{:.5f}".format(entryprice)
+
+            numDecimals = max( 6 - len(str(int(entryprice))), 0 )
+            fmt = "[be]{{:.{}f}}".format(numDecimals)
+            string += ' * ' + fmt.format(entryprice)
 
         if( self.getKey('liquidationPrice') != None and SHOW_LIQUIDATION ):
             liquidationPrice = float(self.getKey('liquidationPrice'))
+
             if liquidationPrice <= 0.0 :
                 string += ' * ' + "[li]----"
-            elif liquidationPrice >= 100.0 :
-                string += ' * ' + "[li]{:.2f}".format(liquidationPrice)
-            elif liquidationPrice >= 10.0 :
-                string += ' * ' + "[li]{:.3f}".format(liquidationPrice)
-            elif liquidationPrice >= 1.0 :
-                string += ' * ' + "[li]{:.4f}".format(liquidationPrice)
             else:
-                string += ' * ' + "[li]{:.5f}".format(liquidationPrice)
+                numDecimals = max( 6 - len(str(int(liquidationPrice))), 0 )
+                fmt = "[be]{{:.{}f}}".format(numDecimals)
+                string += ' * ' + fmt.format(liquidationPrice)
 
         # OKX and Bitget provide the position breakeven price info:bePx. Let's print that too
         if( self.getKey('info') != None ):
@@ -236,14 +229,10 @@ class position_c:
 
             if( be != None and SHOW_BREAKEVEN ):
                 be = float(be)
-                if be >= 100.0:
-                    string += ' * ' + "[be]{:.2f}".format(be)
-                elif be >= 10.0:
-                    string += ' * ' + "[be]{:.3f}".format(be)
-                elif be >= 1.0:
-                    string += ' * ' + "[be]{:.4f}".format(be)
-                else:
-                    string += ' * ' + "[be]{:.5f}".format(be)
+                numDecimals = max( 6 - len(str(int(be))), 0 )
+                fmt = "[be]{{:.{}f}}".format(numDecimals)
+                string += ' * ' + fmt.format(be)
+
 
         return string
             
