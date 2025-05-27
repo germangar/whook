@@ -208,7 +208,7 @@ class position_c:
             entryprice = float(self.getKey('entryPrice'))
 
             numDecimals = max( 6 - len(str(int(entryprice))), 0 )
-            fmt = "[be]{{:.{}f}}".format(numDecimals)
+            fmt = "[ep]{{:.{}f}}".format(numDecimals)
             string += ' * ' + fmt.format(entryprice)
 
         if( self.getKey('liquidationPrice') != None and SHOW_LIQUIDATION ):
@@ -218,7 +218,7 @@ class position_c:
                 string += ' * ' + "[li]----"
             else:
                 numDecimals = max( 6 - len(str(int(liquidationPrice))), 0 )
-                fmt = "[be]{{:.{}f}}".format(numDecimals)
+                fmt = "[li]{{:.{}f}}".format(numDecimals)
                 string += ' * ' + fmt.format(liquidationPrice)
 
         # OKX and Bitget provide the position breakeven price info:bePx. Let's print that too
