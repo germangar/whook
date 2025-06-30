@@ -820,7 +820,7 @@ class account_c:
     
 
     def findPrecisionForSymbol(self, symbol)->float:
-        if( self.exchange.id == 'binance' or self.exchange.id == 'bingx' ):
+        if( self.exchange.id == 'bingx' ):
             precision = 1.0 / (10.0 ** self.markets[symbol]['precision'].get('amount'))
         else :
             precision = self.markets[symbol]['precision'].get('amount')
