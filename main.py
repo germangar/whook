@@ -1355,7 +1355,10 @@ class account_c:
 
                 # bingx {"code":101500,"msg":"The current system is busy, please try again later","data":{}} <class 'ccxt.base.errors.ExchangeError'>
                 # bitget {"code":"400172","msg":"The order validity period is invalid","requestTime":1697878512831,"data":null} <class 'ccxt.base.errors.ExchangeError'>
-                if( 'Too Many Requests' in a or 'too many request' in a or 'service too busy' in a or 'system is busy' in a ):
+                # E: UpdateOrdersQueue: Unhandled exception. Cancelling: binance {"code":-1008,"msg":"Server is currently overloaded with other requests. Please try again in a few minutes."}
+                if( 'Too Many Requests' in a or 'too many request' in a 
+                   or 'service too busy' in a or 'system is busy' in a
+                   or 'code":-1008' in a ):
                     #set a bigger delay and try again
                     order.delay += 1.0
                     print( type(e) )
