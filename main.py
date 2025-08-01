@@ -1361,7 +1361,7 @@ class account_c:
                    or 'code":-1008' in a ):
                     #set a bigger delay and try again
                     order.delay += 1.0
-                    print( type(e) )
+                    print( " * Server too busy. Retrying.", type(e) )
                     continue
 
 
