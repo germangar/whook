@@ -50,6 +50,7 @@ REFRESH_POSITIONS_FREQUENCY = 5 * 60    # refresh positions every 5 minutes
 UPDATE_ORDERS_FREQUENCY = 0.25          # frametime in seconds at which the orders queue is refreshed.
 LOGS_DIRECTORY = 'logs'
 MARGIN_MODE_NONE = '------'
+FLOAT_ERROR = 1e-9
 
 #### Open config file #####
 
@@ -820,7 +821,7 @@ class account_c:
     
 
     def findPrecisionForSymbol(self, symbol)->float:
-        if( self.exchange.id == 'bingx' ):
+        if( self.exchange.id == 'bingx' or self.exchange.id == 'binance' ):
             precision = 1.0 / (10.0 ** self.markets[symbol]['precision'].get('amount'))
         else :
             precision = self.markets[symbol]['precision'].get('amount')
@@ -993,7 +994,7 @@ class account_c:
             
             if( leverage != -1 ):
                 self.markets[ symbol ]['local'][ 'leverage' ] = leverage
-            elif( self.exchange.id != "kucoinfutures" ): # we know kucoin is helpless
+            elif( self.exchange.id != "kucoinfutures" and self.exchange.id != "binance" ): # we know kucoin is helpless. And apparently Binance.
                 print( " * W: refreshPositions: Couldn't find leverage for", self.exchange.id )
 
             self.positionslist.append(position_c( symbol, thisPosition, self.markets[ symbol ] ))
@@ -1292,9 +1293,16 @@ class account_c:
                     # krakenfutures: createOrder failed due to insufficientAvailableFunds
                     # binance {"code":-2027,"msg":"Exceeded the maximum allowable position at current leverage."}
                     # binance {"code":-4131,"msg":"The counterparty's best price does not meet the PERCENT_PRICE filter limit."} <class 'ccxt.base.errors.ExchangeError'>
+                    # binance {"code":-4131,"msg":"The counterparty's best price does not meet the PERCENT_PRICE filter limit."}
                     precision = self.findPrecisionForSymbol( order.symbol )
                     # try first reducing it to our estimation of current balance
-                    if( not order.reduced ):
+
+                    # This doesn't belong to insufficient funds, but cctx sends it here
+                    if 'code":-4131' in a:
+                        self.print( " * E: The counterparty's best price does not meet the PERCENT_PRICE filter limit. Retrying in 3 seconds" )
+                        order.delay += 2.0
+
+                    elif( not order.reduced ):
                         oldQuantity = order.quantity
                         price = self.fetchSellPrice(order.symbol) if( type == 'sell' ) else self.fetchBuyPrice(order.symbol)
                         available = self.fetchAvailableBalance() * 0.985
@@ -1513,7 +1521,7 @@ class account_c:
             return
             
 
-        if( command == 'close' or (command == 'position' and quantity == 0) ):
+        if( command == 'close' or (command == 'position' and abs(quantity) < FLOAT_ERROR ) ):
             if pos == None:
                 self.print( " * 'Close", symbol, "' No position found" )
                 return
