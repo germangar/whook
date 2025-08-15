@@ -821,7 +821,7 @@ class account_c:
     
 
     def findPrecisionForSymbol(self, symbol)->float:
-        if( self.exchange.id == 'bingx' or self.exchange.id == 'binance' ):
+        if( self.exchange.id == 'bingx' ):
             precision = 1.0 / (10.0 ** self.markets[symbol]['precision'].get('amount'))
         else :
             precision = self.markets[symbol]['precision'].get('amount')
@@ -912,7 +912,7 @@ class account_c:
         # reconstruct the list of positions only with active positions
         cleanPositionsList = []
         for thisPosition in positions:
-            if( thisPosition.get('contracts') == 0.0 ):
+            if( abs(thisPosition.get('contracts', 0.0)) < FLOAT_ERROR ):
                 continue
             cleanPositionsList.append( thisPosition )
         positions = cleanPositionsList
@@ -1476,6 +1476,9 @@ class account_c:
             balance = float( self.fetchBalance().get( 'total' ) )
             quantity = round( balance * quantity * 0.01, 4 )
             isUSDT = True
+
+        if abs(quantity) < FLOAT_ERROR:
+            quantity = 0.0
         
         # convert quantity to concracts if needed
         if( (isUSDT or isBaseCurrency) and quantity != 0.0 ) :
