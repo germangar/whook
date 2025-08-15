@@ -48,6 +48,9 @@ Every limit order must have assigned its own unique ID so it can be identified f
 **[value]%** - quantity as percentage of total USDT balance. Use a negative value for shorts when using the position command.<br>
 All quantity types are interchangeable. All can be used with buy/sell/position commands.
 
+**bclock** - When using leverage the quantity will be scaled up by the leverage by Whook. So the quantity you set in the alert will be scaled up and the cost to open the trade kept intact (the USDT cost will be always respected, the amount of coint will be always scaled). This will happen both when sending the order using base curency or quote currency (USDT).
+If you are using base currency values you can switch it up to have the base currency quantity be kept instact and the cost (USDT) be divided by the leverage by adding the keyword 'bclock' to your alert message<br>
+
 Notice: Whook expects the alerts to be encoded as utf-8. Tradingview already handles this, but when sending the alerts from somewhere else you should make sure your text is encoded as utf-8 or you may run into problems with the symbols '$' and '%'. If you experience issues with orders in usdt or percentage you can alternatively add the commands 'force_usdt' or 'force_percent' to your alert to override the symbols.<br>
 
 * Leverage:<br>
