@@ -70,6 +70,8 @@ This alert is all you should really need for running 90% of the strategies in TV
 - **Sell command using base currency:**<br>
 [account_id] [symbol] [command] [value in USDT] [leverage] - **myKucoinA ETH/USDT sell 0.25 x3**<br>
 This would sell 0.25ETH<br>
+The typical alert message to set in a Tradingview strategy for operating with buy/sell orders would look like this<br>
+**myAccount {{ticker}} {{strategy.order.action}} {{strategy.order.contracts}}@ x3**<br>
 
 - **Close position**<br>
 [account_id] [symbol] [command] [percentage] - **myKucoinA ETH/USD close 33.33%**<br>
