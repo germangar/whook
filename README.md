@@ -65,11 +65,14 @@ Examples:<br>
 Notice: This would open a 50ETH short at 3x. For a long position use a positive value. Same goes when the value is in USDT<br>
 Example of a position alert from a strategy in Tradingview:<br>
 **myKucoinA {{ticker}} pos {{strategy.position_size}} x3**<br>
-This alert is all you should really need for running 90% of the strategies in TV
+This alert is all you should really need for running 90% of the strategies in TV as long as they don't make more than one order per candle.
 
 - **Sell command using base currency:**<br>
 [account_id] [symbol] [command] [value in USDT] [leverage] - **myKucoinA ETH/USDT sell 0.25 x3**<br>
 This would sell 0.25ETH<br>
+The typical alert message to set in a Tradingview strategy for operating with buy/sell orders would look like this<br>
+**myAccount {{ticker}} {{strategy.order.action}} {{strategy.order.contracts}}@ x3**<br>
+If you're doing more than one order per candle you may need to use this one.<br>
 
 - **Close position**<br>
 [account_id] [symbol] [command] [percentage] - **myKucoinA ETH/USD close 33.33%**<br>
