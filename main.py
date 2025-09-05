@@ -1482,30 +1482,36 @@ class account_c:
         
         # convert quantity to concracts if needed
         if( (isUSDT or isBaseCurrency) and quantity != 0.0 ) :
-            # We don't know for sure yet if it's a buy or a sell, so we average
-            oldQuantity = quantity
-            try:
-                price = self.fetchAveragePrice(symbol)
-                
-            except ccxt.ExchangeError as e:
-                self.print( " * E: proccessAlert->fetchAveragePrice:", e )
-                return
-            except ValueError as e:
-                self.print( " * E: proccessAlert->fetchAveragePrice", e, type(e) )
-                return
-                
-            coin_name = self.markets[symbol]['quote']
-            if( isBaseCurrency ) :
-                if( lockBaseCurrency and leverage > 1 ):
-                    quantity = quantity * price / leverage
-                else:
-                    quantity *= price
 
-                coin_name = self.markets[symbol]['base']
+            # when using base currency with bclock, and contractsize is 1 we don't have to do any conversion
+            if not ( isBaseCurrency and lockBaseCurrency and self.findContractSizeForSymbol(symbol) == 1 ):
 
-            usdtValue = quantity
-            quantity = self.contractsFromUSDT( symbol, quantity, price, leverage )
-            if verbose : print( "   CONVERTING (x"+str(leverage)+")", oldQuantity, coin_name, '==>', quantity, "contracts" )
+                # We don't know for sure yet if it's a buy or a sell, so we average
+                oldQuantity = quantity
+                try:
+                    price = self.fetchAveragePrice(symbol)
+                    
+                except ccxt.ExchangeError as e:
+                    self.print( " * E: proccessAlert->fetchAveragePrice:", e )
+                    return
+                except ValueError as e:
+                    self.print( " * E: proccessAlert->fetchAveragePrice", e, type(e) )
+                    return
+                    
+                coin_name = self.markets[symbol]['quote']
+                
+                if( isBaseCurrency ) :
+                    if( lockBaseCurrency and leverage > 1 ):
+                        quantity = quantity * price / leverage
+                    else:
+                        quantity *= price
+
+                    coin_name = self.markets[symbol]['base']
+
+                usdtValue = quantity
+                quantity = self.contractsFromUSDT( symbol, quantity, price, leverage )
+                if verbose : print( "   CONVERTING (x"+str(leverage)+")", oldQuantity, coin_name, '==>', quantity, "contracts" )
+
             if( abs(quantity) < minOrder ):
                 self.print( " * E: Order too small:", quantity, "Minimum required:", minOrder )
                 return
