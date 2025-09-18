@@ -1477,7 +1477,7 @@ class account_c:
             quantity = round( balance * quantity * 0.01, 4 )
             isUSDT = True
 
-        if abs(quantity) < FLOAT_ERROR:
+        if quantity is not None and abs(quantity) < FLOAT_ERROR:
             quantity = 0.0
         
         # convert quantity to concracts if needed
