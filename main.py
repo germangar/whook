@@ -496,7 +496,8 @@ class account_c:
             # Store the market into the local markets dictionary
             self.markets[key] = thisMarket
 
-        if( verbose ):
+        # if( verbose ):
+        if self.exchange.id == "coinex":
             pprint( self.markets['BTC/' + self.SETTLE_COIN + ':' + self.SETTLE_COIN] )
             
         self.refreshPositions(True)
@@ -526,6 +527,9 @@ class account_c:
         leverages = thisMarket['info'].get('leverage')
         if( leverages == None ):
             leverages = thisMarket['info'].get('leverages')
+        if( leverages == None ):
+            return leverage
+        
         validLeverages = list(map(int, leverages))
         safeLeverage = 1
         for value in validLeverages:
