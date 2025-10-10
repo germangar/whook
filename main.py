@@ -496,8 +496,7 @@ class account_c:
             # Store the market into the local markets dictionary
             self.markets[key] = thisMarket
 
-        # if( verbose ):
-        if self.exchange.id == "coinex":
+        if( verbose ):
             pprint( self.markets['BTC/' + self.SETTLE_COIN + ':' + self.SETTLE_COIN] )
             
         self.refreshPositions(True)
