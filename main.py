@@ -176,6 +176,24 @@ class position_c:
 
         return 0.0
 
+    def getRealCost(self)->float:
+        if( self.thisMarket == None ): 
+            return 0.0
+        
+        contracts = self.getKey('contracts')
+        contractSize = self.thisMarket.get('contractSize')
+        entryprice = self.getKey('entryPrice')
+        leverage = self.thisMarket['local']['leverage']
+
+        if not contracts or not contractSize or not entryprice or leverage == 0:
+            if self.getKey('initialMargin'):
+                return float(self.getKey('initialMargin'))
+            if self.getKey('collateral') :
+                return float(self.getKey('collateral'))
+            return 0.0
+        
+        return float(contractSize) * float(contracts) * float(entryprice) / leverage
+        
     
     def generatePrintString(self)->str:
         if( self.thisMarket == None ): 
@@ -197,8 +215,9 @@ class position_c:
         string += ' * ' + self.thisMarket['local']['marginMode'] + ':' + levStr
         string += ' * ' + self.getKey('side')
         string += ' * ' + str( self.getKey('contracts') )
-        if( initialMargin != 0 ) : string += ' * ' + "{:.4f}[$]".format(initialMargin)
-        elif( collateral != 0) : string += ' * ' + "{:.4f}[$]".format(collateral)
+        string += ' * ' + "{:.4f}[$]".format(self.getRealCost())
+        # if( initialMargin != 0 ) : string += ' * ' + "{:.4f}[$]".format(initialMargin)
+        # elif( collateral != 0) : string += ' * ' + "{:.4f}[$]".format(collateral)
         string += ' * ' + "{:.2f}[$]".format(unrealizedPnl)
         string += ' * ' + "{:.2f}".format(p) + '%'
 
@@ -1587,9 +1606,7 @@ class account_c:
                 if( usdtValue != None and positionSide == ("short" if quantity < 0.0 else "long") ):
                     extraMargin = 0
                     entryPrice = float(pos.getKey('entryPrice'))
-                    initialMargin = -1 if(pos.getKey('initialMargin') == None) else float(pos.getKey('initialMargin'))
-                    if( initialMargin == -1 and self.markets[ symbol ]['local']['leverage'] > 0 ): # figure it out from the entry price and number or contracts
-                        initialMargin = (positionContracts * entryPrice)/float(self.markets[ symbol ]['local']['leverage'])
+                    initialMargin = (positionContracts * entryPrice)/float(self.markets[ symbol ]['local']['leverage'])
 
                     if( initialMargin != -1 ):
                         #if we're going to change the leverage we need to manipulate the initial margen
