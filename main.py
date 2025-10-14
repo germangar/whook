@@ -873,7 +873,7 @@ class account_c:
                 positions = []
             elif( isinstance(e, ccxt.OnMaintenance) or isinstance(e, ccxt.NetworkError) 
                  or isinstance(e, ccxt.RateLimitExceeded) or isinstance(e, ccxt.RequestTimeout) 
-                 or isinstance(e, ccxt.ExchangeNotAvailable) or 'not available' in a ):
+                 or isinstance(e, ccxt.ExchangeNotAvailable) or isinstance(ccxt.ExchangeError) or 'not available' in a ):
                 failed = True
 
                 if( 'Remote end closed connection' in a
@@ -892,6 +892,7 @@ class account_c:
                   or 'not available' in a # ccxt.base.errors.ExchangeError
                   or 'failure to get a peer' in a # ccxt.base.errors.ExchangeError (okx)
                   or '"code":39999' in a
+                  or 'internal error' in a # ccxt.base.errors.ExchangeError (coinex)
                   or '"retCode":10002' in a ):
                 failed = True
                 # this print is temporary to try to replace the string with the error type if possible
