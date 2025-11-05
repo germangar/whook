@@ -537,25 +537,7 @@ class account_c:
             self.print( " * WARNING: Leverage out of bounds. Readjusting to", str(maxLeverage)+"x" )
             leverage = maxLeverage
 
-        # coinex has a list of valid leverage values
-        if( self.exchange.id != 'coinex' ):
-            return leverage
-        
-        thisMarket = self.markets.get( symbol )
-        leverages = thisMarket['info'].get('leverage')
-        if( leverages == None ):
-            leverages = thisMarket['info'].get('leverages')
-        if( leverages == None ):
-            return leverage
-        
-        validLeverages = list(map(int, leverages))
-        safeLeverage = 1
-        for value in validLeverages:
-            if( value > leverage ):
-                break
-            safeLeverage = value
-        
-        return safeLeverage
+        return leverage
 
 
     def updateSymbolPositionMode( self, symbol ):
@@ -892,7 +874,7 @@ class account_c:
                 positions = []
             elif( isinstance(e, ccxt.OnMaintenance) or isinstance(e, ccxt.NetworkError) 
                  or isinstance(e, ccxt.RateLimitExceeded) or isinstance(e, ccxt.RequestTimeout) 
-                 or isinstance(e, ccxt.ExchangeNotAvailable) or isinstance(ccxt.ExchangeError) or 'not available' in a ):
+                 or isinstance(e, ccxt.ExchangeNotAvailable) or isinstance(e, ccxt.ExchangeError) or 'not available' in a ):
                 failed = True
 
                 if( 'Remote end closed connection' in a
@@ -902,6 +884,9 @@ class account_c:
                    or 'Server busy' in a or 'System busy' in a
                    or '"retCode":10002' in a ):
                     print( timeNow(), self.exchange.id, '* E: Refreshpositions:(old)', a, type(e) )
+                    
+                elif 'code":-2015' in a: # For some reason 'binancedemo' makes it all the way here without a valid API key.
+                    print( timeNow(), a )
             
             elif( 'Remote end closed connection' in a
                   or '500 Internal Server Error' in a
