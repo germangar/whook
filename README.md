@@ -17,15 +17,16 @@ Currently supported exchanges:
 - **Bitget** futures
 - **Coinex** futures
 - **Bingx**
-- **OKX** futures ( also its demo mode )
+- **OKX** futures ( also its demo mode ) [1]
 - **Bybit** futures ( also [Bybit testnet](https://testnet.bybit.com) )
-- **Binance** futures ( also [Binance futures testnet](https://testnet.binancefuture.com) ) [1]
+- **Binance** futures ( also [Binance futures testnet](https://testnet.binancefuture.com) ) [2]
 - **Phemex** futures ( also [Phemex testnet](https://testnet.phemex.com) )
 - **Kraken** futures ( also [Kraken futures testnet](https://demo-futures.kraken.com) )
 
-[1] Binance has stopped supporting futures in their testnet. They have now demo trading in their main platform. Unfortunately they require a Binance futures account for accesing demo trading, and being from Europe I can't have a Binance Futures account. In short: I can't maintain Binance anymore. I'll let it be there, just like OKX, but I can't guarantee they work nor fix them if they don't.
+[1] I don't have access to OKX futures anymore (being European problems), and I have been mostly using Bitget from the last six months. If anything has changed in the other exchanges APIs I will probably have missed it. If you experience any bugs report them in 'Issues' and I'll fix them in a few days. 
 
-Note: I don't have access to OKX futures anymore (being European problems), and I have been mostly using Bitget from the last six months. If anything has changed in the other exchanges APIs I will probably have missed it. If you experience any bugs report them in 'Issues' and I'll fix them in a few days. 
+[2] Binance has stopped supporting futures in their testnet. They have now demo trading in their main platform. Unfortunately they require a Binance futures account for accesing demo trading, and being from Europe I can't have a Binance Futures account. In short: I can't maintain Binance anymore. I'll let it be there, just like OKX, but I can't guarantee they work nor fix them if they don't.
+
 
 ### ALERT SYNTAX ###
 
