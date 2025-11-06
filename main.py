@@ -887,6 +887,10 @@ class account_c:
                     
                 elif 'code":-2015' in a: # For some reason 'binancedemo' makes it all the way here without a valid API key.
                     print( timeNow(), a )
+                    return
+                elif 'access_id not exists': # and now coinex is doing it too. IDK why they reach here. They didn't before.
+                    print( timeNow(), a )
+                    return
             
             elif( 'Remote end closed connection' in a
                   or '500 Internal Server Error' in a
