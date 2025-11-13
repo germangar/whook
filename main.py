@@ -879,7 +879,6 @@ class account_c:
 
                 if( 'Remote end closed connection' in a
                    or '500 Internal Server Error' in a
-                   or '502 Bad Gateway' in a
                    or 'Internal Server Error' in a
                    or 'Server busy' in a or 'System busy' in a
                    or '"retCode":10002' in a ):
@@ -891,10 +890,10 @@ class account_c:
                 elif 'access_id not exists': # and now coinex is doing it too. IDK why they reach here. They didn't before.
                     print( timeNow(), a )
                     return
-            
+                
+                
             elif( 'Remote end closed connection' in a
                   or '500 Internal Server Error' in a
-                  or '502 Bad Gateway' in a
                   or 'Internal Server Error' in a
                   or 'Server busy' in a or 'System busy' in a
                   or 'not available' in a # ccxt.base.errors.ExchangeError
