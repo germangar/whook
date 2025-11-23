@@ -193,69 +193,217 @@ class position_c:
             return 0.0
         
         return float(contractSize) * float(contracts) * float(entryprice) / leverage
-        
+
+    def generateDictionary(self)->dict:
+        if (self.thisMarket == None):
+            return {}
+
+        # numeric values
+        unrealizedPnl = 0.0 if (self.getKey('unrealizedPnl') == None) else float(self.getKey('unrealizedPnl'))
+        initialMargin = 0.0 if (self.getKey('initialMargin') == None) else float(self.getKey('initialMargin'))
+        collateral = 0.0 if (self.getKey('collateral') == None) else float(self.getKey('collateral'))
+
+        if initialMargin != 0.0:
+            pct = (unrealizedPnl / initialMargin) * 100.0
+        elif collateral != 0.0:
+            pct = (unrealizedPnl / (collateral - unrealizedPnl)) * 100.0
+        else:
+            pct = 0.0
+
+        positionMode = 'hedged' if (self.thisMarket['local']['positionMode'] == 'hedged') else 'oneway'
+
+        # basic fields
+        symbol = self.symbol
+        side = self.getKey('side')
+        leverage = self.thisMarket['local'].get('leverage', -1.0)
+        contracts = self.getKey('contracts')
+        realCost = self.getRealCost()
+        realizedPnl = self.getRealizedPNL()
+        entryprice = self.position.get('entryPrice', -1.0)
+        liquidationprice = self.position.get('liquidationPrice', -1.0)
+
+        # break even price
+        info = self.getKey('info')
+        breakevenprice = None
+        if info != None:
+            breakevenprice = info.get('bePx')
+            if breakevenprice == None:
+                breakevenprice = info.get('breakEvenPrice')
+
+        if breakevenprice == None:
+            breakevenprice = -1.0
+
+        result = {
+            'symbol': symbol,
+            'positionMode': positionMode,
+            'marginMode': self.thisMarket['local']['marginMode'],
+            'side': side,
+            'leverage': float(leverage),
+            'contracts': float(contracts),
+            'realCost': float(realCost),
+            'unrealizedPnl': float(unrealizedPnl),
+            'pct': float(pct),
+            'realizedPnl': float(realizedPnl),
+            'entryPrice': float(entryprice),
+            'liquidationPrice': float(liquidationprice),
+            'breakEvenPrice': float(breakevenprice)
+        }
+
+        return result
     
     def generatePrintString(self)->str:
         if( self.thisMarket == None ): 
             return ''
-        
-        p = 0.0
-        unrealizedPnl = 0 if(self.getKey('unrealizedPnl') == None) else float(self.getKey('unrealizedPnl'))
-        initialMargin = 0 if(self.getKey('initialMargin') == None) else float(self.getKey('initialMargin'))
-        collateral = 0.0 if(self.getKey('collateral') == None) else float(self.getKey('collateral'))
-        if( initialMargin != 0 ):
-            p = ( unrealizedPnl / initialMargin ) * 100.0
-        elif( collateral != 0):
-            p = ( unrealizedPnl / (collateral - unrealizedPnl) ) * 100
 
-        positionModeChar = '[H]' if (self.thisMarket['local']['positionMode'] == 'hedged') else ''
-        levStr = "?x" if (self.thisMarket['local']['leverage'] == 0 ) else str(self.thisMarket['local']['leverage']) + 'x'
+        # Use standardized dictionary
+        d = self.generateDictionary()
+        if not d:
+            return ''
 
-        string = self.symbol + positionModeChar
-        string += ' * ' + self.thisMarket['local']['marginMode'] + ':' + levStr
-        string += ' * ' + self.getKey('side')
-        string += ' * ' + str( self.getKey('contracts') )
-        string += ' * ' + "{:.4f}[$]".format(self.getRealCost())
-        # if( initialMargin != 0 ) : string += ' * ' + "{:.4f}[$]".format(initialMargin)
-        # elif( collateral != 0) : string += ' * ' + "{:.4f}[$]".format(collateral)
-        string += ' * ' + "{:.2f}[$]".format(unrealizedPnl)
-        string += ' * ' + "{:.2f}".format(p) + '%'
+        # small helper to format integer-like floats without .0
+        def fmt_num(n):
+            try:
+                fv = float(n)
+            except Exception:
+                return str(n)
+            return str(int(fv)) if fv.is_integer() else str(fv)
 
-        if( SHOW_REALIZEDPNL ):
-            string += ' * ' + "[rp]{:.2f}".format(self.getRealizedPNL())
+        # small formatting helpers
+        def fmt_money(v, prec=2):
+            try:
+                return "{:.{p}f}[$]".format(float(v), p=prec)
+            except Exception:
+                return str(v)
 
-        if( self.getKey('entryPrice') != None and SHOW_ENTRYPRICE ):
-            entryprice = float(self.getKey('entryPrice'))
+        def fmt_pct(v):
+            try:
+                return "{:.2f}%".format(float(v))
+            except Exception:
+                return str(v)
 
-            numDecimals = max( 6 - len(str(int(entryprice))), 0 )
-            fmt = "[ep]{{:.{}f}}".format(numDecimals)
-            string += ' * ' + fmt.format(entryprice)
+        def fmt_price(v):
+            try:
+                v = float(v)
+            except Exception:
+                return str(v)
+            if v <= 0:
+                return "----"
+            numDecimals = max(6 - len(str(int(v))), 0)
+            return ("{:.%df}" % numDecimals).format(v)
 
-        if( self.getKey('liquidationPrice') != None and SHOW_LIQUIDATION ):
-            liquidationPrice = float(self.getKey('liquidationPrice'))
-
-            if liquidationPrice <= 0.0 :
-                string += ' * ' + "[li]----"
+        # dynamic formatting for realCost based on magnitude
+        def fmt_realcost_dynamic(v):
+            try:
+                val = float(v)
+            except Exception:
+                return str(v)
+            int_part = int(abs(val))
+            # rules:
+            # - if integer part is zero -> keep high precision (4 decimals)
+            # - if integer part > 10000 -> only 1 decimal
+            # - otherwise reduce decimals as integer digits grow
+            if int_part == 0:
+                prec = 4
+            elif int_part > 10000:
+                prec = 1
             else:
-                numDecimals = max( 6 - len(str(int(liquidationPrice))), 0 )
-                fmt = "[li]{{:.{}f}}".format(numDecimals)
-                string += ' * ' + fmt.format(liquidationPrice)
+                digits = len(str(int_part))
+                if digits == 1:
+                    prec = 3
+                elif digits == 2:
+                    prec = 2
+                else:
+                    prec = 1
+            return "{:.{p}f}[$]".format(val, p=prec)
 
-        # OKX and Bitget provide the position breakeven price info:bePx. Let's print that too
-        if( self.getKey('info') != None ):
-            be = self.getKey('info').get('bePx')
-            if( be == None ):
-                be = self.getKey('info').get('breakEvenPrice')
+        # dynamic formatting for prices (entry/liquidation/breakeven) using same magnitude rules
+        def fmt_price_dynamic(v):
+            try:
+                val = float(v)
+            except Exception:
+                return str(v)
+            if val <= 0:
+                return "----"
+            int_part = int(abs(val))
+            if int_part == 0:
+                prec = 4
+            elif int_part > 10000:
+                prec = 1
+            else:
+                digits = len(str(int_part))
+                if digits == 1:
+                    prec = 3
+                elif digits == 2:
+                    prec = 2
+                else:
+                    prec = 1
+            return "{:.{p}f}".format(val, p=prec)
 
-            if( be != None and SHOW_BREAKEVEN ):
-                be = float(be)
-                numDecimals = max( 6 - len(str(int(be))), 0 )
-                fmt = "[be]{{:.{}f}}".format(numDecimals)
-                string += ' * ' + fmt.format(be)
+        # prepare small strings for each field
+        positionModeChar = '[H]' if (d.get('positionMode') == 'hedged') else ''
+        lev = d.get('leverage', -1.0)
+        levStr = "?x" if lev == 0 else (str(int(lev)) + 'x' if float(lev).is_integer() else str(lev) + 'x')
 
+        fld_symbol = f"{d.get('symbol','').replace(':USDT', '')}{positionModeChar}"
+        fld_margin = f"{d.get('marginMode','')}/{levStr}"
+        fld_side = d.get('side','')
+        fld_contracts = fmt_num(d.get('contracts', 0))
+        fld_realcost = fmt_realcost_dynamic(d.get('realCost', 0.0))
+        fld_unreal = fmt_money(d.get('unrealizedPnl', 0.0), prec=2)
+        fld_pct = fmt_pct(d.get('pct', 0.0))
 
-        return string
-            
+        # apply the same dynamic adjustment for these fields
+        fld_realized = ("[rp]" + fmt_realcost_dynamic(d.get('realizedPnl', 0.0))) if SHOW_REALIZEDPNL else None
+        fld_entry = ("[ep]" + fmt_price_dynamic(d.get('entryPrice', -1.0))) if SHOW_ENTRYPRICE and d.get('entryPrice', -1.0) > 0.0 else None
+        fld_liq = ("[li]" + fmt_price_dynamic(d.get('liquidationPrice', -1.0))) if SHOW_LIQUIDATION else None
+        fld_be = ("[be]" + fmt_price_dynamic(d.get('breakEvenPrice', -1.0))) if SHOW_BREAKEVEN and d.get('breakEvenPrice', -1.0) > 0.0 else None
+
+        # collect only non-None fields in order
+        fields = [
+            fld_symbol,
+            fld_margin,
+            fld_side,
+            fld_contracts,
+            fld_realcost,
+            fld_unreal,
+            fld_pct,
+        ]
+        # optional fields appended if enabled
+        if fld_realized: fields.append(fld_realized)
+        if fld_entry: fields.append(fld_entry)
+        if fld_liq: fields.append(fld_liq)
+        if fld_be: fields.append(fld_be)
+
+        # decide column widths (based on content but with sensible minimums)
+        min_widths = [15, 12, 7, 8, 11, 12, 10, 14, 14, 14, 14]
+        widths = []
+        for i, val in enumerate(fields):
+            content_len = len(val) if val is not None else 0
+            base = min_widths[i] if i < len(min_widths) else 10
+            widths.append(max(base, content_len + 2))
+
+        # Determine the index where liquidation (fld_liq) appears, if present.
+        # Starting from that column, format to the left as requested.
+        liq_index = None
+        if fld_liq is not None and fld_liq in fields:
+            liq_index = fields.index(fld_liq)
+
+        # build the final single-line string with columns
+        parts = []
+        for i, val in enumerate(fields):
+            w = widths[i]
+            # left-align first three columns (symbol, margin, side)
+            # right-align from contracts onward, except that columns starting from liquidation (if present) should be left-aligned
+            if i < 3:
+                parts.append(val.ljust(w))
+            else:
+                if liq_index is not None and i >= liq_index:
+                    parts.append(val.ljust(w))
+                else:
+                    parts.append(val.rjust(w))
+
+        return "  ".join(parts).rstrip()
+
 
 class order_c:
     def __init__(self, symbol = "", side = "", quantity = 0.0, leverage = 1, delay = 0, reduceOnly = False) -> None:
