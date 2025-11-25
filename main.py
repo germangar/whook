@@ -1,7 +1,7 @@
 
 
 import ccxt
-from flask import Flask, request, abort
+from flask import Flask, request, abort, jsonify
 from werkzeug.middleware.proxy_fix import ProxyFix
 from threading import Timer
 import os
@@ -441,6 +441,12 @@ class account_c:
         if( name.isnumeric() ):
             print( " * FATAL ERROR: Account 'id' can not be only  numeric" )
             raise ValueError('Invalid Account Name')
+        if( name.lower() == 'allaccounts' ):
+            print( " * FATAL ERROR: Account 'id' can not be 'allaccounts'" )
+            raise ValueError('Invalid Account Name: "allaccounts" is a reserved name.')
+        if( name.lower() == 'allaccounts' ):
+            print( " * FATAL ERROR: Account 'id' can not be 'allaccounts'" )
+            raise ValueError('Invalid Account Name: "allaccounts" is a reserved name.')
         
         if( exchange.lower() == 'kucoinfutures' ):
             self.exchange = ccxt.kucoinfutures( {
@@ -2255,7 +2261,7 @@ def webhook():
         return 'success', 200
     
     if request.method == 'GET':
-        # https://b361-139-47-50-177.ngrok-free.app/whook?response=kucoin
+        # https://0.0.0.0/whook
         response = request.args.get('response')
         if( response == None ):
             fontSize = 18
@@ -2278,16 +2284,34 @@ def webhook():
         
         if response == 'whook':
             return 'WHOOKITYWOOK'
-
-        # Return the requested log file
-        try:
-            wmsg = open( f'{LOGS_DIRECTORY}/{response}.log', encoding="utf-8" )
-        except FileNotFoundError:
-            return 'Not found'
+        
+        # https://0.0.0.0/whook?response=account
+        if response.lower() == 'allaccounts':
+            package = {"allaccounts": {}}
+            for acc in accounts:
+                acc.refreshPositions(False)
+                package["allaccounts"][acc.accountName] = { "positions": [pos.generateDictionary() for pos in acc.positionslist],
+                                                            "balance": acc.fetchBalance().get('total') }
+            return jsonify(package)
         else:
-            text = wmsg.read()
-            wmsg.close()
-            return app.response_class(text, mimetype='text/plain; charset=utf-8')
+            package = {"allaccounts": {}}
+            for acc in accounts:
+                if acc.accountName.lower() == response.lower():
+                    acc.refreshPositions(False) 
+                    package["allaccounts"][acc.accountName] = { "positions": [pos.generateDictionary() for pos in acc.positionslist],
+                                                                "balance": acc.fetchBalance().get('total') }
+                    return jsonify(package)
+
+        # temporarily disabled.
+        # Return the requested log file
+        # try:
+        #     wmsg = open( f'{LOGS_DIRECTORY}/{response}.log', encoding="utf-8" )
+        # except FileNotFoundError:
+        #     return 'Not found'
+        # else:
+        #     text = wmsg.read()
+        #     wmsg.close()
+        #     return app.response_class(text, mimetype='text/plain; charset=utf-8')
         
     else:
         abort(400)
