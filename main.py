@@ -1517,6 +1517,11 @@ class account_c:
                     
                     continue # back to the orders loop
 
+                # bitget {"code":"22002","msg":"No position to close","requestTime":1765292553209,"data":null} <class 'ccxt.base.errors.ExchangeError'>
+                if 'No position' in a:
+                    self.print( f'{order.symbol}  No position to close."' )
+                    continue
+
                 #HACK!! this is the shadiest hack ever, but bingx is returning a 'server busy' response
                 # when we try to place a limit order with a clientOrderID that has been already used.
                 # Basically, he's ghosting us!! It may have found it super offensive.
