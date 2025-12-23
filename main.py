@@ -534,16 +534,6 @@ class account_c:
                 #"timeout": 60000,
                 "enableRateLimit": False
                 })
-        elif( exchange.lower() == 'binancedemo' ):
-            self.exchange = ccxt.binance({
-                "apiKey": apiKey,
-                "secret": secret,
-                'password': password,
-                "options": {'defaultType': 'swap', 'adjustForTimeDifference' : True},
-                #"timeout": 60000,
-                "enableRateLimit": False
-                })
-            self.exchange.set_sandbox_mode( True )
         elif( exchange.lower() == 'krakenfutures' ):
             self.exchange = ccxt.krakenfutures({
                 "apiKey": apiKey,
@@ -1395,6 +1385,8 @@ class account_c:
                 params['reduce'] = True # FIXME Do we need this parameter?
                 if( self.exchange.id != 'coinex' ): # coinex interprets reduceOnly as being in hedge mode. Skip the problem by now
                     params['reduceOnly'] = True
+                    if self.exchange.id == 'bitget':
+                        params['reduceOnly'] = 'YES'
 
             if( self.exchange.id == 'kucoinfutures' ): # Kucoin doesn't use setLeverage nor setMarginMode
                 params['leverage'] = max( order.leverage, 1 )
