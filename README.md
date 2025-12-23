@@ -19,7 +19,7 @@ Currently supported exchanges:
 - **Bingx**
 - **OKX** futures ( also its demo mode ) [1]
 - **Bybit** futures ( also [Bybit testnet](https://testnet.bybit.com) )
-- **Binance** futures ( also [Binance futures testnet](https://testnet.binancefuture.com) ) [2]
+- **Binance** futures [2]
 - **Phemex** futures ( also [Phemex testnet](https://testnet.phemex.com) )
 - **Kraken** futures ( also [Kraken futures testnet](https://demo-futures.kraken.com) )
 
