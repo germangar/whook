@@ -534,6 +534,16 @@ class account_c:
                 #"timeout": 60000,
                 "enableRateLimit": False
                 })
+        elif( exchange.lower() == 'binancedemo' ):
+            self.exchange = ccxt.binance({
+                "apiKey": apiKey,
+                "secret": secret,
+                'password': password,
+                "options": {'defaultType': 'swap', 'adjustForTimeDifference' : True},
+                #"timeout": 60000,
+                "enableRateLimit": False
+                })
+            self.exchange.enable_demo_trading(True)
         elif( exchange.lower() == 'krakenfutures' ):
             self.exchange = ccxt.krakenfutures({
                 "apiKey": apiKey,
