@@ -19,7 +19,7 @@ Currently supported exchanges:
 - **Bingx**
 - **OKX** futures ( also its demo mode ) [1]
 - **Bybit** futures ( also [Bybit testnet](https://testnet.bybit.com) )
-- **Binance** futures [2]
+- **Binance** futures ( also Binance futures demo mode ) [2]
 - **Phemex** futures ( also [Phemex testnet](https://testnet.phemex.com) )
 - **Kraken** futures ( also [Kraken futures testnet](https://demo-futures.kraken.com) )
 
@@ -151,7 +151,7 @@ The **EXCHANGE** field is self explanatory. Valid exchange names are:<br>
 - "**bybit**"<br>
 - "**bybitdemo**"(for testnet)<br>
 - "**binance**"<br>
-- "**binancedemo**"(for testnet)<br>
+- "**binancedemo**"(for demo mode)<br>
 - "**krakenfutures**"<br>
 - "**krakendemo**"(for testnet)<br>
 - "**phemex**"<br>
