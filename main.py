@@ -1511,7 +1511,8 @@ class account_c:
 
                 # bitget {"code":"22002","msg":"No position to close","requestTime":1765292553209,"data":null} <class 'ccxt.base.errors.ExchangeError'>
                 if 'No position' in a:
-                    self.print( f'{order.symbol}  No position to close."' )
+                    self.print( f'{order.symbol}  No position to close.' )
+                    self.ordersQueue.remove( order )
                     continue
 
                 #HACK!! this is the shadiest hack ever, but bingx is returning a 'server busy' response
