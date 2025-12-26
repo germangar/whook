@@ -18,10 +18,8 @@ from pprint import pprint
 def fixVersionFormat( version )->str:
     vl = version.split(".")
     return f'{vl[0]}.{vl[1]}.{vl[2].zfill(3)}'
-
-minCCXTversion = '4.2.82'
+minCCXTversion = '4.5.24'
 CCXTversion = fixVersionFormat(ccxt.__version__)
-print( 'CCXT Version:', ccxt.__version__)
 if( CCXTversion < fixVersionFormat(minCCXTversion) ):
     print( '\n============== * WARNING * ==============')
     print( 'WHOOK requires CCXT version', minCCXTversion,' or higher.')
