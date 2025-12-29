@@ -1764,11 +1764,13 @@ class account_c:
 
                         if( positionSide == 'long' ):
                             extraMargin = usdtValue - initialMargin
-                            quantity = positionContracts + self.contractsFromUSDT( symbol, extraMargin, price, leverage )
+                            calcPrice = price if extraMargin > 0 else entryPrice
+                            quantity = positionContracts + self.contractsFromUSDT( symbol, extraMargin, calcPrice, leverage )
 
                         elif( positionSide == 'short' ):
-                            extraMargin = abs(usdtValue) - initialMargin
-                            quantity = positionContracts - self.contractsFromUSDT( symbol, extraMargin, price, leverage )
+                            extraMargin = abs(usdtValue) + initialMargin
+                            calcPrice = price if extraMargin > 0 else entryPrice
+                            quantity = positionContracts - self.contractsFromUSDT( symbol, extraMargin, calcPrice, leverage )
 
 
 
