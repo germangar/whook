@@ -1615,7 +1615,7 @@ class account_c:
         isUSDT = alert['isUSDT']
         isBaseCurrency = alert['isBaseCurrency']
         isPercentage = alert['isPercentage']
-        lockBaseCurrency = alert['lockBaseCurrency']
+        nominal = alert['nominal']
         priceLimit = alert['priceLimit']
         customID = alert['customID']
         usdtValue = None
@@ -1655,7 +1655,7 @@ class account_c:
         if( (isUSDT or isBaseCurrency) and quantity != 0.0 ) :
 
             # when using base currency with bclock, and contractsize is 1 we don't have to do any conversion
-            if not ( isBaseCurrency and lockBaseCurrency and self.findContractSizeForSymbol(symbol) == 1 ):
+            if not ( isBaseCurrency and nominal and self.findContractSizeForSymbol(symbol) == 1 ):
 
                 # We don't know for sure yet if it's a buy or a sell, so we average
                 oldQuantity = quantity
@@ -1671,13 +1671,16 @@ class account_c:
                     
                 coin_name = self.markets[symbol]['quote']
                 
-                if( isBaseCurrency ) :
-                    if( lockBaseCurrency and leverage > 1 ):
+                if isBaseCurrency :
+                    if( nominal and leverage > 1 ):
                         quantity = quantity * price / leverage
                     else:
                         quantity *= price
 
                     coin_name = self.markets[symbol]['base']
+                elif isUSDT :
+                    if( nominal and leverage > 1 ):
+                        quantity = quantity / leverage
 
                 usdtValue = quantity
                 quantity = self.contractsFromUSDT( symbol, quantity, price, leverage )
@@ -1793,7 +1796,7 @@ class account_c:
                         'isUSDT': False,
                         'isBaseCurrency': False,
                         'isPercentage': False,
-                        'lockBaseCurrency': False,
+                        'nominal': True,
                         'priceLimit': 0.0,
                         'customID': None,
                         'alert': f"{symbol} changeleverage {leverage}",
@@ -1973,7 +1976,7 @@ def parseAlert( data, account: account_c ):
         'isUSDT': False,
         'isBaseCurrency': False,
         'isPercentage': False,
-        'lockBaseCurrency': False,
+        'nominal': None,
         'priceLimit': 0.0,
         'customID': None,
         'alert': data,
@@ -2014,8 +2017,10 @@ def parseAlert( data, account: account_c ):
             alert['isPercentage'] = True
         elif token.lower()  == 'force_basecurrency':
             alert['isBaseCurrency'] = True
-        elif token.lower()  == 'lockbasecurrency' or token.lower() == "bclock":
-            alert['lockBaseCurrency'] = True
+        elif token.lower()  == 'nominal' or token.lower() == "bclock":
+            alert['nominal'] = True
+        elif token.lower()  == 'collateral':
+            alert['nominal'] = False
         elif ( token[:1].lower() == "x" or token[-1:].lower() == "x"):
             arg = token.lower().strip().replace("x", "")
             leverage = stringToValue(arg)
@@ -2047,8 +2052,12 @@ def parseAlert( data, account: account_c ):
     if( alert['isPercentage'] ):
         alert['isBaseCurrency'] = False
         alert['isUSDT'] = False
+        alert['nominal'] = False
     if( alert['isUSDT'] ):
         alert['isBaseCurrency'] = False
+
+    if alert['nominal'] == None:
+        alert['nominal'] = True if alert['isBaseCurrency'] else False
     
     # do some syntax validation
     if( alert['symbol'] == None ):
