@@ -1,4 +1,4 @@
-*** **WARNING: on January 6h I'm going to make a default behaviour change. When issuing orders in base currency the value will be nominal. Currently the value is considered the collateral cost. This means the base currency value will be the final size and the cost will be downscaled by the leverage, as opposed of now where a order in base currency is scaled up by the leverage. I will introduce a new keyword "collateral" to force it into the old behavior. The orders issued in USDT will retain the current default behaviour (value is considered the collateral so the size is scaled up by the leverage)** ***
+*** **WARNING: on January 9 I changed the default behavior of the value in orders using base currency. When issuing orders in base currency the value will be nominal from now on. If you want to reproduce the old behavior you can add the keyword 'collateral' to your alert** ***
 
 
 
@@ -51,14 +51,14 @@ Every limit order must have assigned its own unique ID so it can be identified f
 **cancel:all** - Special keyword which cancels all orders from that symbol at once.<br>
 
 * Quantities:<br>
-**[value]** - quantity in base currency. Just the number without any extra character. Base currency is the coin you're trading.<br>
-**[value]$** - quantity in USDT. No command associated. Just the number and the dollar sign.<br>
-**[value]@** - quantity in contracts. The value of a contract differs from exchange to exchange. Just the number and the 'at' sign.<br>
-**[value]%** - quantity as percentage of total USDT balance. Use a negative value for shorts when using the position command.<br>
+**[value]** - quantity in base currency. Just the number without any extra character. Base currency is the coin you're trading. This value will be considered nominal by default (the cost will be downscaled by leverage)<br>
+**[value]$** - quantity in USDT. No command associated. Just the number and the dollar sign. This value will be considered collateral. The amount of contracts to buy will be scaled up by leverage<br>
+**[value]@** - quantity in contracts. The value of a contract differs from exchange to exchange. Just the number and the 'at' sign. This value is nominal<br>
+**[value]%** - quantity as percentage of total USDT balance. Use a negative value for shorts when using the position command. This value will be treated the same as an order in USDT<br>
 All quantity types are interchangeable. All can be used with buy/sell/position commands.
 
-**bclock** - When using leverage the quantity will be scaled up by the leverage by Whook. So the quantity you set in the alert will be scaled up and the cost to open the trade kept intact (the USDT cost will be always respected, the amount of coint will be always scaled). This will happen both when sending the order using base curency or quote currency (USDT).
-If you are using base currency values and you want them to be the final value of the order you can switch it up by adding the keyword 'bclock' to your alert message. When this keyword is present the cost will be divided by the leverage instead of scaling the quantity up<br>
+**nominal** - (alias: bclock) This keyword will force the quantity in the order to be treated as nominal. This means this is the final value in the order and the cost will be downscaled by the leverage<br>
+**collateral** - The opposite of 'nominal'. This keyword will force the value in the order to be considered the 'cost' and the final size of the order will be upscaled by leverage<br>
 
 Notice: Whook expects the alerts to be encoded as utf-8. Tradingview already handles this, but when sending the alerts from somewhere else you should make sure your text is encoded as utf-8 or you may run into problems with the symbols '$' and '%'. If you experience issues with orders in usdt or percentage you can alternatively add the commands 'force_usdt' or 'force_percent' to your alert to override the symbols.<br>
 
