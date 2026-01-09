@@ -1,3 +1,7 @@
+*** **WARNING: on January 6h I'm going to make a default behaviour change. When issuing orders in base currency the value will be nominal. Currently the value is considered the collateral cost. This means the base currency value will be the final size and the cost will be downscaled by the leverage, as opposed of now where a order in base currency is scaled up by the leverage. I will introduce a new keyword "collateral" to force it into the old behavior. The orders issued in USDT will retain the current default behaviour (value is considered the collateral so the size is scaled up by the leverage)** ***
+
+
+
 # whook
 
 WHOOK is a web hook for handling Tradingview Alerts to crypto exchanges in perpetual USDT futures.
