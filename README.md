@@ -49,6 +49,10 @@ I have been mostly using Bitget from the last six months. If anything has change
 Every limit order must have assigned its own unique ID so it can be identified for cancelling it<br>
 **cancel:[customID]** - Cancels a limit order by its customID. The symbol is required in the order.<br>
 **cancel:all** - Special keyword which cancels all orders from that symbol at once.<br>
+**changeleverage** - This command will change the symbol leverage without issuing any order (Use only standalone. This command is normally never used since the orders already modify the leverage)
+
+* Leverage:<br>
+**[value]x or x[value]** - The x identifies this value as the leverage used in a order message<br>
 
 * Quantities:<br>
 **[value]** - quantity in base currency. Just the number without any extra character. Base currency is the coin you're trading. This value will be considered nominal by default (the cost will be downscaled by leverage)<br>
@@ -57,13 +61,12 @@ Every limit order must have assigned its own unique ID so it can be identified f
 **[value]%** - quantity as percentage of total USDT balance. Use a negative value for shorts when using the position command. This value will be treated the same as an order in USDT<br>
 All quantity types are interchangeable. All can be used with buy/sell/position commands.
 
+* Keyword modifiers:<br>
 **nominal** - (alias: bclock) This keyword will force the quantity in the order to be treated as nominal. This means this is the final value in the order and the cost will be downscaled by the leverage<br>
 **collateral** - The opposite of 'nominal'. This keyword will force the value in the order to be considered the 'cost' and the final size of the order will be upscaled by leverage<br>
 
 Notice: Whook expects the alerts to be encoded as utf-8. Tradingview already handles this, but when sending the alerts from somewhere else you should make sure your text is encoded as utf-8 or you may run into problems with the symbols '$' and '%'. If you experience issues with orders in usdt or percentage you can alternatively add the commands 'force_usdt' or 'force_percent' to your alert to override the symbols.<br>
 
-* Leverage:<br>
-**[value]x or x[value]** - The x identifies this value as the leverage.<br>
 
 Examples:<br>
 - **Buy command using USDT:**<br>
