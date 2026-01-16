@@ -1024,6 +1024,9 @@ class account_c:
             a = e.args[0]
             if 'OK' in a: # Coinex raises an exception to give an OK message when there are no positions... don't look at me, look at them
                 positions = []
+            elif '502 Bad Gateway' in a:
+                print( timeNow(), self.exchange.id, '* E: Refreshpositions: 502 Bad Gateway' )
+                failed = True
             elif( isinstance(e, ccxt.OnMaintenance) or isinstance(e, ccxt.NetworkError) 
                  or isinstance(e, ccxt.RateLimitExceeded) or isinstance(e, ccxt.RequestTimeout) 
                  or isinstance(e, ccxt.ExchangeNotAvailable) or isinstance(e, ccxt.ExchangeError) or 'not available' in a ):
@@ -1057,6 +1060,7 @@ class account_c:
                 # this print is temporary to try to replace the string with the error type if possible
                 print( timeNow(), self.exchange.id, '* E: Refreshpositions:', a, type(e) )
             else:
+                if len(str(a)) > 200: a = str(a)[:200] + '...'
                 print( timeNow(), self.exchange.id, '* E: Refreshpositions:', a, type(e) )
                 failed = True
 
