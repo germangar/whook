@@ -1,4 +1,4 @@
-*** **WARNING: on January 6h I'm going to make a default behaviour change. When issuing orders in base currency the value will be nominal. Currently the value is considered the collateral cost. This means the base currency value will be the final size and the cost will be downscaled by the leverage, as opposed of now where a order in base currency is scaled up by the leverage. I will introduce a new keyword "collateral" to force it into the old behavior. The orders issued in USDT will retain the current default behaviour (value is considered the collateral so the size is scaled up by the leverage)** ***
+*** **WARNING: on January 9 I changed the default behavior of the value in orders using base currency. When issuing orders in base currency the value will be nominal from now on. If you want to reproduce the old behavior you can add the keyword 'collateral' to your alert (This change doesn't affect orders in USDT).** ***
 
 
 
@@ -49,39 +49,36 @@ I have been mostly using Bitget from the last six months. If anything has change
 Every limit order must have assigned its own unique ID so it can be identified for cancelling it<br>
 **cancel:[customID]** - Cancels a limit order by its customID. The symbol is required in the order.<br>
 **cancel:all** - Special keyword which cancels all orders from that symbol at once.<br>
+**changeleverage** - This command will change the symbol leverage without issuing any order (Use only standalone. This command is normally never used since the orders already modify the leverage)
+
+* Leverage:<br>
+**[value]x or x[value]** - The x identifies this value as the leverage used in a order message<br>
 
 * Quantities:<br>
-**[value]** - quantity in base currency. Just the number without any extra character. Base currency is the coin you're trading.<br>
-**[value]$** - quantity in USDT. No command associated. Just the number and the dollar sign.<br>
-**[value]@** - quantity in contracts. The value of a contract differs from exchange to exchange. Just the number and the 'at' sign.<br>
-**[value]%** - quantity as percentage of total USDT balance. Use a negative value for shorts when using the position command.<br>
+**[value]** - quantity in base currency. Just the number without any extra character. Base currency is the coin you're trading. This value will be considered nominal by default (the cost will be downscaled by leverage)<br>
+**[value]$** - quantity in USDT. No command associated. Just the number and the dollar sign. This value will be considered collateral. The amount of contracts to buy will be scaled up by leverage<br>
+**[value]@** - quantity in contracts. The value of a contract differs from exchange to exchange. Just the number and the 'at' sign. This value is nominal<br>
+**[value]%** - quantity as percentage of total USDT balance. Use a negative value for shorts when using the position command. This value will be treated the same as an order in USDT<br>
 All quantity types are interchangeable. All can be used with buy/sell/position commands.
 
-**bclock** - When using leverage the quantity will be scaled up by the leverage by Whook. So the quantity you set in the alert will be scaled up and the cost to open the trade kept intact (the USDT cost will be always respected, the amount of coint will be always scaled). This will happen both when sending the order using base curency or quote currency (USDT).
-If you are using base currency values and you want them to be the final value of the order you can switch it up by adding the keyword 'bclock' to your alert message. When this keyword is present the cost will be divided by the leverage instead of scaling the quantity up<br>
+* Keyword modifiers:<br>
+**nominal** - (alias: bclock) This keyword will force the quantity in the order to be treated as nominal. This means this is the final value in the order and the cost will be downscaled by the leverage<br>
+**collateral** - The opposite of 'nominal'. This keyword will force the value in the order to be considered the 'cost' and the final size of the order will be upscaled by leverage<br>
 
 Notice: Whook expects the alerts to be encoded as utf-8. Tradingview already handles this, but when sending the alerts from somewhere else you should make sure your text is encoded as utf-8 or you may run into problems with the symbols '$' and '%'. If you experience issues with orders in usdt or percentage you can alternatively add the commands 'force_usdt' or 'force_percent' to your alert to override the symbols.<br>
 
-* Leverage:<br>
-**[value]x or x[value]** - The x identifies this value as the leverage.<br>
 
 Examples:<br>
 - **Buy command using USDT:**<br>
 [account_id] [symbol] [command] [value in USDT] [leverage] - **myKucoinA ETH/USDT buy 300$ x3**<br>
+Notice: The position size will be worth $900, the cost will be $300
 
-- **Position command using contracts:**<br>
+- **Position command using base currency:**<br>
 [symbol] [command] [value in base currency] [leverage] [account_id] - **ETH/USDT position -50 x3 myKucoinA**<br>
-Notice: This would open a 50ETH short at 3x. For a long position use a positive value. Same goes when the value is in USDT<br>
+Notice: This will open a 50ETH short at 3x, the cost will be the dollar equivalent of 50/3 ETH. For a long position use a positive value for a short a negative value<br>
 Example of a position alert from a strategy in Tradingview:<br>
 **myKucoinA {{ticker}} pos {{strategy.position_size}} x3**<br>
 This alert is all you should really need for running 90% of the strategies in TV as long as they don't make more than one order per candle.
-
-- **Sell command using base currency:**<br>
-[account_id] [symbol] [command] [value in USDT] [leverage] - **myKucoinA ETH/USDT sell 0.25 x3**<br>
-This would sell 0.25ETH<br>
-The typical alert message to set in a Tradingview strategy for operating with buy/sell orders would look like this<br>
-**myAccount {{ticker}} {{strategy.order.action}} {{strategy.order.contracts}}@ x3**<br>
-If you're doing more than one order per candle you may need to use this one.<br>
 
 - **Close position**<br>
 [account_id] [symbol] [command] [percentage] - **myKucoinA ETH/USD close 33.33%**<br>
