@@ -14,7 +14,7 @@ Whook only uses one-side mode. Hedge mode is not supported.<br>
 
 You don't need to be a programmer nor know how to clone a repository to use Whook. All you need is to download the **main.py** file and follow the instructions below.
 
-##### Disclaimer: This project is for my personal use. I'm not taking feature requests.
+> Disclaimer: This project is for my personal use. I'm not taking feature requests.
 
 Currently supported exchanges:
 - **Kucoin** futures
@@ -29,9 +29,9 @@ Currently supported exchanges:
 
 I have been mostly using Bitget from the last six months. If anything has changed in the other exchanges APIs I will probably have missed it. If you experience any bugs report them in 'Issues' and I'll fix them in a few days.
 
-[1] I don't have access to OKX futures anymore (being European problems) so I can't guarantee it still works nor fix it if it doesn't.
+> [1] I don't have access to OKX futures anymore (being European problems) so I can't guarantee it still works nor fix it if it doesn't.
 
-[2] Binance has stopped supporting futures in their testnet. They have now demo trading in their main platform. Unfortunately they require a Binance futures account for accesing demo trading, and being from Europe I can't have a Binance Futures account. In short: I can't maintain Binance anymore. I'll let it be there, just like OKX, but I can't guarantee they work nor fix them if they don't.
+> [2] Binance has stopped supporting futures in their testnet. They have now demo trading in their main platform. Unfortunately they require a Binance futures account for accesing demo trading, and being from Europe I can't have a Binance Futures account. In short: I can't maintain Binance anymore. I'll let it be there, just like OKX, but I can't guarantee they work nor fix them if they don't.
 
 
 ### ALERT SYNTAX ###
@@ -65,7 +65,7 @@ All quantity types are interchangeable. All can be used with buy/sell/position c
 **nominal** - (alias: bclock) This keyword will force the quantity in the order to be treated as nominal. This means this is the final value in the order and the cost will be downscaled by the leverage<br>
 **collateral** - The opposite of 'nominal'. This keyword will force the value in the order to be considered the 'cost' and the final size of the order will be upscaled by leverage<br>
 
-Notice: Whook expects the alerts to be encoded as utf-8. Tradingview already handles this, but when sending the alerts from somewhere else you should make sure your text is encoded as utf-8 or you may run into problems with the symbols '$' and '%'. If you experience issues with orders in usdt or percentage you can alternatively add the commands 'force_usdt' or 'force_percent' to your alert to override the symbols.<br>
+> Notice: Whook expects the alerts to be encoded as utf-8. Tradingview already handles this, but when sending the alerts from somewhere else you should make sure your text is encoded as utf-8 or you may run into problems with the symbols '$' and '%'. If you experience issues and you can't fix the encoding you can alternatively add the commands 'force_usdt' or 'force_percent' to your alert to override the symbols.<br>
 
 
 Examples:<br>
@@ -112,7 +112,7 @@ With these you can already run the script, but it won't have access online. For 
 
 - [ngrok](https://ngrok.com/download). Create a free ngrok account. Download the last version of ngrok and unzip it. In the ngrok website they provide an auth key, copy it. Launch the software and paste the auth code into the ngrok console (with the authcode ngrok will be able to stay open forever). Then type in the ngrok console: "ngrok http 80". This will create an internet address for your webhook. You have to add /whook at the end of it to comunicate with the Whook server. This will be the address you introduce in the tradingview alert<br>
 
-Note: Ngrok now allows free accounts to create one static domain. It allows to close Ngrok and keep the same address the next time you open it, which is nice.
+> Note: Ngrok now allows free accounts to create one static domain. It allows to close Ngrok and keep the same address the next time you open it, which is nice.
 
 Example of an address: https://e579-139-47-50-49.ngrok-free.app/whook<br>
 
