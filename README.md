@@ -49,7 +49,8 @@ I have been mostly using Bitget from the last six months. If anything has change
 Every limit order must have assigned its own unique ID so it can be identified for cancelling it<br>
 **cancel:[customID]** - Cancels a limit order by its customID. The symbol is required in the order.<br>
 **cancel:all** - Special keyword which cancels all orders from that symbol at once.<br>
-**changeleverage** - This command will change the symbol leverage without issuing any order (Use only standalone. This command is normally never used since the orders already modify the leverage)
+**changeleverage** - This command will change the symbol leverage without issuing any order (Use only standalone. This command is normally never used since the orders already modify the leverage)<br>
+**reduce or reduceonly** - It marks the order as reduce only. Meant to be used with **limit orders**. It will attempt to cap market orders to position size, but this has not been thoroughly tested.<br>
 
 * Leverage:<br>
 **[value]x or x[value]** - The x identifies this value as the leverage used in a order message<br>
