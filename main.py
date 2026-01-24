@@ -45,7 +45,7 @@ PROXY_PORT = 50000
 ALERT_TIMEOUT = 60 * 3
 ORDER_TIMEOUT = 40
 REFRESH_POSITIONS_FREQUENCY = 5 * 60    # refresh positions every 5 minutes
-UPDATE_ORDERS_FREQUENCY = 0.25          # frametime in seconds at which the orders queue is refreshed.
+UPDATE_ORDERS_FREQUENCY = 0.1           # frametime in seconds at which the orders queue is refreshed.
 LOGS_DIRECTORY = 'logs'
 MARGIN_MODE_NONE = '------'
 FLOAT_ERROR = 1e-9
@@ -1029,33 +1029,31 @@ class account_c:
                 failed = True
             elif( isinstance(e, ccxt.OnMaintenance) or isinstance(e, ccxt.NetworkError) 
                  or isinstance(e, ccxt.RateLimitExceeded) or isinstance(e, ccxt.RequestTimeout) 
-                 or isinstance(e, ccxt.ExchangeNotAvailable) or isinstance(e, ccxt.ExchangeError) or 'not available' in a ):
+                 or isinstance(e, ccxt.ExchangeNotAvailable) or isinstance(e, ccxt.ExchangeError) ):
                 failed = True
 
-                if( 'Remote end closed connection' in a
-                   or '500 Internal Server Error' in a
-                   or 'Internal Server Error' in a
-                   or 'Server busy' in a or 'System busy' in a
-                   or '"retCode":10002' in a ):
-                    print( timeNow(), self.exchange.id, '* E: Refreshpositions:(old)', a, type(e) )
+                # if( 'Remote end closed connection' in a
+                #    or '500 Internal Server Error' in a
+                #    or 'Internal Server Error' in a
+                #    or 'Server busy' in a or 'System busy' in a
+                #    or '"retCode":10002' in a ):
+                #     print( timeNow(), self.exchange.id, '* E: Refreshpositions:(move to the other block)', a, type(e) )
                     
-                elif 'code":-2015' in a: # For some reason 'binancedemo' makes it all the way here without a valid API key.
-                    print( timeNow(), a )
+                if 'code":-2015' in a: # For some reason 'binancedemo' makes it all the way here without a valid API key.
+                    print( timeNow(), self.exchange.id, '* E: Refreshpositions:(broken)', a, type(e) )
                     return
                 elif 'access_id not exists': # and now coinex is doing it too. IDK why they reach here. They didn't before.
-                    print( timeNow(), a )
+                    print( timeNow(), self.exchange.id, "access_id not exists" )
                     return
-                
                 
             elif( 'Remote end closed connection' in a
                   or '500 Internal Server Error' in a
                   or 'Internal Server Error' in a
                   or 'Server busy' in a or 'System busy' in a
-                  or 'not available' in a # ccxt.base.errors.ExchangeError
-                  or 'failure to get a peer' in a # ccxt.base.errors.ExchangeError (okx)
                   or '"code":39999' in a
-                  or 'internal error' in a # ccxt.base.errors.ExchangeError (coinex)
-                  or '"retCode":10002' in a ):
+                  or '"retCode":10002' in a
+                  or 'Service is not available' in a
+                or 'not available' in a ):
                 failed = True
                 # this print is temporary to try to replace the string with the error type if possible
                 print( timeNow(), self.exchange.id, '* E: Refreshpositions:', a, type(e) )
@@ -1097,7 +1095,7 @@ class account_c:
                 balanceString += " - Available {:.2f}[$]".format(balance['free'])
             print( tab + str(numPositions), "positions found.", balanceString )
 
-        self.positionslist.clear()
+        newPositionsList = []
         for thisPosition in positions:
 
             symbol = thisPosition.get('symbol')
@@ -1164,7 +1162,9 @@ class account_c:
             elif( self.exchange.id != "kucoinfutures" and self.exchange.id != "binance" ): # we know kucoin is helpless. And apparently Binance.
                 print( " * W: refreshPositions: Couldn't find leverage for", self.exchange.id )
 
-            self.positionslist.append(position_c( symbol, thisPosition, self.markets[ symbol ] ))
+            newPositionsList.append(position_c( symbol, thisPosition, self.markets[ symbol ] ))
+        
+        self.positionslist = newPositionsList
 
         if v:
             for pos in self.positionslist:
@@ -1362,7 +1362,7 @@ class account_c:
             return
         
         # go through the queue activating every symbol that doesn't have an active order
-        for order in self.ordersQueue:
+        for order in list(self.ordersQueue):
             if( self.activeOrderForSymbol(order.symbol) ):
                 continue
 
@@ -1397,8 +1397,6 @@ class account_c:
                 params['reduce'] = True # FIXME Do we need this parameter?
                 if( self.exchange.id != 'coinex' ): # coinex interprets reduceOnly as being in hedge mode. Skip the problem by now
                     params['reduceOnly'] = True
-                    if self.exchange.id == 'bitget':
-                        params['reduceOnly'] = 'YES'
 
             if( self.exchange.id == 'kucoinfutures' ): # Kucoin doesn't use setLeverage nor setMarginMode
                 params['leverage'] = max( order.leverage, 1 )
@@ -1521,6 +1519,13 @@ class account_c:
                     
                     continue # back to the orders loop
 
+                # 12:13:18 [cross/bitget]  * E: UpdateOrdersQueue: Unhandled exception. Cancelling: bitget {"code":"40786","msg":"Duplicate clientOid","requestTime":1769253198131,"data":null} <class 'ccxt.base.errors.ExchangeError'>
+                if 'Duplicate clientOid' in a:
+                    self.print( ' * E: Limit order ID was already used. Cancelling' )
+                    self.ordersQueue.remove( order )
+                    continue
+
+
                 # bitget {"code":"22002","msg":"No position to close","requestTime":1765292553209,"data":null} <class 'ccxt.base.errors.ExchangeError'>
                 if 'No position' in a:
                     self.print( f'{order.symbol}  No position to close.' )
@@ -1620,10 +1625,13 @@ class account_c:
         isBaseCurrency = alert['isBaseCurrency']
         isPercentage = alert['isPercentage']
         nominal = alert['nominal']
+        reduceOnly = alert['reduce']
         priceLimit = alert['priceLimit']
         customID = alert['customID']
         usdtValue = None
         isLimit = True if priceLimit > 0.0 else False
+
+        reducing = False
 
         if( verbose ):
             print( "PROCESSALERT: isUSDT:", isUSDT, "isBaseCurrency:", isBaseCurrency )
@@ -1652,13 +1660,13 @@ class account_c:
             quantity = round( balance * quantity * 0.01, 4 )
             isUSDT = True
 
-        if quantity is not None and abs(quantity) < FLOAT_ERROR:
+        if quantity is not None and abs(quantity) <= FLOAT_ERROR:
             quantity = 0.0
         
         # convert quantity to concracts if needed
         if( (isUSDT or isBaseCurrency) and quantity != 0.0 ) :
 
-            # when using base currency with bclock, and contractsize is 1 we don't have to do any conversion
+            # when using base currency and contractsize is 1 we don't have to do any conversion
             if not ( isBaseCurrency and nominal and self.findContractSizeForSymbol(symbol) == 1 ):
 
                 # We don't know for sure yet if it's a buy or a sell, so we average
@@ -1690,9 +1698,9 @@ class account_c:
                 quantity = self.contractsFromUSDT( symbol, quantity, price, leverage )
                 if verbose : print( "   CONVERTING (x"+str(leverage)+")", oldQuantity, coin_name, '==>', quantity, "contracts" )
 
-            if( abs(quantity) < minOrder ):
-                self.print( " * E: Order too small:", quantity, "Minimum required:", minOrder )
-                return
+            # if( abs(quantity) < minOrder ):
+            #     self.print( " * E: Order too small:", quantity, "Minimum required:", minOrder )
+            #     return
 
         # check for a existing position
         pos = self.getPositionBySymbol( symbol )
@@ -1782,8 +1790,13 @@ class account_c:
 
 
                 command = 'sell' if positionContracts > quantity else 'buy'
+
+                if (positionContracts > 0 and 0 <= quantity < positionContracts) or \
+                   (positionContracts < 0 and positionContracts < quantity <= 0):
+                    reducing = True
+
                 quantity = abs( quantity - positionContracts )
-                if( quantity < minOrder ):
+                if( quantity < minOrder and not reducing ):
                     # we don't need to buy nor sell, but do we need to change the leverage?
                     if( leverage != self.markets[ symbol ]['local']['leverage'] ):
                         self.ordersQueue.append( order_c( symbol, 'changeleverage', leverage = leverage ) )
@@ -1820,6 +1833,12 @@ class account_c:
             if( pos != None ):
                 positionContracts = pos.getKey('contracts')
                 positionSide = pos.getKey( 'side' )
+
+                if reduceOnly and quantity > positionContracts:
+                    quantity = positionContracts
+                    
+                if quantity <= positionContracts and ( ( positionSide == 'long' and command == 'sell' ) or ( positionSide == 'short' and command == 'buy' ) ):
+                    reducing = True
                 
                 # reversing the position
                 if not isLimit and (( positionSide == 'long' and command == 'sell' ) or ( positionSide == 'short' and command == 'buy' )):
@@ -1870,11 +1889,15 @@ class account_c:
                         return
                 # fall through
 
-            if( quantity < minOrder ):
+            
+            if( quantity < minOrder and not reducing ):
                 self.print( timeNow(), " * E: Order too small:", quantity, "Minimum required:", minOrder )
                 return
 
-            order = order_c( symbol, command, quantity, leverage )
+            if reducing:
+                leverage = 0 # this isn't really needed
+
+            order = order_c( symbol, command, quantity, leverage, reduceOnly= reducing )
             if( isLimit ):
                 order.type = 'limit'
                 order.customID = customID
@@ -1909,7 +1932,7 @@ def updateOrdersQueue():
         # see if we have any alert pending to be proccessed
         if( len(account.latchedAlerts) ):
             positionsRefreshed = False
-            for alert in account.latchedAlerts:
+            for alert in list(account.latchedAlerts):
                 if( alert.get('delayTimestamp') != None ):
                     alert.get('delayTimestamp') < time.monotonic()
                     continue
@@ -1981,6 +2004,7 @@ def parseAlert( data, account: account_c ):
         'isBaseCurrency': False,
         'isPercentage': False,
         'nominal': None,
+        'reduce': False,
         'priceLimit': 0.0,
         'customID': None,
         'alert': data,
@@ -1993,7 +2017,7 @@ def parseAlert( data, account: account_c ):
     # Informal plain text syntax
     tokens = data.split()
     for token in tokens:
-        if( account.findSymbolFromPairName(token) != None ): # GMXUSDTM, GMX/USDT:USDT and GMX/USDT are all acceptable formats
+        if( account.findSymbolFromPairName(token) != None ): # BTCUSDTM, BTC/USDT:USDT and BTC/USDT are all acceptable formats
             alert['symbol'] = account.findSymbolFromPairName(token) 
         elif ( token.lower() == account.accountName.lower() ):
             pass
@@ -2010,7 +2034,9 @@ def parseAlert( data, account: account_c ):
             alert['isPercentage'] = True
         elif ( token[:1]  == "-" ): # this is a minus symbol! What a bitch (value in base currency)
             alert['isBaseCurrency'] = True
-            alert['quantity'] = stringToValue( token )
+            arg = token.lstrip('-')
+            val = stringToValue( arg )
+            alert['quantity'] = -val if val is not None else None
         elif ( stringToValue( token ) != None ):
             alert['isBaseCurrency'] = True
             arg = token
@@ -2045,6 +2071,8 @@ def parseAlert( data, account: account_c ):
             alert['command'] = 'position'
         elif token.lower()  == 'changeleverage':
             alert['command'] = 'changeleverage'
+        elif token.lower()  == 'reduce' or token.lower()  == 'reduceonly':
+            alert['reduce'] = True
         elif ( token[:5].lower()  == "limit" ):
             limitToken = token # we validate it at processing
         elif ( token[:6].lower()  == "cancel" ):
