@@ -49,7 +49,7 @@ I have been mostly using Bitget from the last six months. If anything has change
 Every limit order must have assigned its own unique ID so it can be identified for cancelling it<br>
 **cancel:[customID]** - Cancels a limit order by its customID. The symbol is required in the order.<br>
 **cancel:all** - Special keyword which cancels all orders from that symbol at once.<br>
-**changeleverage** - This command will change the symbol leverage without issuing any order (Use only standalone. This command is normally never used since the orders already modify the leverage)
+**changeleverage** - This command will change the symbol leverage without issuing any order (Use only standalone. This command is normally never used since the orders already modify the leverage)<br>
 
 * Leverage:<br>
 **[value]x or x[value]** - The x identifies this value as the leverage used in a order message<br>
@@ -64,6 +64,7 @@ All quantity types are interchangeable. All can be used with buy/sell/position c
 * Keyword modifiers:<br>
 **nominal** - (alias: bclock) This keyword will force the quantity in the order to be treated as nominal. This means this is the final value in the order and the cost will be downscaled by the leverage<br>
 **collateral** - The opposite of 'nominal'. This keyword will force the value in the order to be considered the 'cost' and the final size of the order will be upscaled by leverage<br>
+**reduce** or **reduceonly** - It marks the order as reduce only. Meant to be used with **limit orders**. It will attempt to cap market orders to position size, but this has not been thoroughly tested.<br>
 
 > Notice: Whook expects the alerts to be encoded as utf-8. Tradingview already handles this, but when sending the alerts from somewhere else you should make sure your text is encoded as utf-8 or you may run into problems with the symbols '$' and '%'. If you experience issues and you can't fix the encoding you can alternatively add the commands 'force_usdt' or 'force_percent' to your alert to override the symbols.<br>
 
