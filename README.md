@@ -164,6 +164,8 @@ There is also one optional key: **'SETTLE_COIN'** for cases where you want to tr
 
 ### HOW TO HOST IN AWS ### 
 
+> Note: AWS is optional. You can run the script in your own server or anywhere else. I run it locally.
+
 #### Windows
 
 You can host a server in AWS EC2 for free. It can be a linux server or a windows server. You can find many tutorials in Youtube on how to do it. Here's a (slightly outdated) tutorial for windows: https://youtu.be/9z5YOXhxD9Q.<br>
