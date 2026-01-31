@@ -1809,21 +1809,10 @@ class account_c:
                     return
                 # if we are reducing the size and changing leverage we want to reduce size first, then modify the leverage
                 if( command == 'sell' and leverage != self.markets[ symbol ]['local']['leverage'] and self.markets[ symbol ]['local']['leverage'] != 0 ): # kucoin has 0 local leverage until an order is processed
-                    alert = {
-                        'symbol': symbol,
-                        'command': 'changeleverage',
-                        'quantity': None,
-                        'leverage': leverage,
-                        'isUSDT': False,
-                        'isBaseCurrency': False,
-                        'isPercentage': False,
-                        'nominal': True,
-                        'reduce': False,
-                        'priceLimit': 0.0,
-                        'customID': None,
-                        'alert': f"{symbol} changeleverage {leverage}",
-                        'timestamp':time.monotonic()
-                    }
+                    alert = createAlertTemplate( f"{symbol} changeleverage {leverage}" )
+                    alert['symbol'] = symbol
+                    alert['command'] = 'changeleverage'
+                    alert['leverage'] = leverage
                     self.latchedAlerts.append( alert )
                     leverage = self.markets[ symbol ]['local']['leverage'] # reduce the position with current leverage
             # fall through
@@ -1995,26 +1984,29 @@ def generatePositionsString()->str:
 
     return msg
 
+def createAlertTemplate( msg = None ):
+        return {
+            'symbol': None,
+            'command': None,
+            'quantity': None,
+            'leverage': 0,
+            'isUSDT': False,
+            'isBaseCurrency': False,
+            'isPercentage': False,
+            'nominal': None,
+            'reduce': False,
+            'priceLimit': 0.0,
+            'customID': None,
+            'alert': msg,
+            'timestamp':time.monotonic()
+        }
+
 def parseAlert( data, account: account_c ):
 
     if( account == None ):
         return { 'Error': " * E: parseAlert called without an account" }
     
-    alert = {
-        'symbol': None,
-        'command': None,
-        'quantity': None,
-        'leverage': 0,
-        'isUSDT': False,
-        'isBaseCurrency': False,
-        'isPercentage': False,
-        'nominal': None,
-        'reduce': False,
-        'priceLimit': 0.0,
-        'customID': None,
-        'alert': data,
-        'timestamp':time.monotonic()
-    }
+    alert = createAlertTemplate(data)
 
     limitToken = None
     cancelToken = None
