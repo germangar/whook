@@ -423,7 +423,7 @@ class order_c:
         return (self.timestamp + self.delay > time.monotonic() )
 
 class account_c:
-    def __init__(self, exchange = None, name = 'default', apiKey = None, secret = None, password = None, marginMode = None, settleCoin = None )->None:
+    def __init__(self, exchange = None, name = 'default', apiKey = None, secret = None, password = None, marginMode = None, hedgedMode = False, settleCoin = None )->None:
         
         self.accountName = name
         self.refreshPositionsFailed = 0
@@ -432,6 +432,7 @@ class account_c:
         self.activeOrders = []
         self.latchedAlerts = []
         self.MARGIN_MODE = 'cross' if ( marginMode != None and marginMode.lower() == 'cross') else 'isolated'
+        self.POSITION_MODE = 'hedged' if hedgedMode else 'oneway'
         self.SETTLE_COIN = 'USDT' if( settleCoin == None ) else settleCoin
 
         if( exchange == None ):
@@ -666,6 +667,9 @@ class account_c:
 
             # Store the market into the local markets dictionary
             self.markets[key] = thisMarket
+
+        if self.exchange.has.get('setPositionMode') != True and self.POSITION_MODE != 'oneway':
+            print( f"{self.exchange.id} doesn't support changing position mode. It will remain unchanged.")
 
         if( verbose ):
             pprint( self.markets['BTC/' + self.SETTLE_COIN + ':' + self.SETTLE_COIN] )
@@ -1814,6 +1818,7 @@ class account_c:
                         'isBaseCurrency': False,
                         'isPercentage': False,
                         'nominal': True,
+                        'reduce': False,
                         'priceLimit': 0.0,
                         'customID': None,
                         'alert': f"{symbol} changeleverage {leverage}",
@@ -2252,11 +2257,14 @@ for ac in accounts_data:
 
     marginMode = ac.get('MARGIN_MODE')
 
+    hedged = ac.get('HEDGED_MODE')
+    if hedged == None: hedged = False
+
     settleCoin = ac.get('SETTLE_COIN')
 
     print( timeNow(), " Initializing account: [", account_id, "] in [", exchange , ']')
     try:
-        account = account_c( exchange, account_id, api_key, secret_key, password, marginMode, settleCoin )
+        account = account_c( exchange, account_id, api_key, secret_key, password, marginMode, hedged, settleCoin )
     except Exception as e:
         print( 'Account creation failed:', e, type(e) )
         print('------------------------------')
