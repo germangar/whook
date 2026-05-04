@@ -1,7 +1,3 @@
-*** **WARNING: on January 9 I changed the default behavior of the value in orders using base currency. When issuing orders in base currency the value will be nominal from now on. If you want to reproduce the old behavior you can add the keyword 'collateral' to your alert (This change doesn't affect orders in USDT).** ***
-
-
-
 # whook
 
 WHOOK is a web hook for handling Tradingview Alerts to crypto exchanges in perpetual USDT futures.
